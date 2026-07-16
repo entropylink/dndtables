@@ -4,44 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tablas de Vendedores por Asentamiento — D&D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#16130e; --bg2:#1e1a13; --card:#241f16; --card2:#2c2619;
-    --ink:#ece2c9; --muted:#b3a682; --line:#463c28;
-    --gold:#d9b45a; --gold2:#b8923b; --green:#7fb069; --red:#c96b5b;
-    --blue:#7fa9c9; --purple:#a98bc9;
+    /* Paleta de marca entropy.com.mx */
+    --bg:#242525; --bg2:#1c1d1d; --card:#2a2b2b; --card2:#313232;
+    --ink:#ffffff; --muted:#b0b0b0; --line:#4a4b4b;
+    --gold:#a8d300; --gold2:#8aae00; --cyan:#00ffff;
+    --green:#a8d300; --red:#ff6b6b;
+    --blue:#00ffff; --purple:#c9a8ff;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    background:radial-gradient(1200px 600px at 50% -10%, #24201700 0%, transparent 60%), var(--bg);
-    color:var(--ink); font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #a8d30012 0%, transparent 60%), var(--bg);
+    color:var(--ink); font-family:"Ubuntu","Segoe UI",Arial,sans-serif; font-weight:400;
     line-height:1.5; padding:0 0 80px;
   }
   header{
-    background:linear-gradient(180deg,#2a2416,#16130e);
-    border-bottom:2px solid var(--gold2); padding:22px 18px 18px; text-align:center;
+    background:linear-gradient(180deg,#1c1d1d,#242525);
+    border-bottom:2px solid var(--gold); padding:22px 18px 18px; text-align:center;
   }
-  header h1{margin:0 0 4px; font-size:1.7rem; letter-spacing:.5px; color:var(--gold)}
+  header h1{margin:0 0 4px; font-size:1.7rem; font-weight:700; letter-spacing:.5px; color:var(--gold)}
   header p{margin:0; color:var(--muted); font-size:.92rem}
   .wrap{max-width:1080px; margin:0 auto; padding:0 16px}
-  h2{color:var(--gold); border-bottom:1px solid var(--line); padding-bottom:6px; margin:34px 0 14px; font-size:1.25rem}
-  h3{color:var(--gold); margin:0 0 8px; font-size:1.05rem}
+  h2{color:var(--gold); font-weight:700; border-bottom:1px solid var(--line); padding-bottom:6px; margin:34px 0 14px; font-size:1.25rem}
+  h3{color:var(--gold); font-weight:700; margin:0 0 8px; font-size:1.05rem}
   .sub{color:var(--muted); font-size:.85rem}
+  a{color:var(--cyan)}
+  a:hover{color:var(--gold)}
   button{
-    font-family:inherit; cursor:pointer; border:1px solid var(--gold2);
-    background:linear-gradient(180deg,#3a3220,#2a2416); color:var(--gold);
+    font-family:inherit; cursor:pointer; border:1px solid var(--line);
+    background:var(--card2); color:var(--ink);
     padding:8px 14px; border-radius:7px; font-size:.92rem; transition:.12s;
   }
-  button:hover{background:linear-gradient(180deg,#4a4128,#332c1c); transform:translateY(-1px)}
+  button:hover{background:var(--card2); border-color:var(--cyan); color:var(--cyan); transform:translateY(-1px)}
   button:active{transform:translateY(0)}
-  button.primary{background:linear-gradient(180deg,var(--gold),var(--gold2)); color:#221c0c; font-weight:700; border-color:#7a5f1f}
+  button.primary{background:var(--gold); color:#1a1b0a; font-weight:700; border-color:var(--gold)}
+  button.primary:hover{background:var(--gold2); border-color:var(--gold2); color:#1a1b0a}
   button.small{padding:4px 9px; font-size:.8rem}
   button.ghost{background:transparent}
   input,select{
-    font-family:inherit; background:#100d09; color:var(--ink);
+    font-family:inherit; background:var(--bg2); color:var(--ink);
     border:1px solid var(--line); border-radius:6px; padding:7px 9px; font-size:.9rem;
   }
+  input:focus,select:focus{outline:none; border-color:var(--cyan)}
   input[type=number]{width:74px}
   .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
   .controls{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:18px}
@@ -50,25 +59,25 @@
   .size-btn{display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 6px; text-align:center}
   .size-btn .n{font-weight:700; font-size:.95rem}
   .size-btn .p{font-size:.72rem; color:var(--muted)}
-  .size-btn.active{outline:2px solid var(--gold); background:linear-gradient(180deg,#4a4128,#332c1c)}
+  .size-btn.active{outline:2px solid var(--gold); background:var(--card2)}
   /* cards */
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px}
   .vendor{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 2px 0 #0006}
-  .vendor.travel{border-color:#5a4a6a}
+  .vendor.travel{border-color:var(--cyan)}
   .vhead{display:flex; align-items:flex-start; gap:10px; margin-bottom:8px}
   .vicon{font-size:1.7rem; line-height:1}
   .vname{font-weight:700; font-size:1.08rem; color:var(--gold)}
   .vtag{display:inline-block; font-size:.68rem; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--muted); margin-right:4px}
-  .vtag.basic{color:var(--green); border-color:#3f5a35}
-  .vtag.var{color:var(--blue); border-color:#38556a}
-  .vtag.travel{color:var(--purple); border-color:#5a4a6a}
-  .vtag.comp{color:var(--red); border-color:#6a3f38}
+  .vtag.basic{color:var(--green); border-color:var(--gold2)}
+  .vtag.var{color:var(--cyan); border-color:#1a8a8a}
+  .vtag.travel{color:var(--purple); border-color:#6a5a9a}
+  .vtag.comp{color:var(--red); border-color:#8a3f38}
   .goods{width:100%; border-collapse:collapse; margin:8px 0 6px; font-size:.86rem}
-  .goods td{padding:3px 4px; border-bottom:1px dotted #3a3324}
+  .goods td{padding:3px 4px; border-bottom:1px dotted var(--line)}
   .goods td.price{text-align:right; white-space:nowrap; color:var(--ink); font-variant-numeric:tabular-nums}
-  .goods td.base{text-align:right; white-space:nowrap; color:#8a7f5e; font-size:.78rem; text-decoration:line-through}
+  .goods td.base{text-align:right; white-space:nowrap; color:var(--muted); font-size:.78rem; text-decoration:line-through}
   .goods .up{color:var(--red)} .goods .down{color:var(--green)}
-  .haggle{background:#100d09; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; font-size:.82rem}
+  .haggle{background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; font-size:.82rem}
   .haggle .hrow{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:6px}
   .note{font-size:.8rem; color:var(--muted); margin-top:4px; min-height:1em}
   .note.good{color:var(--green)} .note.bad{color:var(--red)}
@@ -82,21 +91,21 @@
   details[open] summary::before{content:"▾ "}
   table.ref{width:100%; border-collapse:collapse; font-size:.85rem; margin-top:6px}
   table.ref th,table.ref td{border:1px solid var(--line); padding:5px 8px; text-align:left}
-  table.ref th{background:#2a2416; color:var(--gold)}
-  table.ref tr:nth-child(even) td{background:#1c180f}
-  .die{display:inline-block; background:#100d09; border:1px solid var(--gold2); color:var(--gold); border-radius:6px; padding:1px 8px; font-size:.8rem; font-weight:700}
+  table.ref th{background:var(--gold); color:#1a1b0a; font-weight:700}
+  table.ref tr:nth-child(even) td{background:var(--bg2)}
+  .die{display:inline-block; background:var(--bg2); border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:1px 8px; font-size:.8rem; font-weight:700}
   /* dice log */
   #log{position:fixed; right:14px; bottom:14px; width:250px; max-height:42vh; overflow:auto;
-    background:#12100b; border:1px solid var(--gold2); border-radius:10px; padding:10px; font-size:.8rem; z-index:20; box-shadow:0 6px 24px #000a}
+    background:var(--bg2); border:1px solid var(--gold); border-radius:10px; padding:10px; font-size:.8rem; z-index:20; box-shadow:0 6px 24px #000a}
   #log h4{margin:0 0 6px; color:var(--gold); font-size:.85rem; display:flex; justify-content:space-between}
-  #log .l{padding:2px 0; border-bottom:1px dotted #3a3324; color:var(--muted)}
+  #log .l{padding:2px 0; border-bottom:1px dotted var(--line); color:var(--muted)}
   #log .l b{color:var(--ink)}
   .empty{color:var(--muted); font-style:italic; padding:16px; text-align:center; grid-column:1/-1}
   .savebar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
-  .saved-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#100d09; margin-top:6px; font-size:.86rem}
+  .saved-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg2); margin-top:6px; font-size:.86rem}
   .saved-item .meta{color:var(--muted); font-size:.78rem}
   .flash{animation:flash .6s ease}
-  @keyframes flash{0%{background:#4a4128}100%{}}
+  @keyframes flash{0%{background:var(--card2)}100%{}}
   @media (max-width:560px){ #log{position:static; width:auto; max-height:none; margin-top:20px} }
 </style>
 </head>
