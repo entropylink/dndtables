@@ -18,7 +18,7 @@ Para cada tamaño de asentamiento —de **troupe errante** a **megalópolis**—
 - **Tira en vivo o digital.** Cada tabla muestra su dado (d100, d12, 1d20…) y su distribución, así que puedes tirar con dados físicos y buscar el resultado, o pulsar los botones para tirar en digital. Un **registro de tiradas** deja ver qué salió.
 - **Precios variables y realistas.** Los precios base salen de las tablas de equipo de D&D 5e. Cada vendedor tira 1d12 para su nivel de precios (de carestía a liquidación), y si dos venden la misma categoría se aplica un **−10 % por competencia**.
 - **Regateo por Persuasión.** Cada ficha indica su CD y su descuento máximo. Introduce (o tira) tu resultado de Persuasión y verás el precio negociado. Un fallo grande ofende al vendedor y sube el precio.
-- **Guardar / Importar.** Guarda los asentamientos generados en el navegador, o expórtalos/impórtalos como `.json`.
+- **Ciudades persistentes.** Cada ciudad generada recibe un **nombre aleatorio** y se **guarda automáticamente en el navegador** con todo su contenido. Se listan en orden alfabético con su tipo (Town, City, Megalopolis…) y un resumen de lo que tienen (nº de vendedores, nº de artículos y las tiendas). Puedes **exportar la ciudad actual** o **todas las ciudades** a `.json`, e **importar** cualquiera de los dos formatos.
 
 ## Uso
 

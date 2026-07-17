@@ -157,12 +157,11 @@
   <h2 data-i18n="saveTitle">💾 Save / Import results</h2>
   <div class="controls">
     <div class="savebar">
-      <input type="text" id="saveName" data-i18n-ph="saveNamePh" placeholder="Name (e.g. Frostport)" style="flex:1; min-width:180px">
-      <button class="primary" id="saveBtn" data-i18n="saveBtn">Save current settlement</button>
-      <button id="exportBtn" data-i18n="exportBtn">⬇ Export .json</button>
-      <label class="button" style="display:inline-block">
-        <button id="importBtn" data-i18n="importBtn">⬆ Import .json</button>
-      </label>
+      <input type="text" id="saveName" data-i18n-ph="saveNamePh" placeholder="City name" style="flex:1; min-width:160px">
+      <button id="renameBtn" data-i18n="renameBtn">Rename</button>
+      <button id="exportBtn" data-i18n="exportCurrent">⬇ Export current</button>
+      <button id="exportAllBtn" data-i18n="exportAll">⬇ Export all</button>
+      <button id="importBtn" data-i18n="importBtn">⬆ Import .json</button>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
     <div id="savedList" style="margin-top:10px"></div>
@@ -392,8 +391,8 @@ const UI = {
     genBtn:"🎲 Generate settlement", regenPerm:"↻ Permanent only", regenTravel:"↻ Traveling only",
     permHead:'Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span>',
     travHead:'Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span>',
-    saveTitle:"💾 Save / Import results",
-    saveNamePh:"Name (e.g. Frostport)", saveBtn:"Save current settlement", exportBtn:"⬇ Export .json", importBtn:"⬆ Import .json",
+    saveTitle:"💾 Saved cities",
+    saveNamePh:"City name", saveBtn:"Save current settlement", exportBtn:"⬇ Export .json", importBtn:"⬆ Import .json",
     refHead:'📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span>',
     sum1:"Settlement sizes & how many vendors",
     ref1p:"Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.",
@@ -432,6 +431,10 @@ const UI = {
     alertBadFile:"Invalid file. It must be a .json exported by this tool.",
     noSaves:"No saved settlements yet. They are stored in this browser.",
     permAbbr:"perm.", travAbbr:"trav.", load:"Load", imported:"Imported",
+    exportCurrent:"⬇ Export current", exportAll:"⬇ Export all", renameBtn:"Rename",
+    vendorsWord:"vendors", goodsWord:"goods", currentTag:"current", nameLabel:"City name",
+    noCities:"No cities generated yet. Generate one and it's saved here automatically.",
+    alertNoCities:"No saved cities to export yet.",
     colSize:"Size", colPop:"Population", colBasics:"Guaranteed basics", colVariety:"Variety stalls", colTravWeek:"Traveling / week", min0:"(min. 0)",
     colStall:"Stall", colVendor:"Vendor", colCategory:"Category", colHaggle:"Haggle", colExamples:"Examples",
     troupeNote:"A troupe has no fixed variety shops — its stock arrives with the traveling vendors.",
@@ -445,8 +448,8 @@ const UI = {
     genBtn:"🎲 Generar asentamiento", regenPerm:"↻ Solo permanentes", regenTravel:"↻ Solo ambulantes",
     permHead:'Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span>',
     travHead:'Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span>',
-    saveTitle:"💾 Guardar / Importar resultados",
-    saveNamePh:"Nombre (p.ej. Puerto Escarcha)", saveBtn:"Guardar asentamiento actual", exportBtn:"⬇ Exportar .json", importBtn:"⬆ Importar .json",
+    saveTitle:"💾 Ciudades guardadas",
+    saveNamePh:"Nombre de la ciudad", saveBtn:"Guardar asentamiento actual", exportBtn:"⬇ Exportar .json", importBtn:"⬆ Importar .json",
     refHead:'📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span>',
     sum1:"Tamaños de asentamiento y cuántos vendedores",
     ref1p:"Los ambulantes se determinan cada semana (o día). El total puede ser 0. Se permiten repetidos: dos que venden casi lo mismo generan competencia y bajan precios.",
@@ -485,6 +488,10 @@ const UI = {
     alertBadFile:"Archivo no válido. Debe ser un .json exportado por esta herramienta.",
     noSaves:"No hay asentamientos guardados todavía. Se guardan en este navegador.",
     permAbbr:"perm.", travAbbr:"amb.", load:"Cargar", imported:"Importado",
+    exportCurrent:"⬇ Exportar actual", exportAll:"⬇ Exportar todas", renameBtn:"Renombrar",
+    vendorsWord:"vendedores", goodsWord:"artículos", currentTag:"actual", nameLabel:"Nombre de la ciudad",
+    noCities:"Aún no has generado ciudades. Genera una y se guarda aquí automáticamente.",
+    alertNoCities:"No hay ciudades guardadas para exportar todavía.",
     colSize:"Tamaño", colPop:"Población", colBasics:"Básicos garantizados", colVariety:"Puestos de variedad", colTravWeek:"Ambulantes / semana", min0:"(mín. 0)",
     colStall:"Puesto", colVendor:"Vendedor", colCategory:"Categoría", colHaggle:"Regateo", colExamples:"Ejemplos",
     troupeNote:"Una troupe no tiene tiendas fijas de variedad — su surtido llega con los vendedores ambulantes.",
@@ -599,14 +606,15 @@ function applyI18n(){
 function updateGenInfo(){
   const gi=document.getElementById("genInfo"); if(!gi||!current||!current.permanent) return;
   const s=SIZES.find(x=>x.key===current.sizeKey);
-  gi.textContent = (s?sizeName(s):current.sizeKey)+" · "+current.permanent.length+" "+L("permWord")+" · "+current.traveling.length+" "+L("travWord");
+  gi.textContent = (current.name?current.name+" · ":"")+(s?sizeName(s):current.sizeKey)+" · "+current.permanent.length+" "+L("permWord")+" · "+current.traveling.length+" "+L("travWord");
 }
-function setLang(l){ LANG=l; localStorage.setItem("lang",l); applyI18n(); renderSizePicker(); renderRefTables(); if(current&&current.permanent) render(); updateGenInfo(); }
+function setLang(l){ LANG=l; localStorage.setItem("lang",l); applyI18n(); renderSizePicker(); renderRefTables(); if(current&&current.permanent) render(); renderCities(); updateGenInfo(); }
 
 /* ===================== ESTADO ===================== */
 let selectedSize = null;      // objeto SIZES
-let current = null;           // {sizeKey, permanent:[...], traveling:[...]}
-const SAVE_KEY = "dnd_vendor_saves_v1";
+let current = null;           // {id, name, sizeKey, permanent:[...], traveling:[...]}
+const SAVE_KEY = "dnd_vendor_saves_v1";   // formato anterior (migración)
+const CITY_KEY = "dnd_vendor_cities_v2";  // ciudades persistentes
 
 /* ===================== UTILIDADES ===================== */
 function rollDie(sides){ return Math.floor(Math.random()*sides)+1; }
@@ -676,10 +684,12 @@ function generatePermanent(){
     log("d100", roll, vName(hit.key));
   }
   chosen.forEach(k=> perm.push(makeVendorEntry(k,"variety")));
-  if(!current) current={};
+  if(!current||!current.id) current={id:uid(), name:randomName()};
+  current.sizeKey=selectedSize.key;
   current.permanent = perm;
   applyCompetition();
   render();
+  persistCurrent();
 }
 
 function generateTraveling(){
@@ -695,10 +705,12 @@ function generateTraveling(){
     log("d100", roll, vName(hit.key));
     trav.push(makeVendorEntry(hit.key,"travel"));
   }
-  if(!current) current={};
+  if(!current||!current.id) current={id:uid(), name:randomName()};
+  current.sizeKey=selectedSize.key;
   current.traveling = trav;
   applyCompetition();
   render();
+  persistCurrent();
 }
 
 // Competencia: misma categoría entre vendedores presentes → −10%
@@ -712,9 +724,10 @@ function applyCompetition(){
 
 function generateAll(){
   if(!selectedSize){ alert(L("alertPickSize")); return; }
-  current = {sizeKey:selectedSize.key};
+  current = {id:uid(), name:randomName(), sizeKey:selectedSize.key};
   generatePermanent();
   generateTraveling();
+  const nm=document.getElementById("saveName"); if(nm) nm.value=current.name;
   updateGenInfo();
 }
 
@@ -836,6 +849,7 @@ function refreshCard(id){
   el.replaceWith(tmp.firstElementChild);
   wireCards();
   document.querySelector(`.vendor[data-id="${id}"]`).classList.add("flash");
+  persistCurrent();
 }
 function rerollVendor(v){
   if(v.tier==="travel"){
@@ -849,72 +863,136 @@ function rerollVendor(v){
     log("d100",roll,`(${L("changed")}) ${vName(hit.key)}`);
     const nv=makeVendorEntry(hit.key,"variety"); const i=current.permanent.indexOf(v); current.permanent[i]=nv;
   } else { alert(L("alertBasicFixed")); return; }
-  applyCompetition(); render();
+  applyCompetition(); render(); persistCurrent();
 }
 
-/* ===================== GUARDAR / IMPORTAR ===================== */
+/* ===================== NOMBRE ALEATORIO ===================== */
+const NAME_A=["Frost","Raven","Black","Silver","Grey","Storm","Iron","Gold","Red","White","Thorn","Wolf","Bright","Shadow","Moon","Sun","Dusk","Dawn","Oak","Ash","Stone","Salt","Wind","Mist","Ember","Green","Fair","High","Deep","Old","Bram","Cael","Vor","Mor","Dun","Karr","Vel","Ald","Hollow","North","Wester","Ester","Pine","Bell","Char","Gloom","Hart"];
+const NAME_B=["holm","moor","port","ford","vale","dale","wick","ton","burg","bury","gate","watch","fell","mere","marsh","hollow","reach","crest","forge","haven","keep","cross","hedge","wood","field","stead","shire","glen","run","bridge","hall","thorpe","spire","hearth","barrow"];
+function pickName(){ return NAME_A[(Math.random()*NAME_A.length)|0] + NAME_B[(Math.random()*NAME_B.length)|0]; }
+function randomName(){
+  const taken = new Set(getCities().map(c=>c.name));
+  for(let i=0;i<40;i++){ const n=pickName(); if(!taken.has(n)) return n; }
+  return pickName()+" "+((Math.random()*900+100)|0);
+}
+function uid(){ return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function nowStr(){ return new Date().toLocaleString(LANG==="en"?"en":"es"); }
+
+/* ===================== PERSISTENCIA / IMPORTAR / EXPORTAR ===================== */
 function serialize(){
   if(!current||!current.permanent) return null;
   const strip = v=>({key:v.key,tier:v.tier,factor:v.factor,priceLabel:v.priceLabel,hagRoll:v.hagRoll});
   return {sizeKey:current.sizeKey, permanent:current.permanent.map(strip), traveling:(current.traveling||[]).map(strip)};
 }
-function loadState(data){
-  const sz=SIZES.find(s=>s.key===data.sizeKey);
+function getCities(){
+  try{ const a=JSON.parse(localStorage.getItem(CITY_KEY)); if(Array.isArray(a)) return a; }catch(e){}
+  // migración desde el formato anterior, si existe
+  try{ const old=JSON.parse(localStorage.getItem(SAVE_KEY)); if(Array.isArray(old)&&old.length){ const m=old.map(o=>({id:o.id||uid(), name:o.name||"City", date:o.date||"", data:o.data})); localStorage.setItem(CITY_KEY, JSON.stringify(m)); return m; } }catch(e){}
+  return [];
+}
+function setCities(a){ localStorage.setItem(CITY_KEY, JSON.stringify(a)); }
+
+// Guarda (o actualiza) la ciudad actual en el navegador
+function persistCurrent(){
+  if(!current||!current.id||!current.permanent) return;
+  const store=getCities();
+  const entry={id:current.id, name:current.name, date:nowStr(), data:serialize()};
+  const i=store.findIndex(c=>c.id===current.id);
+  if(i>=0) store[i]=entry; else store.push(entry);
+  setCities(store); renderCities();
+}
+function loadCity(c){
+  const sz=SIZES.find(s=>s.key===c.data.sizeKey);
   if(sz){ selectedSize=sz; renderSizePicker(); renderRefTables(); }
-  current={sizeKey:data.sizeKey, permanent:data.permanent.map(v=>({...v,comp:0})), traveling:(data.traveling||[]).map(v=>({...v,comp:0}))};
+  current={id:c.id, name:c.name, sizeKey:c.data.sizeKey,
+    permanent:c.data.permanent.map(v=>({...v,comp:0})),
+    traveling:(c.data.traveling||[]).map(v=>({...v,comp:0}))};
   applyCompetition(); render();
-  document.getElementById("genInfo").textContent = `${sz?sizeName(sz):data.sizeKey} · ${L("loaded")}`;
+  const nm=document.getElementById("saveName"); if(nm) nm.value=current.name;
+  updateGenInfo(); renderCities();
 }
 
-function getSaves(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||[]; }catch(e){ return []; } }
-function setSaves(a){ localStorage.setItem(SAVE_KEY, JSON.stringify(a)); }
-function saveCurrent(){
-  const data=serialize();
-  if(!data){ alert(L("alertGenSave")); return; }
-  const name=document.getElementById("saveName").value.trim() || (selectedSize?sizeName(selectedSize):L("defaultName"));
-  const saves=getSaves();
-  saves.unshift({id:"s"+saves.length+"_"+name.replace(/\s+/g,"").slice(0,8), name, date:new Date().toLocaleString(LANG==="en"?"en":"es"), data});
-  setSaves(saves); renderSaved();
-  document.getElementById("saveName").value="";
+// Resumen de lo que tiene una ciudad
+function citySummary(c){
+  const perm=(c.data&&c.data.permanent)||[], trav=(c.data&&c.data.traveling)||[];
+  let goods=0; const shops=[];
+  [...perm,...trav].forEach(v=>{ const cat=CATALOG[v.key]; if(cat){ goods+=cat.goods.length; shops.push(vName(v.key)); } });
+  return {nV:perm.length+trav.length, goods, shops};
 }
-function renderSaved(){
-  const box=document.getElementById("savedList"); const saves=getSaves();
-  if(saves.length===0){ box.innerHTML=`<div class="sub">${L("noSaves")}</div>`; return; }
-  box.innerHTML = saves.map((s,i)=>`
-    <div class="saved-item">
-      <div><b>${s.name}</b> <span class="meta">— ${s.data.permanent.length} ${L("permAbbr")} / ${s.data.traveling.length} ${L("travAbbr")} · ${s.date}</span></div>
-      <div class="row">
-        <button class="small loadSave" data-i="${i}">${L("load")}</button>
-        <button class="small ghost delSave" data-i="${i}">✕</button>
+function renderCities(){
+  const box=document.getElementById("savedList");
+  const store=getCities().slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", LANG==="en"?"en":"es"));
+  if(store.length===0){ box.innerHTML=`<div class="sub">${L("noCities")}</div>`; return; }
+  box.innerHTML = store.map(c=>{
+    const s=SIZES.find(x=>x.key===(c.data&&c.data.sizeKey));
+    const sm=citySummary(c);
+    const isCur = current && current.id===c.id;
+    const shopList = sm.shops.join(", ");
+    return `<div class="saved-item" data-id="${c.id}"${isCur?' style="outline:1px solid var(--gold)"':''}>
+      <div style="flex:1; min-width:0">
+        <div><b>${c.name}</b> <span class="vtag var">${s?sizeName(s):(c.data&&c.data.sizeKey||"?")}</span>${isCur?` <span class="vtag basic">${L("currentTag")}</span>`:""}</div>
+        <div class="meta">${sm.nV} ${L("vendorsWord")} · ${sm.goods} ${L("goodsWord")}${c.date?" · "+c.date:""}</div>
+        <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${shopList}</div>
       </div>
-    </div>`).join("");
-  box.querySelectorAll(".loadSave").forEach(b=> b.onclick=()=> loadState(getSaves()[b.dataset.i].data));
-  box.querySelectorAll(".delSave").forEach(b=> b.onclick=()=>{ const a=getSaves(); a.splice(b.dataset.i,1); setSaves(a); renderSaved(); });
+      <div class="row">
+        <button class="small loadCity" data-id="${c.id}">${L("load")}</button>
+        <button class="small ghost expCity" data-id="${c.id}" title="${L("exportCurrent")}">⬇</button>
+        <button class="small ghost delCity" data-id="${c.id}">✕</button>
+      </div>
+    </div>`; }).join("");
+  box.querySelectorAll(".loadCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) loadCity(c); });
+  box.querySelectorAll(".expCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) downloadJson({type:"dnd-vendor-settlement", version:2, name:c.name, data:c.data}, c.name); });
+  box.querySelectorAll(".delCity").forEach(b=> b.onclick=()=>{ const a=getCities().filter(x=>x.id!==b.dataset.id); setCities(a); if(current&&current.id===b.dataset.id){} renderCities(); });
 }
-function exportJson(){
-  const data=serialize();
-  if(!data){ alert(L("alertGenExport")); return; }
-  const name=(document.getElementById("saveName").value.trim() || (selectedSize?sizeName(selectedSize):"settlement"));
-  const payload={type:"dnd-vendor-settlement", version:1, name, data};
+
+function downloadJson(payload, name){
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download=name.replace(/\s+/g,"_").toLowerCase()+".json"; a.click(); URL.revokeObjectURL(url);
+  a.href=url; a.download=(name||"settlement").replace(/\s+/g,"_").toLowerCase()+".json"; a.click(); URL.revokeObjectURL(url);
+}
+// 1) Exportar solo la ciudad actual
+function exportCurrent(){
+  const data=serialize();
+  if(!data){ alert(L("alertGenExport")); return; }
+  const name=current&&current.name ? current.name : (selectedSize?sizeName(selectedSize):"settlement");
+  downloadJson({type:"dnd-vendor-settlement", version:2, name, data}, name);
+}
+// 2) Exportar todas las ciudades persistentes
+function exportAll(){
+  const store=getCities();
+  if(!store.length){ alert(L("alertNoCities")); return; }
+  downloadJson({type:"dnd-vendor-collection", version:2, cities:store}, "cities_all");
 }
 function importJson(file){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
       const obj=JSON.parse(e.target.result);
-      const data = obj.data || obj; // acepta payload completo o el estado directo
-      if(!data.sizeKey || !data.permanent) throw new Error("formato");
-      loadState(data);
-      // guardar también en la lista local
-      const saves=getSaves();
-      saves.unshift({id:"imp_"+Date.now(), name:(obj.name||L("imported")), date:new Date().toLocaleString(LANG==="en"?"en":"es"), data});
-      setSaves(saves); renderSaved();
+      if(obj && (obj.type==="dnd-vendor-collection" || Array.isArray(obj.cities))){
+        // colección: fusiona todas las ciudades en el store
+        const store=getCities(); const ids=new Set(store.map(c=>c.id));
+        (obj.cities||[]).forEach(c=>{
+          if(!c || !c.data || !c.data.sizeKey || !c.data.permanent) return;
+          let id=c.id||uid(); if(ids.has(id)) id=uid(); ids.add(id);
+          store.push({id, name:c.name||L("imported"), date:c.date||nowStr(), data:c.data});
+        });
+        setCities(store); renderCities();
+      } else {
+        // ciudad única: carga y persiste
+        const data=obj.data||obj;
+        if(!data.sizeKey || !data.permanent) throw new Error("formato");
+        const c={id:uid(), name:(obj.name||L("imported")), date:nowStr(), data};
+        const store=getCities(); store.push(c); setCities(store);
+        loadCity(c);
+      }
     }catch(err){ alert(L("alertBadFile")); }
   };
   reader.readAsText(file);
+}
+function renameCurrent(){
+  if(!current||!current.id){ alert(L("alertGenSave")); return; }
+  const v=document.getElementById("saveName").value.trim();
+  if(v){ current.name=v; persistCurrent(); updateGenInfo(); }
 }
 
 /* ===================== TABLAS DE REFERENCIA ===================== */
@@ -974,10 +1052,12 @@ function renderRefTables(){
 
 /* ===================== INIT ===================== */
 document.getElementById("genBtn").onclick=generateAll;
-document.getElementById("regenPerm").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generatePermanent(); };
-document.getElementById("regenTravel").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generateTraveling(); };
-document.getElementById("saveBtn").onclick=saveCurrent;
-document.getElementById("exportBtn").onclick=exportJson;
+document.getElementById("regenPerm").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} generatePermanent(); updateGenInfo(); };
+document.getElementById("regenTravel").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} generateTraveling(); updateGenInfo(); };
+document.getElementById("renameBtn").onclick=renameCurrent;
+document.getElementById("saveName").addEventListener("keydown",e=>{ if(e.key==="Enter") renameCurrent(); });
+document.getElementById("exportBtn").onclick=exportCurrent;
+document.getElementById("exportAllBtn").onclick=exportAll;
 document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
 document.getElementById("importFile").onchange=e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; };
 document.getElementById("clearLog").onclick=()=>{ document.getElementById("logList").innerHTML=`<div class="l logempty">${L("logEmpty")}</div>`; };
@@ -987,7 +1067,7 @@ selectedSize = SIZES[3]; // Villa / Town por defecto
 applyI18n();
 renderSizePicker();
 renderRefTables();
-renderSaved();
+renderCities();
 </script>
 
 <!-- ===================== FONDO DE PARTÍCULAS ===================== -->
