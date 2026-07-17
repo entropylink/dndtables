@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tablas de Vendedores por Asentamiento — D&D</title>
+<title>Settlement Vendor Tables — D&D</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -31,6 +31,9 @@
     display:flex; align-items:center; justify-content:center; padding:0; font-size:1rem; color:var(--gold);
     border-color:var(--gold2); background:var(--bg2); opacity:.5}
   #bgToggle:hover{opacity:1; color:var(--cyan); border-color:var(--cyan)}
+  #langToggle{position:fixed; right:14px; top:14px; z-index:22; padding:6px 13px; font-weight:700; font-size:.82rem;
+    background:var(--gold); color:#1a1b0a; border-color:var(--gold)}
+  #langToggle:hover{background:var(--gold2); border-color:var(--gold2); color:#1a1b0a}
   header{
     background:linear-gradient(180deg, rgba(28,29,29,.80), rgba(36,37,37,.45));
     backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
@@ -123,93 +126,87 @@
 </head>
 <body>
 <canvas id="bg"></canvas>
-<button id="bgToggle" title="Pausar / reanudar el fondo de partículas">✦</button>
+<button id="bgToggle" data-i18n-title="bgToggleTitle" title="Pause / resume the particle background">✦</button>
+<button id="langToggle" title="Cambiar a español">ES</button>
 <header>
-  <h1>⚖️ Tablas de Vendedores por Asentamiento</h1>
-  <p>Genera vendedores permanentes y ambulantes · precios variables con competencia · regateo por Persuasión · tira en vivo o digital</p>
+  <h1 data-i18n="h1">⚖️ Settlement Vendor Tables</h1>
+  <p data-i18n="tagline">Generate permanent &amp; traveling vendors · variable prices with competition · Persuasion haggling · roll live or digital</p>
 </header>
 
 <div class="wrap">
 
   <div class="controls">
     <div class="row" style="justify-content:space-between">
-      <div><h3 style="margin:0">1 · Elige el tamaño del asentamiento</h3><span class="sub">De troupe errante a megalópolis</span></div>
+      <div><h3 style="margin:0" data-i18n="chooseSize">1 · Choose the settlement size</h3><span class="sub" data-i18n="chooseSizeSub">From a wandering troupe to a megalopolis</span></div>
     </div>
     <div class="sizes" id="sizePicker"></div>
     <div class="row" style="margin-top:14px">
-      <button class="primary" id="genBtn">🎲 Generar asentamiento</button>
-      <button id="regenPerm" class="small">↻ Solo permanentes</button>
-      <button id="regenTravel" class="small">↻ Solo ambulantes</button>
+      <button class="primary" id="genBtn" data-i18n="genBtn">🎲 Generate settlement</button>
+      <button id="regenPerm" class="small" data-i18n="regenPerm">↻ Permanent only</button>
+      <button id="regenTravel" class="small" data-i18n="regenTravel">↻ Traveling only</button>
       <span class="sub" id="genInfo"></span>
     </div>
   </div>
 
-  <h2>Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span></h2>
-  <div class="grid" id="permGrid"><div class="empty">Elige un tamaño y pulsa «Generar asentamiento».</div></div>
+  <h2 data-i18n-html="permHead">Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span></h2>
+  <div class="grid" id="permGrid"><div class="empty" data-i18n="permEmpty">Pick a size and press "Generate settlement".</div></div>
 
-  <h2>Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span></h2>
+  <h2 data-i18n-html="travHead">Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span></h2>
   <div class="grid" id="travelGrid"><div class="empty">—</div></div>
 
-  <h2>💾 Guardar / Importar resultados</h2>
+  <h2 data-i18n="saveTitle">💾 Save / Import results</h2>
   <div class="controls">
     <div class="savebar">
-      <input type="text" id="saveName" placeholder="Nombre (p.ej. Puerto Escarcha)" style="flex:1; min-width:180px">
-      <button class="primary" id="saveBtn">Guardar asentamiento actual</button>
-      <button id="exportBtn">⬇ Exportar .json</button>
+      <input type="text" id="saveName" data-i18n-ph="saveNamePh" placeholder="Name (e.g. Frostport)" style="flex:1; min-width:180px">
+      <button class="primary" id="saveBtn" data-i18n="saveBtn">Save current settlement</button>
+      <button id="exportBtn" data-i18n="exportBtn">⬇ Export .json</button>
       <label class="button" style="display:inline-block">
-        <button id="importBtn">⬆ Importar .json</button>
+        <button id="importBtn" data-i18n="importBtn">⬆ Import .json</button>
       </label>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     </div>
     <div id="savedList" style="margin-top:10px"></div>
   </div>
 
-  <h2>📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span></h2>
+  <h2 data-i18n-html="refHead">📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span></h2>
 
   <details>
-    <summary>Tamaños de asentamiento y cuántos vendedores</summary>
+    <summary><span data-i18n="sum1">Settlement sizes &amp; how many vendors</span></summary>
     <table class="ref" id="sizeRefTable"></table>
-    <p class="sub">Los ambulantes se determinan cada semana (o día). El total puede ser 0. Se permiten repetidos: dos que venden casi lo mismo generan competencia y bajan precios.</p>
+    <p class="sub" data-i18n="ref1p">Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.</p>
   </details>
 
   <details>
-    <summary>Vendedores permanentes de variedad <span class="die" id="varDie">d100</span> <span class="sub" id="varSizeLbl"></span></summary>
-    <p class="sub">Tabla ajustada al tamaño seleccionado. Tira <b>1d100</b> por cada puesto de variedad indicado en la tabla de tamaños. Repite si sale un duplicado.</p>
+    <summary><span data-i18n="sum2">Permanent variety vendors</span> <span class="die" id="varDie">d100</span> <span class="sub" id="varSizeLbl"></span></summary>
+    <p class="sub" data-i18n-html="ref2p">Table adjusted to the selected size. Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.</p>
     <table class="ref" id="varRefTable"></table>
   </details>
 
   <details>
-    <summary>Vendedores ambulantes <span class="die">d100</span></summary>
-    <p class="sub">Primero determina <b>cuántos</b> con el dado de la tabla de tamaños (mín. 0). Luego tira <b>1d100</b> por cada uno aquí. Los repetidos son válidos.</p>
+    <summary><span data-i18n="sum3">Traveling vendors</span> <span class="die">d100</span></summary>
+    <p class="sub" data-i18n-html="ref3p">First determine <b>how many</b> with the die from the sizes table (min. 0). Then roll <b>1d100</b> for each one here. Duplicates are valid.</p>
     <table class="ref" id="travelRefTable"></table>
   </details>
 
   <details>
-    <summary>Variación de precios y competencia <span class="die">d12</span></summary>
-    <p class="sub">Tira <b>1d12</b> por vendedor para su nivel de precios frente al precio base del manual. Si dos o más venden la misma categoría, aplica además <b>−10 %</b> por competencia.</p>
+    <summary><span data-i18n="sum4">Price variation &amp; competition</span> <span class="die">d12</span></summary>
+    <p class="sub" data-i18n-html="ref4p">Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.</p>
     <table class="ref" id="priceRefTable"></table>
   </details>
 
   <details>
-    <summary>Regateo con Persuasión <span class="die">1d20 + CAR</span></summary>
-    <p>Compara tu resultado de <b>Prueba de Persuasión (Carisma)</b> con la <b>CD</b> del vendedor (indicada en cada ficha):</p>
-    <table class="ref">
-      <tr><th>Resultado</th><th>Efecto sobre el precio</th></tr>
-      <tr><td>Falla por 5 o más</td><td class="up">El vendedor se ofende: <b>+10 %</b> (y puede cerrarte el trato)</td></tr>
-      <tr><td>Por debajo de la CD</td><td>No cede: precio sin cambios</td></tr>
-      <tr><td>Iguala la CD</td><td class="down">−5 %</td></tr>
-      <tr><td>Cada 3 puntos por encima de la CD</td><td class="down">−5 % adicional</td></tr>
-      <tr><td>Tope</td><td>Hasta el <b>máximo de regateo</b> del vendedor</td></tr>
-    </table>
-    <p class="sub">Usa la calculadora de cada ficha: introduce el resultado total y verás los precios negociados. Buhoneros y charlatanes ceden mucho; templos, encantadores y herreros de renombre, poco.</p>
+    <summary><span data-i18n="sum5">Haggling with Persuasion</span> <span class="die" data-i18n="hagDie">1d20 + CHA</span></summary>
+    <p data-i18n-html="ref5intro">Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card):</p>
+    <table class="ref" id="haggleRules" data-i18n-html="haggleRules"></table>
+    <p class="sub" data-i18n="ref5note">Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.</p>
   </details>
 
-  <p class="sub" style="margin-top:24px; text-align:center">Precios base tomados de las tablas de equipo de D&D 5e (po = oro · pp = plata · pc = cobre). Los ítems «exóticos», mágicos o de dudosa procedencia usan valores estimados. Ajusta a tu mundo libremente.</p>
+  <p class="sub" style="margin-top:24px; text-align:center" data-i18n-html="footer">Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.</p>
 </div>
 
 <div id="log">
-  <h4>🎲 Registro de tiradas <button class="small ghost" id="clearLog">limpiar</button></h4>
-  <div id="logList"><div class="l">Aún no has tirado nada.</div></div>
+  <h4>🎲 <span data-i18n="logTitle">Roll log</span> <button class="small ghost" id="clearLog" data-i18n="clearBtn">clear</button></h4>
+  <div id="logList"><div class="l logempty" data-i18n="logEmpty">You haven't rolled anything yet.</div></div>
 </div>
 
 <script>
@@ -362,28 +359,249 @@ const CATALOG = {
 
 const ALL6 = ["generalStore","tavern","blacksmith","grocer","temple","apothecary"];
 const SIZES = [
-  {key:"troupe",     name:"Troupe",      sub:"Compañía errante", pop:"5–30",           core:["generalStore","tavern"], variety:1, travel:[1,4,-2]},
-  {key:"hamlet",     name:"Aldea",       sub:"Hamlet",           pop:"20–100",         core:["generalStore","tavern","blacksmith"], variety:1, travel:[1,3,-1]},
-  {key:"village",    name:"Pueblo",      sub:"Village",          pop:"100–1.000",      core:["generalStore","tavern","blacksmith","grocer","temple"], variety:2, travel:[1,4,-1]},
-  {key:"town",       name:"Villa",       sub:"Town",             pop:"1.000–6.000",    core:ALL6, variety:3, travel:[1,4,0]},
-  {key:"city",       name:"Ciudad",      sub:"City",             pop:"6.000–12.000",   core:ALL6, variety:4, travel:[1,6,0]},
-  {key:"largeCity",  name:"Gran Ciudad", sub:"Large City",       pop:"12.000–25.000",  core:ALL6, variety:5, travel:[1,6,1]},
-  {key:"metropolis", name:"Metrópolis",  sub:"Metropolis",       pop:"25.000–100.000", core:ALL6, variety:6, travel:[1,8,0]},
-  {key:"megalopolis",name:"Megalópolis", sub:"Megalopolis",      pop:"100.000+",       core:ALL6, variety:8, travel:[1,10,0]},
+  {key:"troupe",     name:"Troupe",      sub:"Compañía errante", en:{name:"Troupe",      sub:"Wandering company"}, pop:"5–30",           core:["generalStore","tavern"], variety:1, travel:[1,4,-2]},
+  {key:"hamlet",     name:"Aldea",       sub:"Hamlet",           en:{name:"Hamlet",      sub:"Aldea"},             pop:"20–100",         core:["generalStore","tavern","blacksmith"], variety:1, travel:[1,3,-1]},
+  {key:"village",    name:"Pueblo",      sub:"Village",          en:{name:"Village",     sub:"Pueblo"},            pop:"100–1.000",      core:["generalStore","tavern","blacksmith","grocer","temple"], variety:2, travel:[1,4,-1]},
+  {key:"town",       name:"Villa",       sub:"Town",             en:{name:"Town",        sub:"Villa"},             pop:"1.000–6.000",    core:ALL6, variety:3, travel:[1,4,0]},
+  {key:"city",       name:"Ciudad",      sub:"City",             en:{name:"City",        sub:"Ciudad"},            pop:"6.000–12.000",   core:ALL6, variety:4, travel:[1,6,0]},
+  {key:"largeCity",  name:"Gran Ciudad", sub:"Large City",       en:{name:"Large City",  sub:"Gran Ciudad"},       pop:"12.000–25.000",  core:ALL6, variety:5, travel:[1,6,1]},
+  {key:"metropolis", name:"Metrópolis",  sub:"Metropolis",       en:{name:"Metropolis",  sub:"Metrópolis"},        pop:"25.000–100.000", core:ALL6, variety:6, travel:[1,8,0]},
+  {key:"megalopolis",name:"Megalópolis", sub:"Megalopolis",      en:{name:"Megalopolis", sub:"Megalópolis"},       pop:"100.000+",       core:ALL6, variety:8, travel:[1,10,0]},
 ];
 const VARIETY_KEYS = ["weaponsmith","armorsmith","fletcher","leatherworker","tailor","jeweler","alchemist","herbalist","scribe","stable","carpenter","cobbler","chandler","fishmonger","vintner","spice","cartographer","tinker","exotic","enchanter","moneylender","kennel","perfumer"];
 const TRAVEL_KEYS = ["peddler","caravan","snakeOil","exoticBeast","mercRecruiter","fortune","gnomeTinker","wanderEnchanter","relic","blackMarket","potionBrewer","foodCart","bardSupply","horseTrader","rug","bookPeddler"];
 
-// d12 -> variación de precios
+// d12 -> variación de precios (label = ES, en = EN)
 const PRICE_TIERS = [
-  {r:[1,1],   f:1.20, label:"Carestía (+20%)"},
-  {r:[2,2],   f:1.15, label:"Caro (+15%)"},
-  {r:[3,4],   f:1.10, label:"Algo caro (+10%)"},
-  {r:[5,8],   f:1.00, label:"Precio estándar"},
-  {r:[9,10],  f:0.95, label:"Rebaja (−5%)"},
-  {r:[11,11], f:0.90, label:"Oferta (−10%)"},
-  {r:[12,12], f:0.85, label:"Liquidación (−15%)"},
+  {r:[1,1],   f:1.20, label:"Carestía (+20%)",    en:"Shortage (+20%)"},
+  {r:[2,2],   f:1.15, label:"Caro (+15%)",        en:"Pricey (+15%)"},
+  {r:[3,4],   f:1.10, label:"Algo caro (+10%)",   en:"A bit pricey (+10%)"},
+  {r:[5,8],   f:1.00, label:"Precio estándar",    en:"Standard price"},
+  {r:[9,10],  f:0.95, label:"Rebaja (−5%)",       en:"Markdown (−5%)"},
+  {r:[11,11], f:0.90, label:"Oferta (−10%)",      en:"Deal (−10%)"},
+  {r:[12,12], f:0.85, label:"Liquidación (−15%)", en:"Clearance (−15%)"},
 ];
+
+/* ===================== i18n ===================== */
+let LANG = localStorage.getItem("lang") || "en";
+const UI = {
+  en:{
+    h1:"⚖️ Settlement Vendor Tables",
+    tagline:"Generate permanent & traveling vendors · variable prices with competition · Persuasion haggling · roll live or digital",
+    chooseSize:"1 · Choose the settlement size", chooseSizeSub:"From a wandering troupe to a megalopolis",
+    genBtn:"🎲 Generate settlement", regenPerm:"↻ Permanent only", regenTravel:"↻ Traveling only",
+    permHead:'Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span>',
+    travHead:'Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span>',
+    saveTitle:"💾 Save / Import results",
+    saveNamePh:"Name (e.g. Frostport)", saveBtn:"Save current settlement", exportBtn:"⬇ Export .json", importBtn:"⬆ Import .json",
+    refHead:'📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span>',
+    sum1:"Settlement sizes & how many vendors",
+    ref1p:"Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.",
+    sum2:"Permanent variety vendors",
+    ref2p:"Table adjusted to the selected size. Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.",
+    sum3:"Traveling vendors",
+    ref3p:"First determine <b>how many</b> with the die from the sizes table (min. 0). Then roll <b>1d100</b> for each one here. Duplicates are valid.",
+    sum4:"Price variation & competition",
+    ref4p:"Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.",
+    sum5:"Haggling with Persuasion", hagDie:"1d20 + CHA",
+    ref5intro:"Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card):",
+    haggleRules:`<tr><th>Result</th><th>Effect on price</th></tr>`+
+      `<tr><td>Fail by 5 or more</td><td class="up">The vendor takes offense: <b>+10%</b> (and may refuse the deal)</td></tr>`+
+      `<tr><td>Below the DC</td><td>Won't budge: price unchanged</td></tr>`+
+      `<tr><td>Meet the DC</td><td class="down">−5%</td></tr>`+
+      `<tr><td>Every 3 points above the DC</td><td class="down">−5% more</td></tr>`+
+      `<tr><td>Cap</td><td>Up to the vendor's <b>max haggle</b></td></tr>`,
+    ref5note:"Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.",
+    footer:"Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.",
+    logTitle:"Roll log", clearBtn:"clear", logEmpty:"You haven't rolled anything yet.",
+    bgToggleTitle:"Pause / resume the particle background",
+    permEmpty:'Pick a size and press "Generate settlement".',
+    travNone:"No traveling vendor arrived this week. Try again in a few days.",
+    tierBasic:"Permanent · basic", tierVar:"Permanent · variety", tierTravel:"Traveling",
+    comp:"Competition", colItem:"Item", colBase:"base", colHere:"here",
+    haggleWord:"Haggle", dcPersuasion:"Persuasion DC", maxDisc:"max discount", resultD20:"d20 result:",
+    haggleBtn:"Haggle", rollWord:"roll", haggleHint:"Enter your Persuasion check to see the negotiated price.",
+    rerollPrice:"↻ Prices", rerollVendor:"↻ Change vendor",
+    permWord:"permanent", travWord:"traveling this week", loaded:"loaded",
+    dupReroll:"duplicate, rerolling", changed:"changed", travellersWord:"traveling vendor(s)",
+    persuasionIn:"Persuasion at",
+    alertPickSize:"Choose a settlement size first.", alertPickSizeShort:"Pick a size.",
+    alertNoMoreVariety:"No more variety stalls for this size.",
+    alertBasicFixed:"Basic vendors are fixed for this size. You can still reroll their prices.",
+    alertGenSave:"Generate a settlement before saving.", alertGenExport:"Generate a settlement before exporting.",
+    alertBadFile:"Invalid file. It must be a .json exported by this tool.",
+    noSaves:"No saved settlements yet. They are stored in this browser.",
+    permAbbr:"perm.", travAbbr:"trav.", load:"Load", imported:"Imported",
+    colSize:"Size", colPop:"Population", colBasics:"Guaranteed basics", colVariety:"Variety stalls", colTravWeek:"Traveling / week", min0:"(min. 0)",
+    colStall:"Stall", colVendor:"Vendor", colCategory:"Category", colHaggle:"Haggle", colExamples:"Examples",
+    troupeNote:"A troupe has no fixed variety shops — its stock arrives with the traveling vendors.",
+    colPriceLevel:"Price level", colFactor:"Factor", compRow:"Competition (same category, ≥2 vendors)", extra:"extra",
+    defaultName:"Settlement"
+  },
+  es:{
+    h1:"⚖️ Tablas de Vendedores por Asentamiento",
+    tagline:"Genera vendedores permanentes y ambulantes · precios variables con competencia · regateo por Persuasión · tira en vivo o digital",
+    chooseSize:"1 · Elige el tamaño del asentamiento", chooseSizeSub:"De troupe errante a megalópolis",
+    genBtn:"🎲 Generar asentamiento", regenPerm:"↻ Solo permanentes", regenTravel:"↻ Solo ambulantes",
+    permHead:'Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span>',
+    travHead:'Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span>',
+    saveTitle:"💾 Guardar / Importar resultados",
+    saveNamePh:"Nombre (p.ej. Puerto Escarcha)", saveBtn:"Guardar asentamiento actual", exportBtn:"⬇ Exportar .json", importBtn:"⬆ Importar .json",
+    refHead:'📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span>',
+    sum1:"Tamaños de asentamiento y cuántos vendedores",
+    ref1p:"Los ambulantes se determinan cada semana (o día). El total puede ser 0. Se permiten repetidos: dos que venden casi lo mismo generan competencia y bajan precios.",
+    sum2:"Vendedores permanentes de variedad",
+    ref2p:"Tabla ajustada al tamaño seleccionado. Tira <b>1d100</b> por cada puesto de variedad indicado en la tabla de tamaños. Repite si sale un duplicado.",
+    sum3:"Vendedores ambulantes",
+    ref3p:"Primero determina <b>cuántos</b> con el dado de la tabla de tamaños (mín. 0). Luego tira <b>1d100</b> por cada uno aquí. Los repetidos son válidos.",
+    sum4:"Variación de precios y competencia",
+    ref4p:"Tira <b>1d12</b> por vendedor para su nivel de precios frente al precio base del manual. Si dos o más venden la misma categoría, aplica además <b>−10 %</b> por competencia.",
+    sum5:"Regateo con Persuasión", hagDie:"1d20 + CAR",
+    ref5intro:"Compara tu resultado de <b>Prueba de Persuasión (Carisma)</b> con la <b>CD</b> del vendedor (indicada en cada ficha):",
+    haggleRules:'<tr><th>Resultado</th><th>Efecto sobre el precio</th></tr>'+
+      '<tr><td>Falla por 5 o más</td><td class="up">El vendedor se ofende: <b>+10 %</b> (y puede cerrarte el trato)</td></tr>'+
+      '<tr><td>Por debajo de la CD</td><td>No cede: precio sin cambios</td></tr>'+
+      '<tr><td>Iguala la CD</td><td class="down">−5 %</td></tr>'+
+      '<tr><td>Cada 3 puntos por encima de la CD</td><td class="down">−5 % adicional</td></tr>'+
+      '<tr><td>Tope</td><td>Hasta el <b>máximo de regateo</b> del vendedor</td></tr>',
+    ref5note:"Usa la calculadora de cada ficha: introduce el resultado total y verás los precios negociados. Buhoneros y charlatanes ceden mucho; templos, encantadores y herreros de renombre, poco.",
+    footer:"Precios base tomados de las tablas de equipo de D&D 5e (po = oro · pp = plata · pc = cobre). Los ítems «exóticos», mágicos o de dudosa procedencia usan valores estimados. Ajusta a tu mundo libremente.",
+    logTitle:"Registro de tiradas", clearBtn:"limpiar", logEmpty:"Aún no has tirado nada.",
+    bgToggleTitle:"Pausar / reanudar el fondo de partículas",
+    permEmpty:"Elige un tamaño y pulsa «Generar asentamiento».",
+    travNone:"Esta semana no ha llegado ningún vendedor ambulante. Vuelve a probar en unos días.",
+    tierBasic:"Permanente · básico", tierVar:"Permanente · variedad", tierTravel:"Ambulante",
+    comp:"Competencia", colItem:"Artículo", colBase:"base", colHere:"aquí",
+    haggleWord:"Regateo", dcPersuasion:"CD Persuasión", maxDisc:"máx. descuento", resultD20:"Resultado d20:",
+    haggleBtn:"Regatear", rollWord:"tirar", haggleHint:"Introduce tu tirada de Persuasión para ver el precio negociado.",
+    rerollPrice:"↻ Precios", rerollVendor:"↻ Cambiar vendedor",
+    permWord:"permanentes", travWord:"ambulante(s) esta semana", loaded:"cargado",
+    dupReroll:"repetido, repito tirada", changed:"cambio", travellersWord:"ambulante(s)",
+    persuasionIn:"Persuasión en",
+    alertPickSize:"Elige primero un tamaño de asentamiento.", alertPickSizeShort:"Elige un tamaño.",
+    alertNoMoreVariety:"No quedan más puestos de variedad para este tamaño.",
+    alertBasicFixed:"Los vendedores básicos son fijos para este tamaño. Puedes recambiar sus precios.",
+    alertGenSave:"Genera un asentamiento antes de guardar.", alertGenExport:"Genera un asentamiento antes de exportar.",
+    alertBadFile:"Archivo no válido. Debe ser un .json exportado por esta herramienta.",
+    noSaves:"No hay asentamientos guardados todavía. Se guardan en este navegador.",
+    permAbbr:"perm.", travAbbr:"amb.", load:"Cargar", imported:"Importado",
+    colSize:"Tamaño", colPop:"Población", colBasics:"Básicos garantizados", colVariety:"Puestos de variedad", colTravWeek:"Ambulantes / semana", min0:"(mín. 0)",
+    colStall:"Puesto", colVendor:"Vendedor", colCategory:"Categoría", colHaggle:"Regateo", colExamples:"Ejemplos",
+    troupeNote:"Una troupe no tiene tiendas fijas de variedad — su surtido llega con los vendedores ambulantes.",
+    colPriceLevel:"Nivel de precios", colFactor:"Factor", compRow:"Competencia (misma categoría, ≥2 vendedores)", extra:"extra",
+    defaultName:"Asentamiento"
+  }
+};
+const VEN_EN = {
+  "Mercader General":"General Store","Taberna y Posada":"Tavern & Inn","Herrería":"Smithy","Puesto de Mercado":"Market Stall",
+  "Templo":"Temple","Boticario":"Apothecary","Armería":"Weaponsmith","Taller de Armaduras":"Armorer","Flechería":"Fletcher",
+  "Curtiduría":"Leatherworker","Sastrería":"Tailor","Joyería":"Jeweler","Alquimista":"Alchemist","Herbolario":"Herbalist",
+  "Escribanía y Librería":"Scribe & Bookshop","Establos":"Stables","Carpintería":"Carpenter","Zapatería":"Cobbler",
+  "Cerería":"Chandler","Pescadería":"Fishmonger","Vinatería":"Wine Merchant","Especiería":"Spice Merchant",
+  "Cartografía":"Cartographer","Taller de Herramientas":"Tool Workshop","Importador de Exóticos":"Exotic Importer",
+  "Encantador Arcano":"Arcane Enchanter","Casa de Cambio":"Moneychanger","Criadero":"Kennel","Perfumería":"Perfumer",
+  "Buhonero":"Peddler","Mercader de Caravana":"Caravan Merchant","Curandero Charlatán":"Snake-Oil Healer",
+  "Tratante de Bestias":"Beast Trader","Reclutador de Mercenarios":"Mercenary Recruiter","Adivino":"Fortune Teller",
+  "Gnomo Inventor":"Gnome Tinker","Encantador Errante":"Wandering Enchanter","Vendedor de Reliquias":"Relic Seller",
+  "Contrabandista":"Smuggler","Pocionero Ambulante":"Traveling Potioner","Carreta de Comida":"Food Cart",
+  "Proveedor de Bardos":"Bard Supplier","Chalán de Caballos":"Horse Trader","Mercader de Alfombras":"Rug Merchant",
+  "Vendedor de Libros Raros":"Rare Book Seller"
+};
+const CAT_EN = {
+  "general":"general","comida":"food","herrería":"smithing","medicina":"medicine","armas":"weapons","armadura":"armor",
+  "distancia":"ranged","cuero":"leather","ropa":"clothing","lujo":"luxury","alquimia":"alchemy","saber":"lore",
+  "bestias":"beasts","madera":"woodwork","herramientas":"tools","magia":"magic","finanzas":"finance","fe":"faith","ilegal":"black market"
+};
+const ITM_EN = {
+  "Raciones de viaje (1 día)":"Travel rations (1 day)","Antorcha":"Torch","Aceite (frasco)":"Oil (flask)",
+  "Cuerda de cáñamo (15 m)":"Hempen rope (50 ft)","Saco de dormir":"Bedroll","Odre":"Waterskin","Yesquero":"Tinderbox",
+  "Mochila":"Backpack","Vela":"Candle","Farol con capucha":"Hooded lantern","Jarra de cerveza":"Mug of ale",
+  "Jarra de vino común":"Pitcher of common wine","Comida del día":"Meal of the day","Pan y queso":"Bread & cheese",
+  "Habitación modesta (noche)":"Modest room (night)","Habitación cómoda (noche)":"Comfortable room (night)",
+  "Botella de vino fino":"Bottle of fine wine","Daga":"Dagger","Hacha de mano":"Handaxe","Lanza":"Spear","Maza":"Mace",
+  "Martillo":"Hammer","Palanca":"Crowbar","Pala":"Shovel","Olla de hierro":"Iron pot","Cadena (3 m)":"Chain (10 ft)",
+  "Herradura (juego)":"Horseshoes (set)","Pan (hogaza)":"Bread (loaf)","Queso (trozo)":"Cheese (hunk)","Carne (trozo)":"Meat (chunk)",
+  "Pescado ahumado":"Smoked fish","Cerveza (galón)":"Ale (gallon)","Raciones (1 día)":"Rations (1 day)","Huevos (docena)":"Eggs (dozen)",
+  "Fruta y verdura (cesta)":"Fruit & veg (basket)","Símbolo sagrado":"Holy symbol","Agua bendita (frasco)":"Holy water (flask)",
+  "Poción de curación":"Potion of healing","Incienso (bloque)":"Incense (block)","Vela votiva":"Votive candle",
+  "Servicio de sanación (donativo)":"Healing service (donation)","Botiquín (kit de sanador)":"Healer's kit","Antitoxina":"Antitoxin",
+  "Ungüento medicinal":"Medicinal salve","Vendas e hilo":"Bandages & thread","Frasco vacío":"Empty vial","Hierbas secas (bolsa)":"Dried herbs (pouch)",
+  "Espada larga":"Longsword","Espada corta":"Shortsword","Espadón":"Greatsword","Hacha de batalla":"Battleaxe",
+  "Martillo de guerra":"Warhammer","Estoque":"Rapier","Cimitarra":"Scimitar","Alabarda":"Halberd","Armadura de cuero":"Leather armor",
+  "Cuero tachonado":"Studded leather","Camisa de mallas":"Chain shirt","Cota de escamas":"Scale mail","Coraza":"Breastplate",
+  "Media placa":"Half plate","Cota de malla":"Chain mail","Escudo":"Shield","Arco corto":"Shortbow","Arco largo":"Longbow",
+  "Ballesta ligera":"Light crossbow","Ballesta pesada":"Heavy crossbow","Flechas (x20)":"Arrows (x20)","Virotes (x20)":"Crossbow bolts (x20)",
+  "Honda":"Sling","Carcaj":"Quiver","Botas de cuero":"Leather boots","Guantes de cuero":"Leather gloves","Cinturón con vainas":"Belt with sheaths",
+  "Correas y arneses":"Straps & harnesses","Ropa común":"Common clothes","Ropa de viaje":"Traveler's clothes","Ropa fina":"Fine clothes",
+  "Disfraz":"Costume","Capa de viaje":"Traveler's cloak","Túnica":"Tunic","Sombrero":"Hat","Anillo con sello":"Signet ring",
+  "Gema pequeña":"Small gem","Collar de plata":"Silver necklace","Brazalete de oro":"Gold bracelet","Pendientes":"Earrings",
+  "Tasación (servicio)":"Appraisal (service)","Fuego alquímico (frasco)":"Alchemist's fire (flask)","Ácido (frasco)":"Acid (flask)",
+  "Útiles de alquimista":"Alchemist's supplies","Fuego alquímico":"Alchemist's fire","Frasco de sales":"Vial of salts","Kit de herboristería":"Herbalism kit",
+  "Hierbas medicinales (dosis)":"Medicinal herbs (dose)","Antitoxina casera":"Homemade antitoxin","Cataplasma":"Poultice",
+  "Té curativo":"Healing tea","Ungüento":"Salve","Libro":"Book","Tinta (frasco)":"Ink (bottle)","Papel (hoja)":"Paper (sheet)",
+  "Pergamino (hoja)":"Parchment (sheet)","Pluma":"Quill","Diario en blanco":"Blank journal","Mapa regional":"Regional map",
+  "Copiado (por página)":"Copying (per page)","Caballo de monta":"Riding horse","Caballo de tiro":"Draft horse","Poni":"Pony",
+  "Mula":"Mule","Silla de montar":"Saddle","Pienso (1 día)":"Feed (1 day)","Estabulación (día)":"Stabling (day)","Mastín":"Mastiff",
+  "Carro":"Cart","Carreta":"Wagon","Escalera (3 m)":"Ladder (10 ft)","Pértiga (3 m)":"Pole (10 ft)","Mueble sencillo":"Simple furniture",
+  "Barril":"Barrel","Herramientas de carpintero":"Carpenter's tools","Botas resistentes":"Sturdy boots","Zapatos comunes":"Common shoes",
+  "Botas altas de viaje":"Tall travel boots","Reparación de suela":"Sole repair","Pantuflas":"Slippers","Velas (x10)":"Candles (x10)",
+  "Cirio grande":"Large candle","Antorchas (x5)":"Torches (x5)","Jabón":"Soap","Lámpara":"Lamp","Pescado fresco":"Fresh fish",
+  "Marisco (ración)":"Shellfish (serving)","Aparejo de pesca":"Fishing tackle","Red":"Net","Anguila en salazón":"Salted eel",
+  "Vino común (jarra)":"Common wine (pitcher)","Vino fino (botella)":"Fine wine (bottle)","Barril de cerveza":"Keg of ale",
+  "Aguardiente (frasco)":"Spirits (flask)","Hidromiel (jarra)":"Mead (pitcher)","Vino de importación (botella)":"Imported wine (bottle)",
+  "Sal (bolsa)":"Salt (bag)","Pimienta (onza)":"Pepper (ounce)","Azafrán (pizca)":"Saffron (pinch)","Especias variadas (bolsa)":"Assorted spices (bag)",
+  "Té exótico":"Exotic tea","Mapa local":"Local map","Carta de navegación":"Nautical chart","Catalejo":"Spyglass","Lupa":"Magnifying glass",
+  "Brújula":"Compass","Instrumentos de cartógrafo":"Cartographer's tools","Útiles de ladrón":"Thieves' tools","Herramientas de artesano":"Artisan's tools",
+  "Kit de reparación":"Repair kit","Clavos (bolsa)":"Nails (bag)","Cerradura":"Lock","Seda (rollo)":"Silk (bolt)","Perfume (vial)":"Perfume (vial)",
+  "Marfil tallado":"Carved ivory","Ave exótica":"Exotic bird","Alfombra fina":"Fine rug","Curiosidad de tierras lejanas":"Curio from distant lands",
+  "Pergamino de conjuro (menor)":"Spell scroll (minor)","Poción variada menor":"Assorted minor potion","Bolsa de componentes":"Component pouch",
+  "Foco arcano":"Arcane focus","Baratija encantada":"Enchanted trinket","Cambio de moneda (comisión 5%)":"Currency exchange (5% fee)",
+  "Letra de cambio":"Letter of credit","Tasación":"Appraisal","Alquiler de caja fuerte (mes)":"Safe-deposit rental (month)",
+  "Préstamo (aval requerido)":"Loan (collateral required)","Perro de caza":"Hunting dog","Gato":"Cat","Halcón adiestrado":"Trained falcon",
+  "Jabón perfumado":"Perfumed soap","Aceites aromáticos":"Aromatic oils","Sales de baño":"Bath salts","Incienso fino":"Fine incense",
+  "Baratijas variadas":"Assorted trinkets","Cuerda (15 m)":"Rope (50 ft)","Amuleto de la suerte":"Lucky charm","Cuchillo":"Knife",
+  "Especias (bolsa)":"Spices (bag)","Alfombra":"Rug","Incienso":"Incense","Perfume":"Perfume","Tónico «milagroso»":"\"Miracle\" tonic",
+  "Elixir de vigor":"Elixir of vigor","Ungüento prodigioso":"Wondrous salve","Polvos curalotodo":"Cure-all powders",
+  "Amuleto contra plagas":"Anti-plague amulet","Lagarto exótico":"Exotic lizard","Serpiente":"Snake","Mono amaestrado":"Trained monkey",
+  "Ave parlante":"Talking bird","Huevo misterioso":"Mysterious egg","Pienso especial":"Special feed","Contrato de espadachín (semana)":"Swordsman contract (week)",
+  "Cota de malla usada":"Used chain mail","Lectura de fortuna":"Fortune reading","Amuleto de protección":"Amulet of protection",
+  "Carta astral":"Star chart","Talismán":"Talisman","Vela ritual":"Ritual candle","Artilugio de cuerda":"Wind-up gadget",
+  "Reloj de bolsillo":"Pocket watch","Juguete mecánico":"Mechanical toy","Encendedor de chispa":"Spark lighter","Herramientas finas":"Fine tools",
+  "Tinta mágica":"Magical ink","Reliquia «sagrada»":"\"Holy\" relic","Hueso de santo":"Saint's bone","Fragmento de estandarte":"Banner fragment",
+  "Cáliz antiguo":"Ancient chalice","Icono pintado":"Painted icon","Veneno básico (vial)":"Basic poison (vial)","Ballesta de mano":"Hand crossbow",
+  "Documentos falsos":"Forged documents","Mercancía «sin preguntas»":"\"No questions\" goods","Poción de escalar paredes":"Potion of climbing",
+  "Brocheta especiada":"Spiced skewer","Empanada caliente":"Hot pasty","Vino especiado (taza)":"Spiced wine (cup)","Dulces exóticos":"Exotic sweets",
+  "Guiso del día":"Stew of the day","Laúd":"Lute","Flauta":"Flute","Tambor":"Drum","Cuerdas de repuesto":"Spare strings",
+  "Maquillaje escénico":"Stage makeup","Caballo de guerra":"Warhorse","Alfombra pequeña":"Small rug","Tapiz":"Tapestry",
+  "Cojines bordados":"Embroidered cushions","Manta de lana":"Wool blanket","Libro raro":"Rare book","Tratado prohibido":"Forbidden treatise",
+  "Mapa antiguo":"Ancient map","Manuscrito ilustrado":"Illuminated manuscript","Panfleto":"Pamphlet"
+};
+function L(k){ const d=UI[LANG]||UI.en; return d[k]!=null?d[k]:(UI.en[k]!=null?UI.en[k]:k); }
+function tv(n){ return LANG==="en"?(VEN_EN[n]||n):n; }
+function ti(n){ return LANG==="en"?(ITM_EN[n]||n):n; }
+function tc(c){ return LANG==="en"?(CAT_EN[c]||c):c; }
+function vName(key){ return tv(CATALOG[key].name); }
+function fmtPop(p){ return LANG==="en"? p.replace(/\./g,",") : p; }
+function sizeName(s){ return LANG==="en"? s.en.name : s.name; }
+function sizeSub(s){ return LANG==="en"? s.en.sub : s.sub; }
+function priceLbl(t){ return LANG==="en"? t.en : t.label; }
+function tierByFactor(f){ return PRICE_TIERS.find(t=>Math.abs(t.f-f)<0.001) || PRICE_TIERS[3]; }
+function applyI18n(){
+  document.documentElement.lang = LANG;
+  document.title = LANG==="en" ? "Settlement Vendor Tables — D&D" : "Tablas de Vendedores por Asentamiento — D&D";
+  document.querySelectorAll("[data-i18n]").forEach(el=> el.textContent = L(el.getAttribute("data-i18n")));
+  document.querySelectorAll("[data-i18n-html]").forEach(el=> el.innerHTML = L(el.getAttribute("data-i18n-html")));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el=> el.setAttribute("placeholder", L(el.getAttribute("data-i18n-ph"))));
+  document.querySelectorAll("[data-i18n-title]").forEach(el=> el.title = L(el.getAttribute("data-i18n-title")));
+  const lb=document.getElementById("langToggle"); if(lb){ lb.textContent = LANG==="en"?"ES":"EN"; lb.title = LANG==="en"?"Cambiar a español":"Switch to English"; }
+  const le=document.querySelector("#logList .logempty"); if(le) le.textContent = L("logEmpty");
+}
+function updateGenInfo(){
+  const gi=document.getElementById("genInfo"); if(!gi||!current||!current.permanent) return;
+  const s=SIZES.find(x=>x.key===current.sizeKey);
+  gi.textContent = (s?sizeName(s):current.sizeKey)+" · "+current.permanent.length+" "+L("permWord")+" · "+current.traveling.length+" "+L("travWord");
+}
+function setLang(l){ LANG=l; localStorage.setItem("lang",l); applyI18n(); renderSizePicker(); renderRefTables(); if(current&&current.permanent) render(); updateGenInfo(); }
 
 /* ===================== ESTADO ===================== */
 let selectedSize = null;      // objeto SIZES
@@ -401,16 +619,18 @@ function money(cp){
   if(cp<=0) return "—";
   const gp=Math.floor(cp/100); cp-=gp*100;
   const sp=Math.floor(cp/10); const c=cp-sp*10;
+  const loc = LANG==="en" ? "en" : "es";
+  const S = LANG==="en" ? ["gp","sp","cp"] : ["po","pp","pc"];
   const p=[];
-  if(gp) p.push(gp.toLocaleString("es")+" po");
-  if(sp) p.push(sp+" pp");
-  if(c) p.push(c+" pc");
-  return p.join(" ") || "0 pc";
+  if(gp) p.push(gp.toLocaleString(loc)+" "+S[0]);
+  if(sp) p.push(sp+" "+S[1]);
+  if(c) p.push(c+" "+S[2]);
+  return p.join(" ") || ("0 "+S[2]);
 }
 
 function log(die, result, extra){
   const list=document.getElementById("logList");
-  if(list.firstChild && list.firstChild.textContent && list.firstChild.textContent.startsWith("Aún")) list.innerHTML="";
+  if(list.firstChild && list.firstChild.classList && list.firstChild.classList.contains("logempty")) list.innerHTML="";
   const d=document.createElement("div"); d.className="l";
   d.innerHTML = `<span class="die" style="padding:0 5px">${die}</span> → <b>${result}</b>${extra?" — "+extra:""}`;
   list.insertBefore(d, list.firstChild);
@@ -432,7 +652,7 @@ function priceTier(roll){ return PRICE_TIERS.find(t=> roll>=t.r[0] && roll<=t.r[
 function makeVendorEntry(key, tier){
   const roll = rollDie(12);
   const t = priceTier(roll);
-  log("d12", roll, `${CATALOG[key].name}: ${t.label}`);
+  log("d12", roll, `${vName(key)}: ${priceLbl(t)}`);
   return {key, tier, factor:t.f, priceLabel:t.label, comp:0, hagRoll:null};
 }
 
@@ -449,11 +669,11 @@ function generatePermanent(){
     const hit=findInRanges(ranges, roll);
     if(!hit) continue;
     if(chosen.includes(hit.key) || selectedSize.core.includes(hit.key)){
-      log("d100", roll, `${CATALOG[hit.key].name} (repetido, repito tirada)`);
+      log("d100", roll, `${vName(hit.key)} (${L("dupReroll")})`);
       continue;
     }
     chosen.push(hit.key);
-    log("d100", roll, CATALOG[hit.key].name);
+    log("d100", roll, vName(hit.key));
   }
   chosen.forEach(k=> perm.push(makeVendorEntry(k,"variety")));
   if(!current) current={};
@@ -466,13 +686,13 @@ function generateTraveling(){
   if(!selectedSize) return;
   const [c,d,m]=selectedSize.travel;
   const cnt = rollDice(c,d,m);
-  log(travelLabel(selectedSize.travel), cnt.total, `${cnt.rolls.join("+")}${m?(m>0?"+"+m:m):""} → ${cnt.total} ambulante(s)`);
+  log(travelLabel(selectedSize.travel), cnt.total, `${cnt.rolls.join("+")}${m?(m>0?"+"+m:m):""} → ${cnt.total} ${L("travellersWord")}`);
   const ranges = assignRanges(TRAVEL_KEYS);
   const trav=[];
   for(let i=0;i<cnt.total;i++){
     const roll=rollDie(100);
     const hit=findInRanges(ranges, roll);
-    log("d100", roll, CATALOG[hit.key].name);
+    log("d100", roll, vName(hit.key));
     trav.push(makeVendorEntry(hit.key,"travel"));
   }
   if(!current) current={};
@@ -491,12 +711,11 @@ function applyCompetition(){
 }
 
 function generateAll(){
-  if(!selectedSize){ alert("Elige primero un tamaño de asentamiento."); return; }
+  if(!selectedSize){ alert(L("alertPickSize")); return; }
   current = {sizeKey:selectedSize.key};
   generatePermanent();
   generateTraveling();
-  document.getElementById("genInfo").textContent =
-    `${selectedSize.name} · ${current.permanent.length} permanentes · ${current.traveling.length} ambulante(s) esta semana`;
+  updateGenInfo();
 }
 
 /* ===================== REGATEO ===================== */
@@ -505,13 +724,20 @@ function haggleResult(vendor, total){
   const h = CATALOG[vendor.key].haggle;
   if(total===null || total==="" || isNaN(total)) return {disc:0, note:"", cls:""};
   total=Number(total);
-  if(total <= h.dc-5) return {disc:-0.10, note:`Fallo por 5+. El vendedor se ofende: precios +10%.`, cls:"bad"};
-  if(total < h.dc) return {disc:0, note:`No alcanza la CD ${h.dc}. Sin descuento.`, cls:""};
+  if(total <= h.dc-5){
+    const note = LANG==="en" ? "Fail by 5+. The vendor takes offense: prices +10%." : "Fallo por 5+. El vendedor se ofende: precios +10%.";
+    return {disc:-0.10, note, cls:"bad"};
+  }
+  if(total < h.dc){
+    const note = LANG==="en" ? `Doesn't meet DC ${h.dc}. No discount.` : `No alcanza la CD ${h.dc}. Sin descuento.`;
+    return {disc:0, note, cls:""};
+  }
   const over = total - h.dc;
-  let disc = 0.05 + Math.floor(over/3)*0.05;
-  disc = Math.min(disc, h.max);
-  const capped = disc>=h.max ? " (tope alcanzado)" : "";
-  return {disc, note:`¡Trato! Descuento del ${Math.round(disc*100)}%${capped}.`, cls:"good"};
+  let disc = Math.min(0.05 + Math.floor(over/3)*0.05, h.max);
+  const pct = Math.round(disc*100);
+  const capped = disc>=h.max ? (LANG==="en"?" (cap reached)":" (tope alcanzado)") : "";
+  const note = LANG==="en" ? `Deal! ${pct}% discount${capped}.` : `¡Trato! Descuento del ${pct}%${capped}.`;
+  return {disc, note, cls:"good"};
 }
 
 /* ===================== RENDER ===================== */
@@ -523,51 +749,51 @@ function vendorCard(v){
   const totalMult = v.factor * compMult * discMult;
 
   const tierClass = v.tier==="basic"?"basic":(v.tier==="travel"?"travel":"var");
-  const tierLabel = v.tier==="basic"?"Permanente · básico":(v.tier==="travel"?"Ambulante":"Permanente · variedad");
+  const tierLabel = v.tier==="basic"?L("tierBasic"):(v.tier==="travel"?L("tierTravel"):L("tierVar"));
 
   let rows="";
   c.goods.forEach(item=>{
-    if(item.cp<=0){ rows+=`<tr><td>${item.name}</td><td class="price">—</td></tr>`; return; }
+    if(item.cp<=0){ rows+=`<tr><td>${ti(item.name)}</td><td class="price">—</td></tr>`; return; }
     const final = item.cp*totalMult;
     const diff = final/item.cp;
     const cls = diff>1.02?"up":(diff<0.98?"down":"");
-    rows += `<tr><td>${item.name}</td>`+
+    rows += `<tr><td>${ti(item.name)}</td>`+
             `<td class="base">${money(item.cp)}</td>`+
             `<td class="price ${cls}">${money(final)}</td></tr>`;
   });
 
-  const compTag = v.comp>1 ? `<span class="vtag comp">⚔ Competencia ×${v.comp} (−10%)</span>` : "";
+  const compTag = v.comp>1 ? `<span class="vtag comp">⚔ ${L("comp")} ×${v.comp} (−10%)</span>` : "";
   const idx = cardId(v);
 
   return `<div class="vendor ${v.tier==="travel"?"travel":""}" data-id="${idx}">
     <div class="vhead">
       <div class="vicon">${c.icon}</div>
       <div style="flex:1">
-        <div class="vname">${c.name}</div>
+        <div class="vname">${vName(v.key)}</div>
         <div style="margin-top:3px">
           <span class="vtag ${tierClass}">${tierLabel}</span>
-          <span class="vtag">${v.priceLabel}</span>
+          <span class="vtag">${priceLbl(tierByFactor(v.factor))}</span>
           ${compTag}
         </div>
       </div>
     </div>
     <table class="goods">
-      <tr><td class="sub">Artículo</td><td class="base" style="text-decoration:none">base</td><td class="price sub">aquí</td></tr>
+      <tr><td class="sub">${L("colItem")}</td><td class="base" style="text-decoration:none">${L("colBase")}</td><td class="price sub">${L("colHere")}</td></tr>
       ${rows}
     </table>
     <div class="haggle">
-      <b>Regateo</b> · CD Persuasión <b>${c.haggle.dc}</b> · máx. descuento <b>${Math.round(c.haggle.max*100)}%</b>
+      <b>${L("haggleWord")}</b> · ${L("dcPersuasion")} <b>${c.haggle.dc}</b> · ${L("maxDisc")} <b>${Math.round(c.haggle.max*100)}%</b>
       <div class="hrow">
-        <span class="sub">Resultado d20:</span>
-        <input type="number" class="hagInput" value="${v.hagRoll??""}" placeholder="p.ej. 17" style="width:80px">
-        <button class="small hagApply">Regatear</button>
-        <button class="small ghost hagRoll">🎲 tirar</button>
+        <span class="sub">${L("resultD20")}</span>
+        <input type="number" class="hagInput" value="${v.hagRoll??""}" placeholder="17" style="width:80px">
+        <button class="small hagApply">${L("haggleBtn")}</button>
+        <button class="small ghost hagRoll">🎲 ${L("rollWord")}</button>
       </div>
-      <div class="note ${hag.cls}">${hag.note||"Introduce tu tirada de Persuasión para ver el precio negociado."}</div>
+      <div class="note ${hag.cls}">${hag.note||L("haggleHint")}</div>
     </div>
     <div class="vactions">
-      <button class="small rerollPrice">↻ Precios</button>
-      <button class="small rerollVendor">↻ Cambiar vendedor</button>
+      <button class="small rerollPrice">${L("rerollPrice")}</button>
+      <button class="small rerollVendor">${L("rerollVendor")}</button>
     </div>
   </div>`;
 }
@@ -583,11 +809,11 @@ function vendorById(id){
 
 function render(){
   const pg=document.getElementById("permGrid"), tg=document.getElementById("travelGrid");
-  if(!current || !current.permanent){ pg.innerHTML=`<div class="empty">Elige un tamaño y pulsa «Generar asentamiento».</div>`; }
+  if(!current || !current.permanent){ pg.innerHTML=`<div class="empty">${L("permEmpty")}</div>`; }
   else pg.innerHTML = current.permanent.map(vendorCard).join("");
 
   if(!current || !current.traveling){ tg.innerHTML=`<div class="empty">—</div>`; }
-  else if(current.traveling.length===0){ tg.innerHTML=`<div class="empty">Esta semana no ha llegado ningún vendedor ambulante. Vuelve a probar en unos días.</div>`; }
+  else if(current.traveling.length===0){ tg.innerHTML=`<div class="empty">${L("travNone")}</div>`; }
   else tg.innerHTML = current.traveling.map(vendorCard).join("");
 
   wireCards();
@@ -597,9 +823,9 @@ function wireCards(){
   document.querySelectorAll(".vendor").forEach(el=>{
     const v = vendorById(el.dataset.id);
     el.querySelector(".hagApply").onclick=()=>{ v.hagRoll = el.querySelector(".hagInput").value; refreshCard(el.dataset.id); };
-    el.querySelector(".hagRoll").onclick=()=>{ const r=rollDie(20); log("d20",r,`Persuasión en ${CATALOG[v.key].name}`); v.hagRoll=r; el.querySelector(".hagInput").value=r; refreshCard(el.dataset.id); };
+    el.querySelector(".hagRoll").onclick=()=>{ const r=rollDie(20); log("d20",r,`${L("persuasionIn")} ${vName(v.key)}`); v.hagRoll=r; el.querySelector(".hagInput").value=r; refreshCard(el.dataset.id); };
     el.querySelector(".hagInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ v.hagRoll=e.target.value; refreshCard(el.dataset.id);} });
-    el.querySelector(".rerollPrice").onclick=()=>{ const roll=rollDie(12); const t=priceTier(roll); v.factor=t.f; v.priceLabel=t.label; log("d12",roll,`${CATALOG[v.key].name}: ${t.label}`); refreshCard(el.dataset.id); };
+    el.querySelector(".rerollPrice").onclick=()=>{ const roll=rollDie(12); const t=priceTier(roll); v.factor=t.f; v.priceLabel=t.label; log("d12",roll,`${vName(v.key)}: ${priceLbl(t)}`); refreshCard(el.dataset.id); };
     el.querySelector(".rerollVendor").onclick=()=>{ rerollVendor(v); };
   });
 }
@@ -614,15 +840,15 @@ function refreshCard(id){
 function rerollVendor(v){
   if(v.tier==="travel"){
     const ranges=assignRanges(TRAVEL_KEYS); const roll=rollDie(100); const hit=findInRanges(ranges,roll);
-    log("d100",roll,`(cambio) ${CATALOG[hit.key].name}`);
+    log("d100",roll,`(${L("changed")}) ${vName(hit.key)}`);
     const nv=makeVendorEntry(hit.key,"travel"); const i=current.traveling.indexOf(v); current.traveling[i]=nv;
   } else if(v.tier==="variety"){
     const pool=availableVariety(selectedSize).filter(k=> !current.permanent.some(x=>x.key===k));
-    if(pool.length===0){ alert("No quedan más puestos de variedad para este tamaño."); return; }
+    if(pool.length===0){ alert(L("alertNoMoreVariety")); return; }
     const ranges=assignRanges(pool); const roll=rollDie(100); const hit=findInRanges(ranges,roll);
-    log("d100",roll,`(cambio) ${CATALOG[hit.key].name}`);
+    log("d100",roll,`(${L("changed")}) ${vName(hit.key)}`);
     const nv=makeVendorEntry(hit.key,"variety"); const i=current.permanent.indexOf(v); current.permanent[i]=nv;
-  } else { alert("Los vendedores básicos son fijos para este tamaño. Puedes recambiar sus precios."); return; }
+  } else { alert(L("alertBasicFixed")); return; }
   applyCompetition(); render();
 }
 
@@ -637,28 +863,28 @@ function loadState(data){
   if(sz){ selectedSize=sz; renderSizePicker(); renderRefTables(); }
   current={sizeKey:data.sizeKey, permanent:data.permanent.map(v=>({...v,comp:0})), traveling:(data.traveling||[]).map(v=>({...v,comp:0}))};
   applyCompetition(); render();
-  document.getElementById("genInfo").textContent = `${sz?sz.name:data.sizeKey} · cargado`;
+  document.getElementById("genInfo").textContent = `${sz?sizeName(sz):data.sizeKey} · ${L("loaded")}`;
 }
 
 function getSaves(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||[]; }catch(e){ return []; } }
 function setSaves(a){ localStorage.setItem(SAVE_KEY, JSON.stringify(a)); }
 function saveCurrent(){
   const data=serialize();
-  if(!data){ alert("Genera un asentamiento antes de guardar."); return; }
-  const name=document.getElementById("saveName").value.trim() || (selectedSize?selectedSize.name:"Asentamiento");
+  if(!data){ alert(L("alertGenSave")); return; }
+  const name=document.getElementById("saveName").value.trim() || (selectedSize?sizeName(selectedSize):L("defaultName"));
   const saves=getSaves();
-  saves.unshift({id:"s"+saves.length+"_"+name.replace(/\s+/g,"").slice(0,8), name, date:new Date().toLocaleString("es"), data});
+  saves.unshift({id:"s"+saves.length+"_"+name.replace(/\s+/g,"").slice(0,8), name, date:new Date().toLocaleString(LANG==="en"?"en":"es"), data});
   setSaves(saves); renderSaved();
   document.getElementById("saveName").value="";
 }
 function renderSaved(){
   const box=document.getElementById("savedList"); const saves=getSaves();
-  if(saves.length===0){ box.innerHTML=`<div class="sub">No hay asentamientos guardados todavía. Se guardan en este navegador.</div>`; return; }
+  if(saves.length===0){ box.innerHTML=`<div class="sub">${L("noSaves")}</div>`; return; }
   box.innerHTML = saves.map((s,i)=>`
     <div class="saved-item">
-      <div><b>${s.name}</b> <span class="meta">— ${s.data.permanent.length} perm. / ${s.data.traveling.length} amb. · ${s.date}</span></div>
+      <div><b>${s.name}</b> <span class="meta">— ${s.data.permanent.length} ${L("permAbbr")} / ${s.data.traveling.length} ${L("travAbbr")} · ${s.date}</span></div>
       <div class="row">
-        <button class="small loadSave" data-i="${i}">Cargar</button>
+        <button class="small loadSave" data-i="${i}">${L("load")}</button>
         <button class="small ghost delSave" data-i="${i}">✕</button>
       </div>
     </div>`).join("");
@@ -667,8 +893,8 @@ function renderSaved(){
 }
 function exportJson(){
   const data=serialize();
-  if(!data){ alert("Genera un asentamiento antes de exportar."); return; }
-  const name=(document.getElementById("saveName").value.trim() || (selectedSize?selectedSize.name:"asentamiento"));
+  if(!data){ alert(L("alertGenExport")); return; }
+  const name=(document.getElementById("saveName").value.trim() || (selectedSize?sizeName(selectedSize):"settlement"));
   const payload={type:"dnd-vendor-settlement", version:1, name, data};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a");
@@ -684,9 +910,9 @@ function importJson(file){
       loadState(data);
       // guardar también en la lista local
       const saves=getSaves();
-      saves.unshift({id:"imp_"+Date.now(), name:(obj.name||"Importado"), date:new Date().toLocaleString("es"), data});
+      saves.unshift({id:"imp_"+Date.now(), name:(obj.name||L("imported")), date:new Date().toLocaleString(LANG==="en"?"en":"es"), data});
       setSaves(saves); renderSaved();
-    }catch(err){ alert("Archivo no válido. Debe ser un .json exportado por esta herramienta."); }
+    }catch(err){ alert(L("alertBadFile")); }
   };
   reader.readAsText(file);
 }
@@ -696,66 +922,69 @@ function renderSizePicker(){
   const box=document.getElementById("sizePicker");
   box.innerHTML = SIZES.map(s=>`
     <button class="size-btn ${selectedSize&&selectedSize.key===s.key?"active":""}" data-k="${s.key}">
-      <span class="n">${s.name}</span><span class="p">${s.sub}</span><span class="p">👥 ${s.pop}</span>
+      <span class="n">${sizeName(s)}</span><span class="p">${sizeSub(s)}</span><span class="p">👥 ${fmtPop(s.pop)}</span>
     </button>`).join("");
   box.querySelectorAll(".size-btn").forEach(b=> b.onclick=()=>{ selectedSize=SIZES.find(s=>s.key===b.dataset.k); renderSizePicker(); renderRefTables(); });
 }
 
 function renderRefTables(){
+  const dcw = LANG==="en" ? "DC" : "CD";
   // tamaños
   const st=document.getElementById("sizeRefTable");
-  st.innerHTML = `<tr><th>Tamaño</th><th>Población</th><th>Básicos garantizados</th><th>Puestos de variedad <span class="die">d100</span></th><th>Ambulantes / semana</th></tr>`+
+  st.innerHTML = `<tr><th>${L("colSize")}</th><th>${L("colPop")}</th><th>${L("colBasics")}</th><th>${L("colVariety")} <span class="die">d100</span></th><th>${L("colTravWeek")}</th></tr>`+
     SIZES.map(s=>`<tr${selectedSize&&selectedSize.key===s.key?' style="outline:2px solid var(--gold)"':''}>
-      <td><b>${s.name}</b><br><span class="sub">${s.sub}</span></td>
-      <td>${s.pop}</td>
-      <td>${s.core.map(k=>CATALOG[k].name).join(", ")}</td>
+      <td><b>${sizeName(s)}</b><br><span class="sub">${sizeSub(s)}</span></td>
+      <td>${fmtPop(s.pop)}</td>
+      <td>${s.core.map(k=>vName(k)).join(", ")}</td>
       <td style="text-align:center">${s.variety}</td>
-      <td><span class="die">${travelLabel(s.travel)}</span> <span class="sub">(mín. 0)</span></td>
+      <td><span class="die">${travelLabel(s.travel)}</span> <span class="sub">${L("min0")}</span></td>
     </tr>`).join("");
 
   // variedad segun tamaño
   const sz = selectedSize || SIZES[3];
-  document.getElementById("varSizeLbl").textContent = `— ${sz.name}`;
+  document.getElementById("varSizeLbl").textContent = `— ${sizeName(sz)}`;
   const pool = availableVariety(sz); const ranges=assignRanges(pool);
   const vt=document.getElementById("varRefTable");
-  vt.innerHTML = `<tr><th style="width:70px">d100</th><th>Puesto</th><th>Categoría</th><th>Regateo</th><th>Ejemplos</th></tr>`+
+  vt.innerHTML = `<tr><th style="width:70px">d100</th><th>${L("colStall")}</th><th>${L("colCategory")}</th><th>${L("colHaggle")}</th><th>${L("colExamples")}</th></tr>`+
     (pool.length? ranges.map(r=>{ const c=CATALOG[r.key]; return `<tr>
         <td>${r.lo===r.hi?r.lo:r.lo+"–"+r.hi}</td>
-        <td>${c.icon} <b>${c.name}</b></td>
-        <td>${c.cat}</td>
-        <td>CD ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
-        <td class="sub">${c.goods.slice(0,3).map(x=>x.name).join(", ")}…</td></tr>`; }).join("")
-      : `<tr><td colspan="5" class="sub">Una troupe no tiene tiendas fijas de variedad — su surtido llega con los vendedores ambulantes.</td></tr>`);
+        <td>${c.icon} <b>${vName(r.key)}</b></td>
+        <td>${tc(c.cat)}</td>
+        <td>${dcw} ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
+        <td class="sub">${c.goods.slice(0,3).map(x=>ti(x.name)).join(", ")}…</td></tr>`; }).join("")
+      : `<tr><td colspan="5" class="sub">${L("troupeNote")}</td></tr>`);
 
   // ambulantes
   const tr=document.getElementById("travelRefTable");
   const tranges=assignRanges(TRAVEL_KEYS);
-  tr.innerHTML = `<tr><th style="width:70px">d100</th><th>Vendedor</th><th>Categoría</th><th>Regateo</th><th>Ejemplos</th></tr>`+
+  tr.innerHTML = `<tr><th style="width:70px">d100</th><th>${L("colVendor")}</th><th>${L("colCategory")}</th><th>${L("colHaggle")}</th><th>${L("colExamples")}</th></tr>`+
     tranges.map(r=>{ const c=CATALOG[r.key]; return `<tr>
         <td>${r.lo===r.hi?r.lo:r.lo+"–"+r.hi}</td>
-        <td>${c.icon} <b>${c.name}</b></td>
-        <td>${c.cat}</td>
-        <td>CD ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
-        <td class="sub">${c.goods.slice(0,3).map(x=>x.name).join(", ")}…</td></tr>`; }).join("");
+        <td>${c.icon} <b>${vName(r.key)}</b></td>
+        <td>${tc(c.cat)}</td>
+        <td>${dcw} ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
+        <td class="sub">${c.goods.slice(0,3).map(x=>ti(x.name)).join(", ")}…</td></tr>`; }).join("");
 
   // precios
   const pt=document.getElementById("priceRefTable");
-  pt.innerHTML = `<tr><th style="width:70px">d12</th><th>Nivel de precios</th><th>Factor</th></tr>`+
-    PRICE_TIERS.map(t=>`<tr><td>${t.r[0]===t.r[1]?t.r[0]:t.r[0]+"–"+t.r[1]}</td><td>${t.label}</td><td>×${t.f.toFixed(2)}</td></tr>`).join("")+
-    `<tr><td>—</td><td>Competencia (misma categoría, ≥2 vendedores)</td><td>×0.90 extra</td></tr>`;
+  pt.innerHTML = `<tr><th style="width:70px">d12</th><th>${L("colPriceLevel")}</th><th>${L("colFactor")}</th></tr>`+
+    PRICE_TIERS.map(t=>`<tr><td>${t.r[0]===t.r[1]?t.r[0]:t.r[0]+"–"+t.r[1]}</td><td>${priceLbl(t)}</td><td>×${t.f.toFixed(2)}</td></tr>`).join("")+
+    `<tr><td>—</td><td>${L("compRow")}</td><td>×0.90 ${L("extra")}</td></tr>`;
 }
 
 /* ===================== INIT ===================== */
 document.getElementById("genBtn").onclick=generateAll;
-document.getElementById("regenPerm").onclick=()=>{ if(!selectedSize){alert("Elige un tamaño.");return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generatePermanent(); };
-document.getElementById("regenTravel").onclick=()=>{ if(!selectedSize){alert("Elige un tamaño.");return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generateTraveling(); };
+document.getElementById("regenPerm").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generatePermanent(); };
+document.getElementById("regenTravel").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} if(!current)current={sizeKey:selectedSize.key}; current.sizeKey=selectedSize.key; generateTraveling(); };
 document.getElementById("saveBtn").onclick=saveCurrent;
 document.getElementById("exportBtn").onclick=exportJson;
 document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
 document.getElementById("importFile").onchange=e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; };
-document.getElementById("clearLog").onclick=()=>{ document.getElementById("logList").innerHTML=`<div class="l">Aún no has tirado nada.</div>`; };
+document.getElementById("clearLog").onclick=()=>{ document.getElementById("logList").innerHTML=`<div class="l logempty">${L("logEmpty")}</div>`; };
+document.getElementById("langToggle").onclick=()=> setLang(LANG==="en"?"es":"en");
 
-selectedSize = SIZES[3]; // Villa por defecto
+selectedSize = SIZES[3]; // Villa / Town por defecto
+applyI18n();
 renderSizePicker();
 renderRefTables();
 renderSaved();
