@@ -39,7 +39,10 @@
   header h1{margin:0 0 4px; font-size:1.7rem; font-weight:700; letter-spacing:.5px; color:var(--gold)}
   header p{margin:0; color:var(--muted); font-size:.92rem}
   .wrap{max-width:1080px; margin:0 auto; padding:0 16px; position:relative; z-index:1}
-  h2{color:var(--gold); font-weight:700; border-bottom:1px solid var(--line); padding-bottom:6px; margin:34px 0 14px; font-size:1.25rem}
+  h2{color:var(--gold); font-weight:700; background:rgba(28,29,29,.80);
+    border:1px solid var(--line); border-left:3px solid var(--gold);
+    padding:8px 14px; border-radius:8px; margin:34px 0 14px; font-size:1.25rem;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
   h3{color:var(--gold); font-weight:700; margin:0 0 8px; font-size:1.05rem}
   .sub{color:var(--muted); font-size:.85rem}
   a{color:var(--cyan)}
@@ -819,8 +822,8 @@ renderSaved();
 
   // Máquina de fases: seguir → reaccionar → formar imagen → mantener → explotar → loop
   const SEQ = REDUCED
-    ? [["follow",7000],["form",5000],["hold",4000]]
-    : [["follow",6000],["react",6000],["form",4200],["hold",2600],["explode",3200]];
+    ? [["follow",11000],["form",7500],["hold",5500]]
+    : [["follow",9500],["react",9500],["form",6500],["hold",4000],["explode",5000]];
   let pi=0, phase=SEQ[0][0], phaseEnd=0;
   let imgMix=0, followW=0, reactW=0;
 
@@ -833,8 +836,8 @@ renderSaved();
     const cx=W/2, cy=H/2, diag=Math.hypot(W,H)/2;
     for(const p of particles){
       let dx=p.x-cx, dy=p.y-cy, d=Math.hypot(dx,dy)||1;
-      const sp=rand(4,11)*(0.6+(d/diag)*0.8);
-      p.vx+=dx/d*sp+rand(-1.6,1.6); p.vy+=dy/d*sp+rand(-1.6,1.6);
+      const sp=rand(2.5,7)*(0.6+(d/diag)*0.8);
+      p.vx+=dx/d*sp+rand(-1.1,1.1); p.vy+=dy/d*sp+rand(-1.1,1.1);
     }
   }
 
@@ -844,9 +847,9 @@ renderSaved();
     if(now>=phaseEnd) nextPhase(now);
 
     const dImg=(phase==="form"||phase==="hold")?1:0;
-    imgMix+=(dImg-imgMix)*0.04;
-    followW+=((phase==="follow"?1:0)-followW)*0.05;
-    reactW +=((phase==="react" ?1:0)-reactW )*0.05;
+    imgMix+=(dImg-imgMix)*0.022;
+    followW+=((phase==="follow"?1:0)-followW)*0.03;
+    reactW +=((phase==="react" ?1:0)-reactW )*0.03;
 
     // rastro (más nítido al formar la imagen)
     ctx.globalCompositeOperation="source-over";
@@ -857,14 +860,14 @@ renderSaved();
     const free=1-imgMix, R=150, R2=R*R;
     for(const p of particles){
       let ax=0, ay=0;
-      if(imgMix>0.001){ ax+=(p.tx-p.x)*0.020*imgMix; ay+=(p.ty-p.y)*0.020*imgMix; }
+      if(imgMix>0.001){ ax+=(p.tx-p.x)*0.014*imgMix; ay+=(p.ty-p.y)*0.014*imgMix; }
       if(free>0.001){
-        p.seed+=0.01;
-        ax+=Math.cos(p.seed)*0.02*free; ay+=Math.sin(p.seed*1.3)*0.02*free;
+        p.seed+=0.006;
+        ax+=Math.cos(p.seed)*0.014*free; ay+=Math.sin(p.seed*1.3)*0.014*free;
         if(followW>0.01){ // gravita y orbita el cursor
-          const dx=mx-p.x, dy=my-p.y, d=Math.hypot(dx,dy)||1, pull=0.0016*followW*free;
-          ax+=dx*pull+(-dy/d)*0.35*followW*free; ay+=dy*pull+(dx/d)*0.35*followW*free;
-          if(d<48){ ax-=dx/d*0.6*followW; ay-=dy/d*0.6*followW; }
+          const dx=mx-p.x, dy=my-p.y, d=Math.hypot(dx,dy)||1, pull=0.0011*followW*free;
+          ax+=dx*pull+(-dy/d)*0.24*followW*free; ay+=dy*pull+(dx/d)*0.24*followW*free;
+          if(d<48){ ax-=dx/d*0.45*followW; ay-=dy/d*0.45*followW; }
         }
         if(reactW>0.01){ // repele del cursor
           const dx=p.x-mx, dy=p.y-my, d2=dx*dx+dy*dy;
@@ -872,7 +875,7 @@ renderSaved();
         }
       }
       p.vx+=ax; p.vy+=ay;
-      const damp=0.90+0.06*imgMix; p.vx*=damp; p.vy*=damp;
+      const damp=0.925+0.045*imgMix; p.vx*=damp; p.vy*=damp;
       const s2=p.vx*p.vx+p.vy*p.vy; if(s2>196){ const s=14/Math.sqrt(s2); p.vx*=s; p.vy*=s; }
       p.x+=p.vx; p.y+=p.vy;
       if(imgMix<0.3){
