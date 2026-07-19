@@ -593,6 +593,11 @@ function sizeName(s){ return LANG==="en"? s.en.name : s.name; }
 function sizeSub(s){ return LANG==="en"? s.en.sub : s.sub; }
 function priceLbl(t){ return LANG==="en"? t.en : t.label; }
 function tierByFactor(f){ return PRICE_TIERS.find(t=>Math.abs(t.f-f)<0.001) || PRICE_TIERS[3]; }
+// Escapa datos no confiables (JSON importado, localStorage, input del usuario)
+// antes de interpolarlos en innerHTML. Cierra el XSS de vendor-gen: comparte
+// origen con la sesión/bóveda de entropy.com.mx, así que un settlement
+// compartido con un nombre malicioso podía ejecutar script en quien lo importa.
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function applyI18n(){
   document.documentElement.lang = LANG;
   document.title = LANG==="en" ? "Settlement Vendor Tables — D&D" : "Tablas de Vendedores por Asentamiento — D&D";
@@ -756,6 +761,7 @@ function haggleResult(vendor, total){
 /* ===================== RENDER ===================== */
 function vendorCard(v){
   const c = CATALOG[v.key];
+  if(!c) return ""; // clave desconocida (JSON importado corrupto): no romper el render
   const compMult = v.comp>1 ? 0.9 : 1;
   const hag = haggleResult(v, v.hagRoll);
   const discMult = 1 - hag.disc; // hag.disc negativo = recargo
@@ -798,7 +804,7 @@ function vendorCard(v){
       <b>${L("haggleWord")}</b> · ${L("dcPersuasion")} <b>${c.haggle.dc}</b> · ${L("maxDisc")} <b>${Math.round(c.haggle.max*100)}%</b>
       <div class="hrow">
         <span class="sub">${L("resultD20")}</span>
-        <input type="number" class="hagInput" value="${v.hagRoll??""}" placeholder="17" style="width:80px">
+        <input type="number" class="hagInput" value="${esc(v.hagRoll)}" placeholder="17" style="width:80px">
         <button class="small hagApply">${L("haggleBtn")}</button>
         <button class="small ghost hagRoll">🎲 ${L("rollWord")}</button>
       </div>
@@ -928,21 +934,21 @@ function renderCities(){
     const sm=citySummary(c);
     const isCur = current && current.id===c.id;
     const shopList = sm.shops.join(", ");
-    return `<div class="saved-item" data-id="${c.id}"${isCur?' style="outline:1px solid var(--gold)"':''}>
+    return `<div class="saved-item" data-id="${esc(c.id)}"${isCur?' style="outline:1px solid var(--gold)"':''}>
       <div style="flex:1; min-width:0">
-        <div><b>${c.name}</b> <span class="vtag var">${s?sizeName(s):(c.data&&c.data.sizeKey||"?")}</span>${isCur?` <span class="vtag basic">${L("currentTag")}</span>`:""}</div>
-        <div class="meta">${sm.nV} ${L("vendorsWord")} · ${sm.goods} ${L("goodsWord")}${c.date?" · "+c.date:""}</div>
-        <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${shopList}</div>
+        <div><b>${esc(c.name)}</b> <span class="vtag var">${s?sizeName(s):esc(c.data&&c.data.sizeKey||"?")}</span>${isCur?` <span class="vtag basic">${L("currentTag")}</span>`:""}</div>
+        <div class="meta">${sm.nV} ${L("vendorsWord")} · ${sm.goods} ${L("goodsWord")}${c.date?" · "+esc(c.date):""}</div>
+        <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(shopList)}</div>
       </div>
       <div class="row">
-        <button class="small loadCity" data-id="${c.id}">${L("load")}</button>
-        <button class="small ghost expCity" data-id="${c.id}" title="${L("exportCurrent")}">⬇</button>
-        <button class="small ghost delCity" data-id="${c.id}">✕</button>
+        <button class="small loadCity" data-id="${esc(c.id)}">${L("load")}</button>
+        <button class="small ghost expCity" data-id="${esc(c.id)}" title="${L("exportCurrent")}">⬇</button>
+        <button class="small ghost delCity" data-id="${esc(c.id)}">✕</button>
       </div>
     </div>`; }).join("");
   box.querySelectorAll(".loadCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) loadCity(c); });
   box.querySelectorAll(".expCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) downloadJson({type:"dnd-vendor-settlement", version:2, name:c.name, data:c.data}, c.name); });
-  box.querySelectorAll(".delCity").forEach(b=> b.onclick=()=>{ const a=getCities().filter(x=>x.id!==b.dataset.id); setCities(a); if(current&&current.id===b.dataset.id){} renderCities(); });
+  box.querySelectorAll(".delCity").forEach(b=> b.onclick=()=>{ const a=getCities().filter(x=>x.id!==b.dataset.id); setCities(a); if(current&&current.id===b.dataset.id){ current.id=null; updateGenInfo(); } renderCities(); });
 }
 
 function downloadJson(payload, name){

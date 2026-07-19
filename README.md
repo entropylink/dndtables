@@ -19,6 +19,7 @@ Para cada tamaño de asentamiento —de **troupe errante** a **megalópolis**—
 - **Precios variables y realistas.** Los precios base salen de las tablas de equipo de D&D 5e. Cada vendedor tira 1d12 para su nivel de precios (de carestía a liquidación), y si dos venden la misma categoría se aplica un **−10 % por competencia**.
 - **Regateo por Persuasión.** Cada ficha indica su CD y su descuento máximo. Introduce (o tira) tu resultado de Persuasión y verás el precio negociado. Un fallo grande ofende al vendedor y sube el precio.
 - **Ciudades persistentes.** Cada ciudad generada recibe un **nombre aleatorio** y se **guarda automáticamente en el navegador** con todo su contenido. Se listan en orden alfabético con su tipo (Town, City, Megalopolis…) y un resumen de lo que tienen (nº de vendedores, nº de artículos y las tiendas). Puedes **exportar la ciudad actual** o **todas las ciudades** a `.json`, e **importar** cualquiera de los dos formatos.
+- **Bilingüe EN/ES.** Un botón conmuta toda la herramienta (interfaz, vendedores, artículos y tablas) entre inglés y español; arranca en inglés por defecto y recuerda tu elección.
 
 ## Uso
 
@@ -28,3 +29,7 @@ Para cada tamaño de asentamiento —de **troupe errante** a **megalópolis**—
 4. Guarda o exporta el resultado.
 
 Los precios base se dan en po (oro), pp (plata) y pc (cobre). Los ítems exóticos, mágicos o de dudosa procedencia usan valores estimados; ajústalos a tu mundo.
+
+## Despliegue
+
+La versión publicada vive en **[entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/)**, registrada en el hub de herramientas del sitio (entropy-landing).
