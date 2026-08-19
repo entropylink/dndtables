@@ -1,4 +1,6 @@
-# Tablas de Vendedores por Asentamiento (D&D)
+# Settlement Vendor Tables / Tablas de Vendedores por Asentamiento
+
+*Single-file, dependency-free, offline HTML tool that generates the vendors of a settlement for a 5e tabletop campaign — with live d100 tables, realistic variable pricing, Persuasion-based haggling, and persistent, exportable cities. Fully bilingual EN/ES. Open `index.html` in any browser, or try it live at [entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/).*
 
 Herramienta HTML autónoma (un solo archivo, sin dependencias ni conexión) para generar los vendedores de un asentamiento en una partida de D&D. Abre `index.html` en cualquier navegador.
 
@@ -33,3 +35,11 @@ Los precios base se dan en po (oro), pp (plata) y pc (cobre). Los ítems exótic
 ## Despliegue
 
 La versión publicada vive en **[entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/)**, registrada en el hub de herramientas del sitio (entropy-landing).
+
+## License & attribution
+
+Code is MIT-licensed (see `LICENSE`). Base item prices come from the SRD 5.1
+by Wizards of the Coast LLC, used under CC-BY-4.0 — full attribution and the
+Fan Content disclaimer are in `NOTICE`. This is unofficial Fan Content
+permitted under the Fan Content Policy; not approved or endorsed by Wizards
+of the Coast.
