@@ -1,0 +1,320 @@
+#!/usr/bin/env node
+/**
+ * Pruebas de la app suelta (index.html), headless con Playwright.
+ *
+ *   node tests/app.test.mjs            → corre todo; sale con 1 si algo falla
+ *   SHOTS=1 node tests/app.test.mjs    → además guarda capturas en tests/.shots/
+ *
+ * Playwright: en el entorno remoto está en /opt/node22/lib/node_modules/playwright.
+ * En tu PC: `npm i -g playwright && npx playwright install chromium`, o ajusta PW_PATH.
+ */
+import { mkdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const URL_APP = pathToFileURL(join(HERE, '..', 'index.html')).href;
+const OUT = join(HERE, '.shots');
+const PW = process.env.PW_PATH || '/opt/node22/lib/node_modules/playwright/index.mjs';
+let chromium;
+try { ({ chromium } = await import(PW)); } catch { ({ chromium } = await import('playwright')); }
+if (process.env.SHOTS) mkdirSync(OUT, { recursive: true });
+
+let fails = 0, total = 0;
+const ok = (cond, name, info = '') => { total++; if (!cond) fails++; console.log(`${cond ? '✓' : '✖'} ${name}${cond ? '' : ' — ' + info}`); };
+const IGNORE = /fonts\.googleapis|fonts\.gstatic|ERR_CERT|net::ERR/;
+
+const browser = await chromium.launch();
+async function fresh(opts = {}) {
+  const ctx = await browser.newContext({ viewport: opts.viewport || { width: 1280, height: 900 }, acceptDownloads: true });
+  if (opts.init) await ctx.addInitScript(opts.init);
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('console', (m) => { if ((m.type() === 'error' || m.type() === 'warning') && !IGNORE.test(m.text())) errors.push(`${m.type()}: ${m.text()}`); });
+  page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
+  page.on('dialog', (d) => d.accept());
+  await page.goto(URL_APP + (opts.query || ''));
+  await page.waitForFunction(() => window.DT && DT.started);
+  return { ctx, page, errors };
+}
+const shot = async (page, name, full = false) => { if (process.env.SHOTS) await page.screenshot({ path: join(OUT, name + '.png'), fullPage: full }); };
+
+/* ── 1. Motor de tablas (funciones puras) ─────────────────────────────── */
+{
+  const { ctx, page, errors } = await fresh();
+  const r = await page.evaluate(() => {
+    const out = {};
+    const f = DT.faces([1, 1], 100);
+    out.half = f[0].lo === 1 && f[0].hi === 50 && f[1].lo === 51 && f[1].hi === 100;
+    // pesos aleatorios: siempre cubren 1..N sin huecos, cada fila ≥ 1 cara, peso 0 → sin rango
+    let fine = true;
+    for (let k = 0; k < 300; k++) {
+      const n = 1 + Math.floor(Math.random() * 30), sides = [4, 6, 8, 10, 12, 20, 100][k % 7];
+      if (n > sides) continue;
+      const ws = Array.from({ length: n }, (_, i) => (i % 7 === 3 ? 0 : Math.random() * 10 + 0.01));
+      const fr = DT.faces(ws, sides);
+      let next = 1;
+      fr.forEach((x, i) => { if (ws[i] === 0) { if (x) fine = false; return; } if (!x || x.lo !== next || x.hi < x.lo) fine = false; next = x ? x.hi + 1 : next; });
+      if (ws.some((w) => w > 0) && next !== sides + 1) fine = false;
+    }
+    out.random = fine;
+    try { DT.faces([1, 1, 1], 2, 'x'); out.throws = false; } catch { out.throws = true; }
+    out.monotone = (() => { const fr = DT.faces([8, 1], 100); return (fr[0].hi - fr[0].lo) > (fr[1].hi - fr[1].lo); })();
+    DT.seed(42); const a = [DT.rollDie(20), DT.rollDie(20), DT.rollDie(20)]; DT.seed(42); const b = [DT.rollDie(20), DT.rollDie(20), DT.rollDie(20)];
+    out.seeded = a.join() === b.join();
+    out.dice = JSON.stringify([DT.parseDice('1d4'), DT.parseDice('2d6+1'), DT.parseDice('1d8−2'), DT.parseDice('1')]);
+    return out;
+  });
+  ok(r.half, 'faces: dos pesos iguales parten el d100 en 1–50 / 51–100');
+  ok(r.random, 'faces: con pesos al azar siempre cubre el dado entero, sin huecos ni solapes');
+  ok(r.throws, 'faces: más filas que caras es un error explícito');
+  ok(r.monotone, 'faces: más peso → rango más ancho');
+  ok(r.seeded, 'DT.seed repite las mismas tiradas');
+  ok(r.dice === JSON.stringify([{ count: 1, die: 4, mod: 0 }, { count: 2, die: 6, mod: 1 }, { count: 1, die: 8, mod: -2 }, { count: 0, die: 1, mod: 1 }]), 'parseDice entiende 1d4, 2d6+1, 1d8−2 y "1"', r.dice);
+  const i18n = await page.evaluate(() => {
+    const en = Object.keys(DT.dict.en), es = Object.keys(DT.dict.es);
+    const used = new Set();
+    const scan = (root) => root.querySelectorAll('[data-i18n],[data-i18n-html],[data-i18n-ph],[data-i18n-title]').forEach((el) => {
+      for (const a of ['data-i18n', 'data-i18n-html', 'data-i18n-ph', 'data-i18n-title']) if (el.hasAttribute(a)) used.add(el.getAttribute(a)); });
+    scan(document); document.querySelectorAll('template').forEach((t) => scan(t.content));
+    return { onlyEn: en.filter((k) => !es.includes(k)), onlyEs: es.filter((k) => !en.includes(k)), missing: [...used].filter((k) => !(k in DT.dict.en) || !(k in DT.dict.es)) };
+  });
+  ok(!i18n.onlyEn.length && !i18n.onlyEs.length, 'i18n: EN y ES tienen exactamente las mismas claves', JSON.stringify(i18n));
+  ok(!i18n.missing.length, 'i18n: toda clave usada en el HTML existe en los dos idiomas', i18n.missing.join());
+  ok(!errors.length, 'sin errores de consola al cargar', errors.join(' | '));
+  await ctx.close();
+}
+
+/* ── 2. Datos de la pestaña de vendedores ─────────────────────────────── */
+{
+  const { ctx, page } = await fresh();
+  const r = await page.evaluate(() => {
+    const A = DT.tabs.get('vendors').api, out = {};
+    const cover = (tb) => { const seen = new Array(tb.die + 1).fill(0); tb.ranges().forEach((x) => { for (let n = x.lo; n <= x.hi; n++) seen[n]++; }); return seen.slice(1).every((c) => c === 1); };
+    out.fixed = ['STOCK', 'STATES', 'EVENTS', 'ANCESTRY', 'TRAIT', 'QUIRK', 'ATTITUDE', 'RUMOR', 'TRUTH'].filter((k) => !cover(A[k]));
+    const cats = [...new Set(Object.values(A.CATALOG).map((c) => c.cat))];
+    out.missingSpecial = cats.filter((c) => !A.SPECIALS[c] || A.SPECIALS[c].length !== 6);
+    const keys = new Set(Object.keys(A.CATALOG));
+    const refs = [];
+    [...A.STATES.rows, ...A.EVENTS.rows].forEach((r) => { Object.keys(r.weights || {}).forEach((k) => refs.push(k)); (r.remove || []).forEach((k) => refs.push(k)); if (r.force) refs.push(r.force); Object.keys(r.dcKey || {}).forEach((k) => refs.push(k)); });
+    out.badRefs = refs.filter((k) => !keys.has(k));
+    const priceCats = new Set([...A.STATES.rows, ...A.EVENTS.rows].flatMap((r) => [...Object.keys(r.price || {}), ...Object.keys(r.stock || {})]));
+    out.badCats = [...priceCats].filter((c) => c !== 'all' && !cats.includes(c));
+    out.noWeight = [...A.VARIETY_KEYS, ...A.TRAVEL_KEYS].filter((k) => !A.VENDOR_W[k]);
+    out.sizes = A.SIZES.map((s) => { const v = A.varietyTable(s); return v.pool.length ? cover({ die: 100, ranges: () => v.table.ranges(v.wf) }) : true; }).every(Boolean);
+    const w = (sizeKey, key) => { const s = A.SIZES.find((x) => x.key === sizeKey); const v = A.varietyTable(s); const r = v.table.ranges(v.wf).find((x) => x.row.key === key); return r ? r.hi - r.lo + 1 : 0; };
+    out.enchCity = w('city', 'enchanter'); out.enchMega = w('megalopolis', 'enchanter');
+    out.herbCity = w('city', 'herbalist');
+    const trav = (stateId) => A.TRAVEL_T.ranges(A.travelWF(A.STATES.byId(stateId), A.EVENTS.byId('quiet'))).map((x) => x.row.key);
+    out.crackdown = trav('crackdown').includes('blackMarket');
+    out.embargo = trav('embargo').includes('caravan');
+    out.warWidth = (() => { const g = (s) => { const r = A.TRAVEL_T.ranges(A.travelWF(A.STATES.byId(s), A.EVENTS.byId('quiet'))).find((x) => x.row.key === 'mercRecruiter'); return r.hi - r.lo + 1; }; return g('war') > g('normal'); })();
+    const d = { state: { id: 'war' }, event: { id: 'shortage' } };
+    out.warArms = A.catMult('armas', d);
+    out.warFood = A.catMult('comida', { state: { id: 'normal' }, event: { id: 'quiet' } });
+    const v = { key: 'blacksmith', npc: { att: 1 }, hagRoll: null, factor: 1, comp: 0 };
+    out.hostileDC = A.effHaggle(v, { state: { id: 'crackdown' } }).dc;   // 15 + 3 (hostil) + 1 (mano dura)
+    out.tavernBrawl = A.effHaggle({ key: 'tavern', npc: { att: 3 } }, { event: { id: 'brawl' } }).dc;   // 16 + 2
+    return out;
+  });
+  ok(!r.fixed.length, 'tablas fijas cubren su dado exactamente una vez', r.fixed.join());
+  ok(!r.missingSpecial.length, 'cada categoría del catálogo tiene su tabla d6 de piezas especiales', r.missingSpecial.join());
+  ok(!r.badRefs.length, 'estados y eventos solo nombran vendedores que existen', r.badRefs.join());
+  ok(!r.badCats.length, 'estados y eventos solo nombran categorías que existen', r.badCats.join());
+  ok(!r.noWeight.length, 'cada vendedor tiene peso en su d100', r.noWeight.join());
+  ok(r.sizes, 'el d100 de variedad cubre 1–100 en cada tamaño');
+  ok(r.enchMega > r.enchCity && r.herbCity > r.enchCity, `pesos: el encantador es raro y crece con el tamaño (ciudad ${r.enchCity}, megalópolis ${r.enchMega}, herbolario ${r.herbCity})`);
+  ok(!r.crackdown && !r.embargo, 'mano dura quita al contrabandista; bloqueo quita la caravana');
+  ok(r.warWidth, 'guerra ensancha el rango del reclutador de mercenarios');
+  ok(Math.abs(r.warArms - 1.25 * 1.10) < 1e-9 && r.warFood === 1, `precio por categoría: guerra × retraso = ×1.375 (${r.warArms})`);
+  ok(r.hostileDC === 19, `CD efectiva: herrería 15 + hostil 3 + mano dura 1 = 19 (${r.hostileDC})`);
+  ok(r.tavernBrawl === 18, `pelea en la taberna: CD 16 + 2 = 18 (${r.tavernBrawl})`);
+  await ctx.close();
+}
+
+/* ── 3. Generar en todos los tamaños (semilla fija) ───────────────────── */
+{
+  const { ctx, page, errors } = await fresh();
+  const r = await page.evaluate(() => {
+    const A = DT.tabs.get('vendors').api, out = [];
+    for (let seed = 1; seed <= 25; seed++) {
+      for (const s of A.SIZES) {
+        DT.seed(seed * 97 + s.key.length);
+        A.select(s.key); A.generateAll(); A.newWeek(); A.newWeek();
+        const d = A.current().data;
+        const all = [...d.permanent, ...d.traveling];
+        const bad = all.filter((v) => !v.npc || !Array.isArray(v.stock) || v.stock.length !== A.CATALOG[v.key].goods.length || !v.special);
+        const expectedPerm = s.core.length + Math.min(s.variety, A.varietyTable(s).pool.length);
+        if (bad.length || d.permanent.length !== expectedPerm || d.week !== 3 || !d.state || !d.event) out.push({ seed, size: s.key, bad: bad.length, perm: d.permanent.length, expectedPerm, week: d.week });
+        const dup = d.permanent.map((v) => v.key); if (new Set(dup).size !== dup.length) out.push({ seed, size: s.key, dup: true });
+        const ev = A.EVENTS.byId(d.event.id);
+        if (ev.remove && d.traveling.some((v) => ev.remove.includes(v.key))) out.push({ seed, size: s.key, raidFail: true });
+      }
+    }
+    return { problems: out, records: DT.records.list('vendors').length };
+  });
+  ok(!r.problems.length, 'generar + 2 semanas × 8 tamaños × 25 semillas: tenderos, existencias, sin repetidos, la redada funciona', JSON.stringify(r.problems.slice(0, 3)));
+  ok(r.records === 200, `cada generación queda guardada (${r.records})`);
+  ok(!errors.length, 'sin errores de consola tras 200 generaciones', errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
+/* ── 4. Interfaz: generar, regatear, cambiar idioma, persistir ─────────── */
+{
+  const { ctx, page, errors } = await fresh();
+  await page.click('[data-ref="genBtn"]');
+  const cards = await page.locator('#panel-vendors .vendor').count();
+  ok(cards >= 9, `Villa: ≥ 9 fichas (${cards})`);
+  ok(await page.locator('#panel-vendors .scard').count() === 2, 'estado del asentamiento y evento semanal visibles');
+  ok(await page.locator('#panel-vendors .vendor .npc .who').count() === cards, 'cada ficha tiene su tendero');
+  const first = page.locator('#panel-vendors .vendor').first();
+  const before = await first.locator('.note').textContent();
+  await first.locator('.hagInput').fill('30');
+  await first.locator('.hagApply').click();
+  const after = await page.locator('#panel-vendors .vendor').first().locator('.note').textContent();
+  ok(before !== after && /(Deal|Trato)/.test(after), 'la calculadora de regateo aplica el descuento', after);
+  await page.locator('#panel-vendors .vendor').first().locator('.rerollNpc').click();
+  ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, '↻ Tendero vuelve a tirar el PNJ');
+  const name = await page.inputValue('[data-ref="saveName"]');
+  await page.click('#langToggle');
+  ok((await page.textContent('#appTitle')).includes('Tablas de Vendedores'), 'EN → ES cambia la cabecera');
+  ok((await page.textContent('#panel-vendors [data-ref="genBtn"]')).includes('Generar'), 'EN → ES cambia los botones');
+  ok(/semana/.test(await page.textContent('#panel-vendors .scard.event')), 'EN → ES cambia las tarjetas de estado');
+  await shot(page, 'app-es');
+  await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
+  ok(await page.inputValue('[data-ref="saveName"]') === name, 'al recargar vuelve la ciudad activa', name);
+  ok((await page.textContent('#appTitle')).includes('Tablas de Vendedores'), 'al recargar recuerda el idioma');
+  ok(await page.locator('#panel-vendors .saved-item').count() === 1, 'la ciudad aparece en «Ciudades guardadas»');
+  // copiar como Markdown
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  const md = await page.evaluate(() => { const t = DT.tabs.get('vendors'); return t.toMarkdown(DT.records.active('vendors'), { dm: true }); });
+  ok(md.includes('| ') && md.includes(name) && /\*DM: /.test(md), 'Markdown del asentamiento: tabla, nombre y veracidad de rumores para el DM');
+  const art = await page.evaluate(() => DT.tabs.get('vendors').api.articlePayload(DT.records.active('vendors')));
+  ok(art.block.startsWith(':::nota 🛒') && art.block.trimEnd().endsWith(':::') && !/DM: /.test(art.block), 'bloque del artículo: :::nota 🛒 … ::: sin secretos del DM');
+  // exportar
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('[data-ref="exportBtn"]')]);
+  const exported = JSON.parse(readFileSync(await dl.path(), 'utf8'));
+  ok(exported.type === 'dndtables-record' && exported.record.name === name && exported.record.data.v === 3, 'exportar actual → dndtables-record v3');
+  // borrar la actual limpia la vista
+  await page.locator('#panel-vendors .saved-item [data-act="delete"]').click();
+  ok(await page.locator('#panel-vendors .vendor').count() === 0 && await page.locator('#panel-vendors .saved-item').count() === 0, 'borrar la ciudad actual la quita de la lista y de la vista');
+  ok(!errors.length, 'sin errores de consola en la interfaz', errors.join(' | '));
+  await ctx.close();
+}
+
+/* ── 5. Migración de la v2 y formatos viejos ──────────────────────────── */
+{
+  const v2 = [{ id: 'c1', name: 'Oldport', date: '1/2/2026', data: { sizeKey: 'city', permanent: [
+    { key: 'generalStore', tier: 'basic', factor: 1.1, priceLabel: 'Algo caro (+10%)', hagRoll: null },
+    { key: 'tavern', tier: 'basic', factor: 1, priceLabel: 'Precio estándar', hagRoll: '18' },
+    { key: 'nope', tier: 'variety', factor: 1 }], traveling: [{ key: 'fortune', tier: 'travel', factor: 0.9, hagRoll: null }] } }];
+  const init = `if(!localStorage.getItem('dnd_vendor_cities_v2')){ localStorage.setItem('dnd_vendor_cities_v2', ${JSON.stringify(JSON.stringify(v2))}); localStorage.setItem('lang','es'); }`;
+  const { ctx, page, errors } = await fresh({ init });
+  const r = await page.evaluate(() => ({ recs: DT.records.list('vendors').map((x) => x.name), old: localStorage.getItem('dnd_vendor_cities_v2') !== null, lang: DT.lang }));
+  ok(r.recs.length === 1 && r.recs[0] === 'Oldport', 'las ciudades v2 pasan a la v3 al primer arranque');
+  ok(r.old, 'la clave vieja no se borra');
+  ok(r.lang === 'es', 'la preferencia de idioma vieja se respeta');
+  await page.locator('#panel-vendors .saved-item [data-act="load"]').click();
+  const cards = await page.locator('#panel-vendors .vendor').count();
+  ok(cards === 3, `una ciudad v2 carga (la clave desconocida se ignora): ${cards} fichas`);
+  ok(await page.locator('#panel-vendors [data-act="rollNpc"]').count() === 3, 'sin tendero en la v2 → botón «Tirar tendero»');
+  // precio igual al de la v2: factor 1.1, sin competencia, existencias normales → antorcha 1 pc × 1.1
+  const price = await page.locator('#panel-vendors .vendor').first().locator('tr', { hasText: 'Saco de dormir' }).locator('td.price').textContent();
+  ok(price.trim() === '1 po 1 pp', `los precios de una ciudad v2 no cambian (saco de dormir 1 po × 1.1 = ${price.trim()})`);
+  await page.locator('#panel-vendors [data-act="rollNpc"]').first().click();
+  ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, 'se le puede tirar tendero a una ciudad vieja');
+  // importar un JSON de la v2 (una ciudad) por el selector de archivos
+  const single = { type: 'dnd-vendor-settlement', version: 2, name: '<img src=x onerror=window.__xss=1>', data: { sizeKey: 'hamlet', permanent: [{ key: 'generalStore', tier: 'basic', factor: 1 }], traveling: [] } };
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#panel-vendors [data-ref="importBtn"]')]);
+  await chooser.setFiles({ name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(single)) });
+  await page.waitForTimeout(300);
+  const x = await page.evaluate(() => ({ xss: !!window.__xss, imgs: document.querySelectorAll('#panel-vendors .saved-item img').length, n: DT.records.list('vendors').length, name: document.querySelector('#panel-vendors [data-ref="saveName"]').value }));
+  ok(x.n === 2 && x.name.startsWith('<img'), 'importar una ciudad v2 la guarda y la carga');
+  ok(!x.xss && x.imgs === 0, 'un nombre malicioso importado se muestra escapado (sin XSS)');
+  const coll = await page.evaluate(() => { const r = DT.io.parse({ type: 'dnd-vendor-collection', cities: [{ id: 'c1', name: 'Dup', data: { sizeKey: 'town', permanent: [] } }, { name: 'Bad' }] }); const added = DT.io.importRecords(r.records); return { added: added.length, skipped: r.skipped, newId: added[0].id !== 'c1' }; });
+  ok(coll.added === 1 && coll.skipped === 0 && coll.newId, 'colección v2: un id repetido recibe uno nuevo (no pisa); lo inválido se descarta');
+  const unknown = await page.evaluate(() => DT.io.parse({ type: 'dndtables-collection', records: [{ id: 'z', tab: 'nope', name: 'X', data: {} }] }));
+  ok(unknown.records.length === 0 && unknown.skipped === 1, 'resultados de una pestaña desconocida se omiten al importar');
+  ok(!errors.length, 'sin errores de consola en la migración', errors.join(' | '));
+  await ctx.close();
+}
+
+/* ── 6. Pestañas nuevas: registro y pestaña declarativa ────────────────── */
+{
+  const { ctx, page, errors } = await fresh();
+  const r = await page.evaluate(() => {
+    const out = {};
+    DT.simpleTableTab({ id: 'test-weather', icon: '⛅', order: 50, title: { en: 'Weather', es: 'Clima' }, tagline: { en: 'Test', es: 'Prueba' },
+      tables: [
+        { id: 'sky', die: 6, title: { en: 'Sky', es: 'Cielo' }, rows: [{ lo: 1, hi: 3, text: { en: 'Clear', es: 'Despejado' } }, { lo: 4, hi: 6, text: { en: 'Cloudy', es: 'Nublado' } }] },
+        { id: 'wind', die: 20, title: { en: 'Wind', es: 'Viento' }, rows: [{ w: 3, text: { en: 'Calm', es: 'Calma' } }, { w: 1, text: { en: 'Gale', es: 'Vendaval' } }] }] });
+    out.bar = document.querySelectorAll('#tabBar .tabbtn').length;
+    out.hidden = document.getElementById('tabBar').hidden;
+    try { DT.registerTab({ id: 'vendors', mount() {} }); out.dupThrows = false; } catch { out.dupThrows = true; }
+    try { DT.registerTab({ id: 'Bad Id', mount() {} }); out.badThrows = false; } catch { out.badThrows = true; }
+    DT.registerTab({ id: 'test-broken', title: { en: 'Broken', es: 'Rota' }, mount() { throw new Error('boom'); } });
+    return out;
+  });
+  ok(r.bar === 2 && !r.hidden, 'con más de una pestaña aparece la barra de pestañas');
+  ok(r.dupThrows && r.badThrows, 'registerTab rechaza ids repetidos o inválidos');
+  await page.click('#tabBar [data-tab="test-weather"]');
+  await page.click('#panel-test-weather [data-ref="rollAll"]');
+  const rc = await page.locator('#panel-test-weather .rcard').count();
+  const saved = await page.evaluate(() => DT.records.list('test-weather').length);
+  ok(rc === 2 && saved === 1, 'pestaña declarativa: «Tirar todo» tira cada tabla y guarda el resultado');
+  ok(await page.locator('#panel-test-weather .saved-item').count() === 1, 'la biblioteca genérica lista el resultado');
+  const md = await page.evaluate(() => DT.tabs.get('test-weather').toMarkdown(DT.records.list('test-weather')[0]));
+  ok(/\*\*Sky\*\* \(d6 = \d\)/.test(md), 'la pestaña declarativa exporta Markdown', md);
+  await page.click('#tabBar [data-tab="test-broken"]');
+  ok(await page.locator('#panel-test-broken .tab-error').count() === 1, 'una pestaña que falla al montar muestra su error sin tumbar la app');
+  await page.click('#tabBar [data-tab="vendors"]');
+  await page.click('#panel-vendors [data-ref="genBtn"]');
+  ok(await page.locator('#panel-vendors .vendor').count() > 0, 'las demás pestañas siguen funcionando');
+  await page.click('#langToggle');
+  ok((await page.textContent('#tabBar')).includes('Clima'), 'las pestañas registradas también cambian de idioma');
+  ok((await page.textContent('#appTitle')).includes('Tablas D&D'), 'con varias pestañas la cabecera es la de la app');
+  const errs = errors.filter((e) => !/boom/.test(e));
+  ok(!errs.length, 'sin errores de consola (salvo el de la pestaña rota a propósito)', errs.join(' | '));
+  await ctx.close();
+}
+
+/* ── 7. Puente con Veil: la mezcla (sin Veil) ─────────────────────────── */
+{
+  const { ctx, page } = await fresh();
+  const r = await page.evaluate(() => {
+    const rec = (id, savedAt, name) => ({ id, tab: 'vendors', name: name || id, savedAt, data: { sizeKey: 'town', permanent: [], traveling: [] } });
+    DT.records.all().splice(0); DT.records.upsert(rec('a', 100), { keepTime: true }); DT.records.upsert(rec('b', 100), { keepTime: true }); DT.records.upsert(rec('c', 300, 'local-newer'), { keepTime: true });
+    localStorage.setItem('dndtables.v3.synced', JSON.stringify(['a', 'b', 'c', 'd']));
+    DT.records.reload();
+    // Veil tiene: b (más nuevo), c (más viejo), d (ya no está aquí → se borró aquí), e (nuevo del mundo). Falta a (se borró en el mundo).
+    const res = DT.bridge.merge([rec('b', 200, 'world-newer'), rec('c', 200), rec('d', 100), rec('e', 50)]);
+    const names = Object.fromEntries(DT.records.all().map((x) => [x.id, x.name]));
+    return { names, upload: res.upload.map((x) => x.id), removeWorld: res.removeWorld };
+  });
+  ok(!('a' in r.names), 'mezcla: lo que el mundo borró se borra aquí');
+  ok(r.names.b === 'world-newer', 'mezcla: gana la versión más reciente del mundo');
+  ok(r.names.c === 'local-newer' && r.upload.includes('c'), 'mezcla: la versión local más reciente se sube');
+  ok(r.removeWorld.includes('d') && !('d' in r.names), 'mezcla: lo borrado aquí se borra del mundo');
+  ok(r.names.e === 'e', 'mezcla: lo nuevo del mundo baja');
+  await ctx.close();
+}
+
+/* ── 8. Pantallas: sin desbordes en móvil, modo Veil sin fondo ─────────── */
+{
+  const { ctx, page, errors } = await fresh({ viewport: { width: 390, height: 844 } });
+  await page.click('#panel-vendors [data-ref="genBtn"]');
+  await page.evaluate(() => document.querySelectorAll('details').forEach((d) => { d.open = true; }));
+  const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(over <= 0, `móvil 390 px: sin scroll horizontal (${over}px de más)`);
+  await shot(page, 'app-mobile', true);
+  ok(!errors.length, 'sin errores de consola en móvil', errors.join(' | '));
+  await ctx.close();
+  const v = await fresh({ query: '?velo=mundo-x' });
+  const s = await v.page.evaluate(() => { DT.tabs.get('vendors').api.generateAll(); return { keys: Object.keys(localStorage).filter((k) => k.startsWith('velo:mundo-x:')).length, plain: localStorage.getItem('dndtables.v3.records') }; });
+  ok(s.keys >= 1 && s.plain === null, 'con ?velo=<mundo> los datos se guardan con prefijo de mundo');
+  await v.ctx.close();
+}
+
+await browser.close();
+console.log(`\n${total - fails}/${total} OK${fails ? `, ${fails} fallas` : ''}`);
+process.exit(fails ? 1 : 0);

@@ -1,40 +1,76 @@
-# Settlement Vendor Tables / Tablas de Vendedores por Asentamiento
+# D&D Tables / Tablas D&D
 
-*Single-file, dependency-free, offline HTML tool that generates the vendors of a settlement for a 5e tabletop campaign — with live d100 tables, realistic variable pricing, Persuasion-based haggling, and persistent, exportable cities. Fully bilingual EN/ES. Open `index.html` in any browser, or try it live at [entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/).*
+*Single-file, dependency-free, offline HTML tool with table generators for a 5e tabletop campaign. Its first tab generates the vendors of a settlement — weighted d100 tables, settlement state and weekly market events, shopkeepers with rumors, stock of the day, realistic variable pricing, Persuasion-based haggling, and persistent, exportable cities. Fully bilingual EN/ES. Built to grow by tabs, and it plugs into [Veil](https://github.com/entropylink/dnd-veil) as a DM tool. Open `index.html` in any browser, or try it live at [entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/).*
 
-Herramienta HTML autónoma (un solo archivo, sin dependencias ni conexión) para generar los vendedores de un asentamiento en una partida de D&D. Abre `index.html` en cualquier navegador.
+Herramienta HTML autónoma (un solo archivo, sin dependencias ni conexión) con generadores de tablas para el DM. Abre `index.html` en cualquier navegador.
 
-## Qué hace
+## Pestaña ⚖️ Vendedores
 
-Para cada tamaño de asentamiento —de **troupe errante** a **megalópolis**— genera dos bloques:
+Para cada tamaño de asentamiento —de **troupe errante** a **megalópolis**—:
 
-1. **Vendedores permanentes**
-   - *Básicos*: los puestos imprescindibles para que el asentamiento funcione (mercader general, taberna, herrería, mercado, templo, boticario). Cuántos hay garantizados depende del tamaño.
-   - *Variedad*: puestos «no tan básicos» (armería, alquimista, joyería, cartógrafo, encantador…) que se tiran en una tabla d100 para que cada asentamiento se sienta distinto del anterior.
+1. **Estado del asentamiento** (d20, una vez): tiempos normales, prosperidad, fiestas, cosecha,
+   peregrinación, fiebre del oro, mano dura, crisis, sequía, bloqueo, guerra, plaga, amenaza de
+   monstruos. Mueve precios y existencias por categoría, cuántos ambulantes llegan y cuáles son
+   más probables.
+2. **Vendedores permanentes**
+   - *Básicos*: los imprescindibles (mercader general, taberna, herrería, mercado, templo,
+     boticario), garantizados según el tamaño.
+   - *Variedad*: tabla **d100 con pesos** — los oficios cotidianos ocupan rangos anchos y las
+     tiendas raras (encantador, importador de exóticos, casa de cambio) estrechos, que crecen en
+     las ciudades grandes.
+3. **Evento semanal del mercado** (d20): llega una caravana, feria, tormenta, redada, robo,
+   guerra de precios, retraso de suministros, recién llegado, subasta, pelea en la taberna…
+4. **Vendedores ambulantes**: cuántos (dado del tamaño ± estado ± evento, puede ser **0**) y
+   quiénes (d100 con pesos, ajustado por el estado). Se permiten repetidos.
 
-2. **Vendedores ambulantes**
-   - Cambian cada semana/día. Primero se tira **cuántos** hay (puede ser **0**), luego **quiénes** en una tabla d100. Se permiten repetidos: a veces dos venden casi lo mismo (y compiten), a veces no aparece nadie de esa categoría.
+Y en cada ficha:
 
-## Características
+- **El tendero**: nombre y ascendencia, personalidad, manía, **actitud que sube o baja la CD de
+  regateo** y un **rumor** con su veracidad (solo para el DM).
+- **Existencias del día** (d6 por artículo): agotado, pocas unidades (+10 %), normal,
+  abundante (−10 %). Los servicios nunca se agotan.
+- **Pieza especial** (con 4+ en d6): algo fuera de catálogo según su categoría.
+- **Precios**: nivel de precios (d12) × competencia (−10 %) × estado × evento × existencias ×
+  regateo por **Persuasión**, con calculadora en la ficha.
+- ↻ Precios · ↻ Existencias · ↻ Tendero · ↻ Cambiar vendedor.
 
-- **Tira en vivo o digital.** Cada tabla muestra su dado (d100, d12, 1d20…) y su distribución, así que puedes tirar con dados físicos y buscar el resultado, o pulsar los botones para tirar en digital. Un **registro de tiradas** deja ver qué salió.
-- **Precios variables y realistas.** Los precios base salen de las tablas de equipo de D&D 5e. Cada vendedor tira 1d12 para su nivel de precios (de carestía a liquidación), y si dos venden la misma categoría se aplica un **−10 % por competencia**.
-- **Regateo por Persuasión.** Cada ficha indica su CD y su descuento máximo. Introduce (o tira) tu resultado de Persuasión y verás el precio negociado. Un fallo grande ofende al vendedor y sube el precio.
-- **Ciudades persistentes.** Cada ciudad generada recibe un **nombre aleatorio** y se **guarda automáticamente en el navegador** con todo su contenido. Se listan en orden alfabético con su tipo (Town, City, Megalopolis…) y un resumen de lo que tienen (nº de vendedores, nº de artículos y las tiendas). Puedes **exportar la ciudad actual** o **todas las ciudades** a `.json`, e **importar** cualquiera de los dos formatos.
-- **Bilingüe EN/ES.** Un botón conmuta toda la herramienta (interfaz, vendedores, artículos y tablas) entre inglés y español; arranca en inglés por defecto y recuerda tu elección.
+**↻ Nueva semana** tira evento nuevo, ambulantes nuevos y repone las existencias de todos.
 
-## Uso
+## Todo
 
-1. Elige un tamaño de asentamiento.
-2. Pulsa **Generar asentamiento** (o regenera solo permanentes / solo ambulantes).
-3. Regatea, recambia precios o cambia vendedores en cada ficha.
-4. Guarda o exporta el resultado.
+- **Tira en vivo o digital.** Cada tabla de referencia muestra su dado y sus rangos (los de pesos
+  ya repartidos), así que puedes tirar con dados físicos. Un **registro de tiradas** enseña qué salió.
+- **Resultados persistentes.** Cada ciudad recibe un nombre aleatorio y se **guarda sola** en el
+  navegador. Exporta la actual o todas a `.json` e impórtalas (también los `.json` de la versión 2).
+  Las ciudades guardadas por la versión 2 se migran solas la primera vez.
+- **📋 Copiar como Markdown** para pegar en tus notas.
+- **Bilingüe EN/ES** en toda la interfaz y el contenido; recuerda tu elección.
 
-Los precios base se dan en po (oro), pp (plata) y pc (cobre). Los ítems exóticos, mágicos o de dudosa procedencia usan valores estimados; ajústalos a tu mundo.
+## Dentro de Veil
+
+`node veil/install.mjs ../dnd-veil` la instala como extensión de Veil (**⚅ Tablas D&D** en cada
+mundo). Ahí los resultados se guardan **con el mundo**, cualquier cosa va a la **pantalla de DM**,
+y un asentamiento se vuelve su **artículo** (plantilla de asentamiento, mercado en «Economía»,
+actualizable sin tocar tu prosa). Detalles: [`veil/README.md`](veil/README.md) y
+[`docs/VEIL.md`](docs/VEIL.md).
+
+## Agregar pestañas
+
+Una pestaña nueva es un bloque `<script>` que llama a `DT.simpleTableTab({...})` (solo datos) o
+a `DT.registerTab({...})` (lógica propia). Guardado, biblioteca, exportar/importar, idioma, tablas
+de referencia y Veil vienen del núcleo. Guía, contrato e ideas: [`docs/ADDING_TABS.md`](docs/ADDING_TABS.md).
+
+## Pruebas
+
+```bash
+npm test                                  # sintaxis + contrato con Veil + pruebas headless (Playwright)
+VEIL_DIR=../dnd-veil npm run test:veil    # integración real con un servidor de Veil
+```
 
 ## Despliegue
 
-La versión publicada vive en **[entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/)**, registrada en el hub de herramientas del sitio (entropy-landing).
+La versión publicada vive en **[entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/)**,
+registrada en el hub de herramientas del sitio (entropy-landing).
 
 ## License & attribution
 

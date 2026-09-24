@@ -6,9 +6,11 @@ https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is
 licensed under the Creative Commons Attribution 4.0 International License
 available at https://creativecommons.org/licenses/by/4.0/legalcode.
 
-Specifically, base item prices in the vendor catalog are drawn from the SRD
-5.1 equipment tables. Vendor concepts, settlement generation logic, prose,
-and all other content are original work.
+Specifically, base item prices in the vendor catalog and in the special-piece
+tables are drawn from the SRD 5.1 equipment tables (and, for a few poisons and
+gems, from the SRD 5.1 poison and treasure lists) where such an item exists.
+Vendor concepts, settlement states, market events, shopkeeper and rumor tables,
+settlement generation logic, prose, and all other content are original work.
 
 # Fan Content disclaimer
 

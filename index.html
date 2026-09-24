@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Settlement Vendor Tables — D&D</title>
+<title>D&D Tables</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -12,9 +12,10 @@
     /* Paleta de marca entropy.com.mx */
     --bg:#080909; --bg2:#141515; --card:#1c1d1d; --card2:#242525;
     --ink:#ffffff; --muted:#b0b0b0; --line:#4a4b4b;
-    --gold:#a8d300; --gold2:#8aae00; --cyan:#00ffff;
-    --green:#a8d300; --red:#ff6b6b;
-    --blue:#00ffff; --purple:#c9a8ff;
+    --gold:#a8d300; --gold2:#8aae00; --cyan:#00ffff; --cyan2:#1a8a8a;
+    --green:#a8d300; --red:#ff6b6b; --red2:#8a3f38;
+    --blue:#00ffff; --purple:#c9a8ff; --purple2:#6a5a9a;
+    --amber:#ffcf66; --amber2:#8a6a1a; --on-gold:#1a1b0a;
   }
   *{box-sizing:border-box}
   html{background:var(--bg)}
@@ -24,16 +25,17 @@
     color:var(--ink); font-family:"Ubuntu","Segoe UI",Arial,sans-serif; font-weight:400;
     line-height:1.5; padding:0 0 80px;
   }
+  [hidden]{display:none !important}
   /* particle background */
   #bg{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block}
-  header,.wrap{position:relative; z-index:1}
+  header,.wrap,.tabbar,.hostbar{position:relative; z-index:1}
   #bgToggle{position:fixed; left:14px; bottom:14px; z-index:21; width:36px; height:36px; border-radius:50%;
     display:flex; align-items:center; justify-content:center; padding:0; font-size:1rem; color:var(--gold);
     border-color:var(--gold2); background:var(--bg2); opacity:.5}
   #bgToggle:hover{opacity:1; color:var(--cyan); border-color:var(--cyan)}
   #langToggle{position:fixed; right:14px; top:14px; z-index:22; padding:6px 13px; font-weight:700; font-size:.82rem;
-    background:var(--gold); color:#1a1b0a; border-color:var(--gold)}
-  #langToggle:hover{background:var(--gold2); border-color:var(--gold2); color:#1a1b0a}
+    background:var(--gold); color:var(--on-gold); border-color:var(--gold)}
+  #langToggle:hover{background:var(--gold2); border-color:var(--gold2); color:var(--on-gold)}
   header{
     background:linear-gradient(180deg, rgba(14,15,15,.82), rgba(8,9,9,.5));
     backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
@@ -41,7 +43,15 @@
   }
   header h1{margin:0 0 4px; font-size:1.7rem; font-weight:700; letter-spacing:.5px; color:var(--gold)}
   header p{margin:0; color:var(--muted); font-size:.92rem}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 16px; position:relative; z-index:1}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 16px}
+  /* tabs */
+  .tabbar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-width:1080px; margin:0 auto; padding:14px 16px 0}
+  .tabbtn{display:inline-flex; align-items:center; gap:6px; border-radius:20px; padding:6px 15px; background:rgba(28,29,29,.85)}
+  .tabbtn[aria-selected="true"]{background:var(--gold); color:var(--on-gold); border-color:var(--gold); font-weight:700}
+  .tabbtn[aria-selected="true"]:hover{color:var(--on-gold)}
+  .tab-error{background:var(--bg2); border:1px solid var(--red2); color:var(--red); border-radius:10px; padding:14px; margin-top:18px}
+  .hostbar{max-width:1080px; margin:10px auto 0; padding:6px 12px; border:1px solid var(--cyan2); border-radius:8px;
+    background:var(--bg2); color:var(--muted); font-size:.82rem; width:calc(100% - 32px)}
   h2{color:var(--gold); font-weight:700; background:rgba(28,29,29,.80);
     border:1px solid var(--line); border-left:3px solid var(--gold);
     padding:8px 14px; border-radius:8px; margin:34px 0 14px; font-size:1.25rem;
@@ -57,10 +67,11 @@
   }
   button:hover{background:var(--card2); border-color:var(--cyan); color:var(--cyan); transform:translateY(-1px)}
   button:active{transform:translateY(0)}
-  button.primary{background:var(--gold); color:#1a1b0a; font-weight:700; border-color:var(--gold)}
-  button.primary:hover{background:var(--gold2); border-color:var(--gold2); color:#1a1b0a}
+  button.primary{background:var(--gold); color:var(--on-gold); font-weight:700; border-color:var(--gold)}
+  button.primary:hover{background:var(--gold2); border-color:var(--gold2); color:var(--on-gold)}
   button.small{padding:4px 9px; font-size:.8rem}
   button.ghost{background:transparent}
+  button.host{border-color:var(--cyan2); color:var(--cyan)}
   input,select{
     font-family:inherit; background:var(--bg2); color:var(--ink);
     border:1px solid var(--line); border-radius:6px; padding:7px 9px; font-size:.9rem;
@@ -75,28 +86,53 @@
   .size-btn .n{font-weight:700; font-size:.95rem}
   .size-btn .p{font-size:.72rem; color:var(--muted)}
   .size-btn.active{outline:2px solid var(--gold); background:var(--card2)}
+  /* settlement state & weekly event */
+  .statusgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-top:14px}
+  .scard{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:12px; padding:12px 14px}
+  .scard.event{border-left-color:var(--cyan)}
+  .scard .shead{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+  .scard .st{font-weight:700; color:var(--gold); font-size:1.02rem}
+  .scard.event .st{color:var(--cyan)}
+  .scard .sd{font-size:.84rem; color:var(--muted); margin-top:4px}
+  .fx{display:flex; flex-wrap:wrap; gap:4px; margin-top:6px}
   /* cards */
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px}
-  .vendor{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 2px 0 #0006}
+  .vendor,.rcard{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:0 2px 0 #0006}
   .vendor.travel{border-color:var(--cyan)}
   .vhead{display:flex; align-items:flex-start; gap:10px; margin-bottom:8px}
   .vicon{font-size:1.7rem; line-height:1}
   .vname{font-weight:700; font-size:1.08rem; color:var(--gold)}
-  .vtag{display:inline-block; font-size:.68rem; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--muted); margin-right:4px}
+  .vtag{display:inline-block; font-size:.68rem; padding:1px 7px; border-radius:20px; border:1px solid var(--line); color:var(--muted); margin:0 4px 2px 0}
   .vtag.basic{color:var(--green); border-color:var(--gold2)}
-  .vtag.var{color:var(--cyan); border-color:#1a8a8a}
-  .vtag.travel{color:var(--purple); border-color:#6a5a9a}
-  .vtag.comp{color:var(--red); border-color:#8a3f38}
+  .vtag.var{color:var(--cyan); border-color:var(--cyan2)}
+  .vtag.travel{color:var(--purple); border-color:var(--purple2)}
+  .vtag.comp{color:var(--red); border-color:var(--red2)}
+  .vtag.mod{color:var(--amber); border-color:var(--amber2)}
+  .vtag.good{color:var(--green); border-color:var(--gold2)}
+  .vtag.bad{color:var(--red); border-color:var(--red2)}
+  .npc{background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:7px 9px; margin:6px 0; font-size:.82rem}
+  .npc .who{font-weight:700}
+  .npc .sub{font-size:.78rem}
+  .npc details{margin:4px 0 0; padding:0; border:0; background:none}
+  .npc details[open]{padding:0}
+  .npc summary{padding:2px 0; font-size:.8rem; color:var(--cyan); font-weight:400}
   .goods{width:100%; border-collapse:collapse; margin:8px 0 6px; font-size:.86rem}
   .goods td{padding:3px 4px; border-bottom:1px dotted var(--line)}
   .goods td.price{text-align:right; white-space:nowrap; color:var(--ink); font-variant-numeric:tabular-nums}
   .goods td.base{text-align:right; white-space:nowrap; color:var(--muted); font-size:.78rem; text-decoration:line-through}
   .goods .up{color:var(--red)} .goods .down{color:var(--green)}
+  .goods tr.out td:first-child{color:var(--muted); text-decoration:line-through}
+  .goods tr.special td{border-bottom:1px solid var(--amber2)}
+  .goods tr.special td:first-child{color:var(--amber)}
+  .stk{font-size:.64rem; padding:0 6px; border-radius:10px; border:1px solid var(--line); margin-left:4px; white-space:nowrap; text-decoration:none; display:inline-block}
+  .stk.out{color:var(--muted)} .stk.low{color:var(--red); border-color:var(--red2)} .stk.plenty{color:var(--green); border-color:var(--gold2)}
   .haggle{background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; font-size:.82rem}
   .haggle .hrow{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:6px}
   .note{font-size:.8rem; color:var(--muted); margin-top:4px; min-height:1em}
   .note.good{color:var(--green)} .note.bad{color:var(--red)}
   .vactions{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap}
+  .rcard .rt{font-weight:700; color:var(--gold)}
+  .rcard .rv{margin:6px 0; font-size:.95rem}
   /* reference tables */
   details{background:var(--bg2); border:1px solid var(--line); border-radius:10px; margin:10px 0; padding:0 14px}
   details[open]{padding-bottom:14px}
@@ -104,10 +140,13 @@
   summary::-webkit-details-marker{display:none}
   summary::before{content:"▸ "; color:var(--gold2)}
   details[open] summary::before{content:"▾ "}
+  .refgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px}
+  .tscroll{overflow-x:auto}
   table.ref{width:100%; border-collapse:collapse; font-size:.85rem; margin-top:6px}
-  table.ref th,table.ref td{border:1px solid var(--line); padding:5px 8px; text-align:left}
-  table.ref th{background:var(--gold); color:#1a1b0a; font-weight:700}
+  table.ref th,table.ref td{border:1px solid var(--line); padding:5px 8px; text-align:left; vertical-align:top}
+  table.ref th{background:var(--gold); color:var(--on-gold); font-weight:700}
   table.ref tr:nth-child(even) td{background:var(--bg2)}
+  table.ref caption{caption-side:top; text-align:left; font-weight:700; color:var(--gold); padding:4px 0}
   .die{display:inline-block; background:var(--bg2); border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:1px 8px; font-size:.8rem; font-weight:700}
   /* dice log */
   #log{position:fixed; right:14px; bottom:14px; width:250px; max-height:42vh; overflow:auto;
@@ -118,10 +157,22 @@
   .empty{color:var(--muted); font-style:italic; padding:16px; text-align:center; grid-column:1/-1}
   .savebar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
   .saved-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg2); margin-top:6px; font-size:.86rem}
+  .saved-item.current{outline:1px solid var(--gold)}
   .saved-item .meta{color:var(--muted); font-size:.78rem}
+  .toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--card2); border:1px solid var(--gold);
+    color:var(--ink); padding:8px 16px; border-radius:8px; font-size:.86rem; box-shadow:0 6px 24px #000a}
   .flash{animation:flash .6s ease}
   @keyframes flash{0%{background:var(--card2)}100%{}}
-  @media (max-width:560px){ #log{position:static; width:auto; max-height:none; margin-top:20px} }
+  /* embebida en Veil (app.html?velo=<mundo>): sin fondo animado, cabecera compacta */
+  html.embedded #bg, html.embedded #bgToggle{display:none}
+  html.embedded header{padding:12px 70px 10px}
+  html.embedded header h1{font-size:1.25rem}
+  html.embedded body{padding-bottom:40px}
+  @media (max-width:560px){
+    #log{position:static; width:auto; max-height:none; margin:20px 16px 0}
+    header{padding:18px 64px 14px}
+    header h1{font-size:1.35rem}
+  }
 </style>
 </head>
 <body>
@@ -129,86 +180,814 @@
 <button id="bgToggle" data-i18n-title="bgToggleTitle" title="Pause / resume the particle background">✦</button>
 <button id="langToggle" title="Cambiar a español">ES</button>
 <header>
-  <h1 data-i18n="h1">⚖️ Settlement Vendor Tables</h1>
-  <p data-i18n="tagline">Generate permanent &amp; traveling vendors · variable prices with competition · Persuasion haggling · roll live or digital</p>
+  <h1 id="appTitle">🎲 D&amp;D Tables</h1>
+  <p id="appTagline"></p>
 </header>
-
-<div class="wrap">
-
-  <div class="controls">
-    <div class="row" style="justify-content:space-between">
-      <div><h3 style="margin:0" data-i18n="chooseSize">1 · Choose the settlement size</h3><span class="sub" data-i18n="chooseSizeSub">From a wandering troupe to a megalopolis</span></div>
-    </div>
-    <div class="sizes" id="sizePicker"></div>
-    <div class="row" style="margin-top:14px">
-      <button class="primary" id="genBtn" data-i18n="genBtn">🎲 Generate settlement</button>
-      <button id="regenPerm" class="small" data-i18n="regenPerm">↻ Permanent only</button>
-      <button id="regenTravel" class="small" data-i18n="regenTravel">↻ Traveling only</button>
-      <span class="sub" id="genInfo"></span>
-    </div>
-  </div>
-
-  <h2 data-i18n-html="permHead">Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span></h2>
-  <div class="grid" id="permGrid"><div class="empty" data-i18n="permEmpty">Pick a size and press "Generate settlement".</div></div>
-
-  <h2 data-i18n-html="travHead">Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span></h2>
-  <div class="grid" id="travelGrid"><div class="empty">—</div></div>
-
-  <h2 data-i18n="saveTitle">💾 Save / Import results</h2>
-  <div class="controls">
-    <div class="savebar">
-      <input type="text" id="saveName" data-i18n-ph="saveNamePh" placeholder="City name" style="flex:1; min-width:160px">
-      <button id="renameBtn" data-i18n="renameBtn">Rename</button>
-      <button id="exportBtn" data-i18n="exportCurrent">⬇ Export current</button>
-      <button id="exportAllBtn" data-i18n="exportAll">⬇ Export all</button>
-      <button id="importBtn" data-i18n="importBtn">⬆ Import .json</button>
-      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-    </div>
-    <div id="savedList" style="margin-top:10px"></div>
-  </div>
-
-  <h2 data-i18n-html="refHead">📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span></h2>
-
-  <details>
-    <summary><span data-i18n="sum1">Settlement sizes &amp; how many vendors</span></summary>
-    <table class="ref" id="sizeRefTable"></table>
-    <p class="sub" data-i18n="ref1p">Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.</p>
-  </details>
-
-  <details>
-    <summary><span data-i18n="sum2">Permanent variety vendors</span> <span class="die" id="varDie">d100</span> <span class="sub" id="varSizeLbl"></span></summary>
-    <p class="sub" data-i18n-html="ref2p">Table adjusted to the selected size. Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.</p>
-    <table class="ref" id="varRefTable"></table>
-  </details>
-
-  <details>
-    <summary><span data-i18n="sum3">Traveling vendors</span> <span class="die">d100</span></summary>
-    <p class="sub" data-i18n-html="ref3p">First determine <b>how many</b> with the die from the sizes table (min. 0). Then roll <b>1d100</b> for each one here. Duplicates are valid.</p>
-    <table class="ref" id="travelRefTable"></table>
-  </details>
-
-  <details>
-    <summary><span data-i18n="sum4">Price variation &amp; competition</span> <span class="die">d12</span></summary>
-    <p class="sub" data-i18n-html="ref4p">Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.</p>
-    <table class="ref" id="priceRefTable"></table>
-  </details>
-
-  <details>
-    <summary><span data-i18n="sum5">Haggling with Persuasion</span> <span class="die" data-i18n="hagDie">1d20 + CHA</span></summary>
-    <p data-i18n-html="ref5intro">Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card):</p>
-    <table class="ref" id="haggleRules" data-i18n-html="haggleRules"></table>
-    <p class="sub" data-i18n="ref5note">Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.</p>
-  </details>
-
-  <p class="sub" style="margin-top:24px; text-align:center" data-i18n-html="footer">Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.</p>
-</div>
+<nav class="tabbar" id="tabBar" role="tablist"></nav>
+<div class="hostbar" id="hostBar" hidden></div>
+<main class="wrap" id="panels"></main>
+<p class="sub" id="appVersion" style="position:relative; z-index:1; text-align:center; margin:28px 16px 0"></p>
 
 <div id="log">
   <h4>🎲 <span data-i18n="logTitle">Roll log</span> <button class="small ghost" id="clearLog" data-i18n="clearBtn">clear</button></h4>
   <div id="logList"><div class="l logempty" data-i18n="logEmpty">You haven't rolled anything yet.</div></div>
 </div>
 
+<!-- ===================== PESTAÑA · VENDEDORES (marcado) ===================== -->
+<template id="tpl-vendors">
+  <div class="controls">
+    <div class="row" style="justify-content:space-between">
+      <div><h3 style="margin:0" data-i18n="chooseSize">1 · Choose the settlement size</h3><span class="sub" data-i18n="chooseSizeSub">From a wandering troupe to a megalopolis</span></div>
+    </div>
+    <div class="sizes" data-ref="sizePicker"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" data-ref="genBtn" data-i18n="genBtn">🎲 Generate settlement</button>
+      <button class="small" data-ref="regenPerm" data-i18n="regenPerm">↻ Permanent only</button>
+      <button class="small" data-ref="newWeek" data-i18n="newWeek">↻ New week</button>
+      <span class="sub" data-ref="genInfo"></span>
+    </div>
+    <div class="row" style="margin-top:10px" data-ref="shareRow" hidden>
+      <button class="small" data-ref="copyMd" data-i18n="copyMd">📋 Copy as Markdown</button>
+      <button class="small host" data-ref="toScreen" data-i18n="toScreen" hidden>▤ To the DM screen</button>
+      <button class="small host" data-ref="toArticle" data-i18n="toArticle" hidden>¶ Settlement article</button>
+    </div>
+  </div>
+
+  <div class="statusgrid" data-ref="statusGrid" hidden></div>
+
+  <h2 data-i18n-html="permHead">Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span></h2>
+  <div class="grid" data-ref="permGrid"><div class="empty" data-i18n="permEmpty">Pick a size and press "Generate settlement".</div></div>
+
+  <h2 data-i18n-html="travHead">Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span></h2>
+  <div class="grid" data-ref="travelGrid"><div class="empty">—</div></div>
+
+  <h2 data-i18n="saveTitle">💾 Saved cities</h2>
+  <div class="controls">
+    <div class="savebar">
+      <input type="text" data-ref="saveName" data-i18n-ph="saveNamePh" placeholder="City name" style="flex:1; min-width:160px">
+      <button data-ref="renameBtn" data-i18n="renameBtn">Rename</button>
+      <button data-ref="exportBtn" data-i18n="exportCurrent">⬇ Export current</button>
+      <button data-ref="exportAllBtn" data-i18n="exportAll">⬇ Export all</button>
+      <button data-ref="importBtn" data-i18n="importBtn">⬆ Import .json</button>
+    </div>
+    <div data-ref="savedList" style="margin-top:10px"></div>
+  </div>
+
+  <h2 data-i18n-html="refHead">📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span></h2>
+
+  <details>
+    <summary><span data-i18n="sum1">Settlement sizes &amp; how many vendors</span></summary>
+    <div class="tscroll"><table class="ref" data-ref="sizeRefTable"></table></div>
+    <p class="sub" data-i18n="ref1p">Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.</p>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sumState">Settlement state</span> <span class="die">d20</span></summary>
+    <p class="sub" data-i18n-html="refStateP">Roll <b>1d20</b> once per settlement. The state shifts prices and stock by category, how many traveling vendors show up, and which ones are more likely.</p>
+    <div class="tscroll"><table class="ref" data-ref="stateRefTable"></table></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sum2">Permanent variety vendors</span> <span class="die">d100</span> <span class="sub" data-ref="varSizeLbl"></span></summary>
+    <p class="sub" data-i18n-html="ref2p">Weighted table, adjusted to the selected size: everyday trades take wide ranges, rare shops narrow ones (and grow in big cities). Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.</p>
+    <div class="tscroll"><table class="ref" data-ref="varRefTable"></table></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sumEvent">Weekly market event</span> <span class="die">d20</span></summary>
+    <p class="sub" data-i18n-html="refEventP">Roll <b>1d20</b> at the start of each week, <b>before</b> the traveling vendors: some events add or remove vendors.</p>
+    <div class="tscroll"><table class="ref" data-ref="eventRefTable"></table></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sum3">Traveling vendors</span> <span class="die">d100</span> <span class="sub" data-ref="travStateLbl"></span></summary>
+    <p class="sub" data-i18n-html="ref3p">First determine <b>how many</b> with the die from the sizes table (min. 0), adjusted by the state and the weekly event. Then roll <b>1d100</b> for each one here. Duplicates are valid.</p>
+    <div class="tscroll"><table class="ref" data-ref="travelRefTable"></table></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sum4">Price variation &amp; competition</span> <span class="die">d12</span></summary>
+    <p class="sub" data-i18n-html="ref4p">Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.</p>
+    <div class="tscroll"><table class="ref" data-ref="priceRefTable"></table></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sumStock">Stock of the day &amp; special piece</span> <span class="die">d6</span></summary>
+    <p class="sub" data-i18n-html="refStockP">Roll <b>1d6</b> per item (services are always available). The settlement state can add or subtract from the roll. Then <b>1d6</b> per vendor: on <b>4+</b> they have a special piece — roll <b>1d6</b> on their category's table.</p>
+    <div class="refgrid">
+      <div class="tscroll"><table class="ref" data-ref="stockRefTable"></table></div>
+      <div>
+        <label class="sub"><span data-i18n="colCategory">Category</span> <select data-ref="specialCat"></select></label>
+        <div class="tscroll"><table class="ref" data-ref="specialRefTable"></table></div>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sumNpc">The shopkeeper</span> <span class="die">d20 · d12 · d6</span></summary>
+    <p class="sub" data-i18n-html="refNpcP">One roll on each table per vendor. The <b>attitude</b> changes the haggling DC. The rumor's <b>truth</b> is for the DM only.</p>
+    <div class="refgrid" data-ref="npcRefGrid"></div>
+  </details>
+
+  <details>
+    <summary><span data-i18n="sum5">Haggling with Persuasion</span> <span class="die" data-i18n="hagDie">1d20 + CHA</span></summary>
+    <p data-i18n-html="ref5intro">Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card):</p>
+    <div class="tscroll"><table class="ref" data-i18n-html="haggleRules"></table></div>
+    <p class="sub" data-i18n="ref5note">Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.</p>
+  </details>
+
+  <p class="sub" style="margin-top:24px; text-align:center" data-i18n-html="footer">Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.</p>
+</template>
+
+<input type="file" id="importFile" accept="application/json,.json" hidden>
 <script>
+/* =====================================================================
+ * NÚCLEO · D&D Tables
+ * ---------------------------------------------------------------------
+ * Todo lo que no es de una pestaña concreta: idioma, dados y tablas con
+ * pesos, registro de tiradas, almacén de resultados (con migración y
+ * separación por mundo), exportar/importar, biblioteca de guardados,
+ * registro de pestañas y el puente con Veil.
+ *
+ * Una pestaña nueva es un <script> que llama a DT.registerTab({...}) o
+ * DT.simpleTableTab({...}). Ver docs/ADDING_TABS.md.
+ * ===================================================================== */
+"use strict";
+const DT = window.DT = {};
+DT.VERSION = "3.0.0";
+DT.SCHEMA = 3;
+
+/* ===================== ANFITRIÓN (suelta o dentro de Veil) ===================== */
+// app.html?velo=<mundo> → los datos se guardan con prefijo de mundo. Si además está en un
+// <iframe>, habla con Veil por postMessage (ver veil/index.js).
+DT.params = (function(){ try{ return new URLSearchParams(location.search); }catch(e){ return new URLSearchParams(); } })();
+DT.host = (function(){
+  const world = (DT.params.get("velo")||"").trim();
+  let framed = false; try{ framed = window.parent && window.parent !== window; }catch(e){ framed = true; }
+  return { kind: world ? "veil" : "standalone", world: world || null, embedded: !!(world && framed),
+           connected:false, canEdit:true, caps:{}, worldName:"" };
+})();
+if(DT.host.embedded) document.documentElement.classList.add("embedded");
+
+/* ===================== ALMACENAMIENTO ===================== */
+// Contenido (resultados guardados) → con prefijo de mundo cuando corre dentro de Veil.
+// Preferencias (idioma, fondo, última pestaña) → compartidas, con prefijo "dndtables.".
+DT.storage = (function(){
+  let ls = null;
+  try{ ls = window.localStorage; const k="__dt_probe"; ls.setItem(k,"1"); ls.removeItem(k); }catch(e){ ls = null; }
+  const mem = new Map();
+  const NS = DT.host.world ? "velo:"+DT.host.world+":" : "";
+  const get = k=>{ try{ return ls ? ls.getItem(k) : (mem.has(k)?mem.get(k):null); }catch(e){ return mem.has(k)?mem.get(k):null; } };
+  const set = (k,v)=>{ try{ if(ls){ ls.setItem(k,v); return true; } }catch(e){ console.warn("[dndtables] storage full or blocked:", e && e.message); DT.toast && DT.toast(DT.t("storageFull")); } mem.set(k,v); return false; };
+  const del = k=>{ try{ ls && ls.removeItem(k); }catch(e){} mem.delete(k); };
+  return {
+    ns: NS, persistent: !!ls,
+    getJSON(k, fb){ try{ const v = JSON.parse(get(NS+k)); return v==null ? fb : v; }catch(e){ return fb; } },
+    setJSON(k, v){ return set(NS+k, JSON.stringify(v)); },
+    del(k){ del(NS+k); },
+    rawGet: get,
+    pref(k, v){
+      const key = "dndtables."+k;
+      if(arguments.length > 1){ if(v==null) del(key); else set(key, String(v)); return v; }
+      return get(key);
+    }
+  };
+})();
+// Preferencias con nombres viejos (lang, bgOff) → con prefijo; solo fuera de Veil, sin borrar las viejas.
+if(!DT.host.world){
+  if(DT.storage.pref("lang")==null && DT.storage.rawGet("lang")) DT.storage.pref("lang", DT.storage.rawGet("lang"));
+  if(DT.storage.pref("bgOff")==null && DT.storage.rawGet("bgOff")) DT.storage.pref("bgOff", "1");
+}
+
+/* ===================== IDIOMA ===================== */
+const DICT = {en:{}, es:{}};
+DT.dict = DICT;   // solo lectura: las pruebas comprueban que EN y ES tienen las mismas claves
+DT.lang = (function(){
+  const p = DT.storage.pref("lang"); if(p==="en"||p==="es") return p;
+  const q = DT.params.get("lang"); if(q==="en"||q==="es") return q;
+  return "en";
+})();
+DT.addStrings = function(s){
+  for(const l of ["en","es"]){
+    const src = (s&&s[l])||{};
+    for(const k of Object.keys(src)){
+      if(DICT[l][k]!=null && DICT[l][k]!==src[k]) console.warn(`[dndtables] i18n key "${k}" (${l}) redefined — prefix your tab's keys.`);
+      DICT[l][k] = src[k];
+    }
+  }
+};
+DT.t = function(k, vars){
+  let s = DICT[DT.lang][k]; if(s==null) s = DICT.en[k]; if(s==null) s = DICT.es[k]; if(s==null) s = k;
+  if(vars) s = String(s).replace(/\{(\w+)\}/g, (m,n)=> vars[n]!=null ? vars[n] : m);
+  return s;
+};
+// Texto bilingüe en los datos: {en:"…", es:"…"} (o una cadena tal cual).
+DT.tx = o => o==null ? "" : (typeof o==="string" ? o : (o[DT.lang] ?? o.en ?? o.es ?? ""));
+DT.applyI18n = function(root){
+  root = root || document;
+  root.querySelectorAll("[data-i18n]").forEach(el=> el.textContent = DT.t(el.getAttribute("data-i18n")));
+  root.querySelectorAll("[data-i18n-html]").forEach(el=> el.innerHTML = DT.t(el.getAttribute("data-i18n-html")));
+  root.querySelectorAll("[data-i18n-ph]").forEach(el=> el.setAttribute("placeholder", DT.t(el.getAttribute("data-i18n-ph"))));
+  root.querySelectorAll("[data-i18n-title]").forEach(el=> el.title = DT.t(el.getAttribute("data-i18n-title")));
+};
+const langListeners = [];
+DT.onLang = fn => { langListeners.push(fn); };
+DT.setLang = function(l){
+  if(l!=="en" && l!=="es") return;
+  DT.lang = l; DT.storage.pref("lang", l);
+  document.documentElement.lang = l;
+  DT.applyI18n(document);
+  renderChrome();
+  for(const fn of langListeners){ try{ fn(l); }catch(e){ console.error(e); } }
+};
+
+DT.addStrings({
+  en:{
+    appTitle:"🎲 D&D Tables", docTitle:"D&D Tables",
+    logTitle:"Roll log", clearBtn:"clear", logEmpty:"You haven't rolled anything yet.",
+    bgToggleTitle:"Pause / resume the particle background",
+    load:"Load", imported:"Imported", currentTag:"current", deleteConfirm:"Delete “{name}”? This can't be undone.",
+    exportCurrent:"⬇ Export current", exportAll:"⬇ Export all", renameBtn:"Rename", importBtn:"⬆ Import .json",
+    alertBadFile:"Invalid file. It must be a .json exported by this tool.",
+    importDone:"Imported {n} result(s).", importSkipped:"{n} skipped (unknown tab or invalid data).",
+    alertNothingToExport:"Nothing saved in this tab yet.",
+    storageFull:"The browser refused to save (storage full or blocked). Export your results.",
+    tabFailed:"This tab failed to load:", copied:"Copied to the clipboard.", copyFailed:"Couldn't copy. Your browser blocked the clipboard.",
+    hostConnected:"Connected to Veil · world “{world}”. Results are saved with the world.",
+    hostReader:"Veil reader view: what you change here is not saved to the world.",
+    hostSent:"Sent to Veil.", hostOffline:"Veil didn't answer; working locally.",
+    rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result"
+  },
+  es:{
+    appTitle:"🎲 Tablas D&D", docTitle:"Tablas D&D",
+    logTitle:"Registro de tiradas", clearBtn:"limpiar", logEmpty:"Aún no has tirado nada.",
+    bgToggleTitle:"Pausar / reanudar el fondo de partículas",
+    load:"Cargar", imported:"Importado", currentTag:"actual", deleteConfirm:"¿Borrar «{name}»? No se puede deshacer.",
+    exportCurrent:"⬇ Exportar actual", exportAll:"⬇ Exportar todas", renameBtn:"Renombrar", importBtn:"⬆ Importar .json",
+    alertBadFile:"Archivo no válido. Debe ser un .json exportado por esta herramienta.",
+    importDone:"Importado(s) {n} resultado(s).", importSkipped:"{n} omitido(s) (pestaña desconocida o datos inválidos).",
+    alertNothingToExport:"Todavía no hay nada guardado en esta pestaña.",
+    storageFull:"El navegador no dejó guardar (almacenamiento lleno o bloqueado). Exporta tus resultados.",
+    tabFailed:"Esta pestaña no pudo cargarse:", copied:"Copiado al portapapeles.", copyFailed:"No se pudo copiar. El navegador bloqueó el portapapeles.",
+    hostConnected:"Conectado a Veil · mundo «{world}». Los resultados se guardan con el mundo.",
+    hostReader:"Vista lector de Veil: lo que cambies aquí no se guarda en el mundo.",
+    hostSent:"Enviado a Veil.", hostOffline:"Veil no respondió; se trabaja en local.",
+    rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado"
+  }
+});
+
+/* ===================== UTILIDADES ===================== */
+// Escapa datos no confiables (JSON importado, localStorage, Veil, input del usuario)
+// antes de interpolarlos en innerHTML. Comparte origen con entropy.com.mx y con Veil.
+DT.esc = s => String(s==null?"":s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+// Markdown: neutraliza lo que podría romper una celda o abrir un bloque.
+DT.mdEsc = s => String(s==null?"":s).replace(/[|\\`*_[\]<>]/g, ch=>"\\"+ch).replace(/\r?\n/g," ");
+DT.uid = (p="r") => p+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+DT.fmtDate = ms => ms ? new Date(ms).toLocaleString(DT.lang==="en"?"en":"es") : "";
+DT.money = function(cp){
+  cp = Math.round(cp);
+  if(cp<=0) return "—";
+  const gp=Math.floor(cp/100); cp-=gp*100;
+  const sp=Math.floor(cp/10); const c=cp-sp*10;
+  const loc = DT.lang==="en" ? "en" : "es";
+  const S = DT.lang==="en" ? ["gp","sp","cp"] : ["po","pp","pc"];
+  const p=[];
+  if(gp) p.push(gp.toLocaleString(loc)+" "+S[0]);
+  if(sp) p.push(sp+" "+S[1]);
+  if(c) p.push(c+" "+S[2]);
+  return p.join(" ");
+};
+DT.toast = function(msg, ms=2600){
+  const d=document.createElement("div"); d.className="toast"; d.textContent=msg;
+  document.body.appendChild(d); setTimeout(()=>d.remove(), ms);
+};
+DT.copyText = async function(text){
+  try{ await navigator.clipboard.writeText(text); DT.toast(DT.t("copied")); return true; }
+  catch(e){
+    try{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); const ok=document.execCommand("copy"); ta.remove(); if(ok){ DT.toast(DT.t("copied")); return true; } }catch(_){}
+    DT.toast(DT.t("copyFailed")); return false;
+  }
+};
+// Referencias por data-ref dentro de un contenedor: refs.permGrid, refs.genBtn…
+DT.refs = function(root){ const o={}; root.querySelectorAll("[data-ref]").forEach(el=>{ o[el.dataset.ref]=el; }); return o; };
+
+/* ===================== DADOS Y TABLAS ===================== */
+// Generador reemplazable (las pruebas usan DT.seed(n) para repetir resultados).
+DT.rng = Math.random;
+DT.seed = function(s){
+  let a = (s>>>0) || 1;
+  DT.rng = function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
+};
+DT.rollDie = sides => Math.floor(DT.rng()*sides)+1;
+DT.rollDice = function(count, die, mod=0){
+  let s=0; const rolls=[];
+  for(let i=0;i<count;i++){ const r=DT.rollDie(die); rolls.push(r); s+=r; }
+  return {total:Math.max(0, s+mod), rolls, mod};
+};
+DT.diceLabel = (c,d,m)=> `${c}d${d}${m?(m>0?"+"+m:"−"+Math.abs(m)):""}`;
+DT.parseDice = function(str){
+  const src = String(str).replace(/−/g,"-").replace(/\s+/g,"");
+  const m = src.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+  if(m) return {count: m[1]?parseInt(m[1],10):1, die: parseInt(m[2],10), mod: m[3]?parseInt(m[3],10):0};
+  const n = parseInt(src,10); return isNaN(n) ? null : {count:0, die:1, mod:n};
+};
+DT.rangeLabel = r => r.lo===r.hi ? String(r.lo) : `${r.lo}–${r.hi}`;
+
+// Reparte las caras de un dado entre filas con peso (resto mayor; toda fila con peso > 0 recibe ≥ 1 cara).
+// Devuelve un rango {lo,hi} por fila (null si su peso es 0). Así un d100 con pesos significa algo
+// al tirar a mano: las filas comunes ocupan rangos anchos y las raras, estrechos.
+DT.faces = function(weights, sides, id){
+  const live = []; weights.forEach((w,i)=>{ if(w>0) live.push(i); });
+  const out = weights.map(()=>null);
+  if(!live.length) return out;
+  if(live.length > sides) throw new Error(`[dndtables] table "${id||"?"}": ${live.length} rows don't fit on a d${sides}`);
+  const W = live.reduce((s,i)=>s+weights[i],0);
+  const exact = live.map(i=> weights[i]*sides/W);
+  const alloc = exact.map(x=> Math.max(1, Math.floor(x)));
+  let sum = alloc.reduce((a,b)=>a+b,0);
+  // El resto se mide contra lo ya asignado: una fila subida al mínimo (1) ya no "debe" nada.
+  const order = exact.map((x,k)=>({k, r:x-alloc[k]})).sort((a,b)=> b.r-a.r || a.k-b.k);
+  for(let j=0; sum<sides; j++){ alloc[order[j % order.length].k]++; sum++; }
+  while(sum>sides){
+    let best=-1; for(let k=0;k<alloc.length;k++){ if(alloc[k]>1 && (best<0 || alloc[k]-exact[k] > alloc[best]-exact[best])) best=k; }
+    alloc[best]--; sum--;
+  }
+  let lo=1; live.forEach((i,k)=>{ out[i]={lo, hi:lo+alloc[k]-1}; lo+=alloc[k]; });
+  return out;
+};
+
+// Una tabla tirable. def = {id, die, rows:[{…, w?} | {…, lo, hi}]}.
+//   · Filas con lo/hi → rangos fijos (tablas "de libro").
+//   · Si no, pesos (w, por defecto 1) → DT.faces. weight(row) permite pesos calculados (tamaño, estado…).
+DT.table = function(def){
+  if(!def || !Array.isArray(def.rows) || !def.die) throw new Error("[dndtables] DT.table needs {die, rows}");
+  const fixed = def.rows.length>0 && def.rows.every(r=> r.lo!=null && r.hi!=null);
+  const t = {
+    id:def.id||"", die:def.die, rows:def.rows, fixed,
+    ranges(weightFn){
+      if(fixed && !weightFn) return def.rows.map(r=>({lo:r.lo, hi:r.hi, row:r}));
+      const ws = def.rows.map(r=> Math.max(0, Number(weightFn ? weightFn(r) : (r.w==null?1:r.w)) || 0));
+      const f = DT.faces(ws, def.die, def.id);
+      return def.rows.map((r,i)=> f[i] ? {lo:f[i].lo, hi:f[i].hi, row:r} : null).filter(Boolean);
+    },
+    lookup(n, weightFn){ return t.ranges(weightFn).find(r=> n>=r.lo && n<=r.hi) || null; },
+    roll(weightFn){
+      const ranges = t.ranges(weightFn);
+      if(!ranges.length) return null;
+      const n = DT.rollDie(def.die);
+      const hit = ranges.find(r=> n>=r.lo && n<=r.hi);
+      return {roll:n, row:hit.row, lo:hit.lo, hi:hit.hi};
+    },
+    byId(id){ return def.rows.find(r=> r.id===id) || null; }
+  };
+  if(fixed){
+    const seen = new Array(def.die+1).fill(0);
+    def.rows.forEach(r=>{ for(let n=r.lo;n<=r.hi;n++) seen[n]++; });
+    for(let n=1;n<=def.die;n++) if(seen[n]!==1) console.warn(`[dndtables] table "${def.id}": face ${n} is covered ${seen[n]} times`);
+  }
+  return t;
+};
+// Tabla de referencia genérica: cols = [{h:"cabecera", f:(rango)=>html}] (el html ya escapado).
+DT.refTableHTML = function(table, cols, weightFn, caption){
+  const rows = table.ranges(weightFn);
+  return (caption?`<caption>${caption}</caption>`:"")+
+    `<tr><th style="width:70px">d${table.die}</th>${cols.map(c=>`<th>${c.h}</th>`).join("")}</tr>`+
+    rows.map(r=>`<tr><td>${DT.rangeLabel(r)}</td>${cols.map(c=>`<td>${c.f(r)}</td>`).join("")}</tr>`).join("");
+};
+
+/* ===================== REGISTRO DE TIRADAS ===================== */
+DT.log = function(die, result, extra){
+  const list=document.getElementById("logList"); if(!list) return;
+  const e=list.querySelector(".logempty"); if(e) e.remove();
+  const d=document.createElement("div"); d.className="l";
+  d.innerHTML = `<b>${DT.esc(die)}</b>${result!==""&&result!=null?" → <b>"+DT.esc(result)+"</b>":""} · ${DT.esc(extra||"")}`;
+  list.prepend(d);
+  while(list.children.length>200) list.lastChild.remove();
+};
+
+/* ===================== RESULTADOS GUARDADOS ===================== */
+// Un resultado de cualquier pestaña: {id, tab, name, savedAt, data, links?, legacyDate?}
+const REC_KEY = "dndtables.v3.records";
+const ACTIVE_KEY = "dndtables.v3.active";
+const SYNC_KEY = "dndtables.v3.synced";   // ids que el mundo de Veil ya tiene (para distinguir borrados de nuevos)
+const recListeners = [];
+DT.records = (function(){
+  let cache = null;
+  function read(){
+    let a = DT.storage.getJSON(REC_KEY, null);
+    if(!Array.isArray(a)){ a = DT.host.world ? [] : migrateLegacy(); if(a.length) DT.storage.setJSON(REC_KEY, a); }
+    return a.filter(r=> r && typeof r==="object" && r.id && r.tab);
+  }
+  // Leer → cambiar → escribir, siempre sobre lo que hay guardado AHORA: si la app está abierta en
+  // dos pestañas del mismo mundo (Veil y «Abrir aparte»), ninguna pisa lo que escribió la otra.
+  function commit(fn){ cache = read(); const out = fn(cache); DT.storage.setJSON(REC_KEY, cache); return out; }
+  function emit(ev){ for(const fn of recListeners){ try{ fn(ev); }catch(e){ console.error(e); } } }
+  const api = {
+    all(){ if(!cache) cache = read(); return cache; },
+    list(tab){ return api.all().filter(r=> r.tab===tab); },
+    get(id){ return api.all().find(r=> r.id===id) || null; },
+    // Guarda (o actualiza) un resultado. opts.keepTime conserva savedAt; opts.fromHost no se reenvía a Veil.
+    upsert(rec, opts={}){
+      if(!rec.id) rec.id = DT.uid();
+      if(!opts.keepTime || !rec.savedAt) rec.savedAt = Date.now();
+      commit(list=>{ const i = list.findIndex(r=> r.id===rec.id); if(i>=0) list[i]=rec; else list.push(rec); });
+      emit({type:"upsert", rec, opts});
+      return rec;
+    },
+    remove(id, opts={}){
+      const rec = commit(list=>{ const i = list.findIndex(r=> r.id===id); return i>=0 ? list.splice(i,1)[0] : null; });
+      if(!rec) return false;
+      const act = DT.storage.getJSON(ACTIVE_KEY, {}); if(act[rec.tab]===id){ delete act[rec.tab]; DT.storage.setJSON(ACTIVE_KEY, act); }
+      emit({type:"remove", rec, opts});
+      return true;
+    },
+    active(tab){ const a=DT.storage.getJSON(ACTIVE_KEY, {}); return a[tab] ? api.get(a[tab]) : null; },
+    setActive(tab, id){ const a=DT.storage.getJSON(ACTIVE_KEY, {}); if(id) a[tab]=id; else delete a[tab]; DT.storage.setJSON(ACTIVE_KEY, a); },
+    onChange(fn){ recListeners.push(fn); },
+    reload(){ cache = read(); }
+  };
+  // Otra pestaña del mismo origen (y mundo) cambió los resultados: se vuelve a leer y se avisa.
+  window.addEventListener("storage", e=>{
+    if(e.key!==null && e.key!==DT.storage.ns+REC_KEY) return;
+    cache = null; emit({type:"external"});
+  });
+  // Ciudades de la versión 2 (dnd_vendor_cities_v2) y 1 (dnd_vendor_saves_v1) → pestaña "vendors".
+  // Las claves viejas no se tocan: si algo sale mal, siguen ahí.
+  function migrateLegacy(){
+    const read = k=>{ try{ const v=JSON.parse(DT.storage.rawGet(k)); return Array.isArray(v)?v:null; }catch(e){ return null; } };
+    const src = read("dnd_vendor_cities_v2") || read("dnd_vendor_saves_v1") || [];
+    return src.filter(c=> c && c.data).map(c=>({id:String(c.id||DT.uid()), tab:"vendors", name:String(c.name||"City"), savedAt:0, legacyDate:String(c.date||""), data:c.data}));
+  }
+  return api;
+})();
+DT.recordDate = rec => rec.savedAt ? DT.fmtDate(rec.savedAt) : (rec.legacyDate||"");
+
+/* ===================== EXPORTAR / IMPORTAR ===================== */
+DT.io = {
+  download(payload, name){
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=String(name||"dndtables").replace(/[\\/:*?"<>|]+/g,"").replace(/\s+/g,"_").toLowerCase()+".json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  },
+  exportRecord(rec){ DT.io.download({type:"dndtables-record", version:DT.SCHEMA, app:DT.VERSION, record:rec}, rec.name); },
+  exportMany(recs, name){ DT.io.download({type:"dndtables-collection", version:DT.SCHEMA, app:DT.VERSION, records:recs}, name||"dndtables_all"); },
+  // Convierte cualquier JSON conocido en resultados válidos. Las pestañas pueden adoptar formatos
+  // propios o antiguos con tab.adoptForeign(obj) → [resultados] | null.
+  parse(obj){
+    let recs = null;
+    if(obj && obj.type==="dndtables-record" && obj.record) recs = [obj.record];
+    else if(obj && obj.type==="dndtables-collection" && Array.isArray(obj.records)) recs = obj.records;
+    else for(const tab of DT.tabList()){ if(tab.adoptForeign){ const r = tab.adoptForeign(obj); if(r && r.length){ recs = r; break; } } }
+    if(!recs) return null;
+    const ok=[]; let skipped=0;
+    for(const r of recs){
+      const tab = r && DT.tabs.get(r.tab);
+      if(!tab || !r.data || (tab.validate && !tab.validate(r.data))){ skipped++; continue; }
+      ok.push({id:String(r.id||DT.uid()), tab:r.tab, name:String(r.name||DT.t("imported")), savedAt:Number(r.savedAt)||0,
+               legacyDate:r.legacyDate?String(r.legacyDate):undefined, data:r.data, links:(r.links&&typeof r.links==="object")?r.links:undefined});
+    }
+    return {records:ok, skipped};
+  },
+  // Guarda lo importado: un id repetido recibe uno nuevo (nunca pisa lo que ya hay).
+  importRecords(list){
+    const ids = new Set(DT.records.all().map(r=>r.id));
+    const added=[];
+    for(const r of list){ if(ids.has(r.id)) r.id = DT.uid(); ids.add(r.id); added.push(DT.records.upsert(r, {keepTime:!!r.savedAt})); }
+    return added;
+  },
+  pickFile(){
+    const inp=document.getElementById("importFile");
+    inp.onchange = e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+      const rd=new FileReader();
+      rd.onload = ev=>{
+        let res=null; try{ res = DT.io.parse(JSON.parse(ev.target.result)); }catch(err){ res=null; }
+        if(!res || !res.records.length){ alert(DT.t("alertBadFile")); return; }
+        const added = DT.io.importRecords(res.records);
+        DT.toast(DT.t("importDone",{n:added.length}) + (res.skipped?" "+DT.t("importSkipped",{n:res.skipped}):""));
+        const first = added[0], tab = first && DT.tabs.get(first.tab);
+        if(added.length===1 && tab){ DT.showTab(tab.id); tab.load && tab.load(first); }
+        else DT.refreshLibraries();
+      };
+      rd.readAsText(f);
+    };
+    inp.click();
+  }
+};
+
+/* ===================== BIBLIOTECA (lista de guardados por pestaña) ===================== */
+const libraries = new Set();
+// DT.library(contenedor, tabId) → lista ordenada con cargar / exportar / borrar.
+// La pestaña da el resumen con tab.summary(rec) → {chips:[…], meta:[…], detail:"…"} (texto plano; aquí se escapa).
+DT.library = function(box, tabId){
+  const lib = {box, tabId, render(){
+    const tab = DT.tabs.get(tabId);
+    const cur = DT.records.active(tabId);
+    const recs = DT.records.list(tabId).slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", DT.lang));
+    if(!recs.length){ box.innerHTML = `<div class="sub">${DT.esc(DT.t(tab.emptyLibraryKey||"noResults"))}</div>`; return; }
+    box.innerHTML = recs.map(r=>{
+      let s = {chips:[], meta:[], detail:""}; try{ s = Object.assign(s, tab.summary ? tab.summary(r) : {}); }catch(e){ console.error(e); }
+      const isCur = cur && cur.id===r.id; const d = DT.recordDate(r);
+      return `<div class="saved-item${isCur?" current":""}" data-id="${DT.esc(r.id)}">
+        <div style="flex:1; min-width:0">
+          <div><b>${DT.esc(r.name)}</b> ${s.chips.map(c=>`<span class="vtag var">${DT.esc(c)}</span>`).join("")}${isCur?` <span class="vtag basic">${DT.esc(DT.t("currentTag"))}</span>`:""}</div>
+          <div class="meta">${DT.esc([...s.meta, d].filter(Boolean).join(" · "))}</div>
+          ${s.detail?`<div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${DT.esc(s.detail)}</div>`:""}
+        </div>
+        <div class="row">
+          <button class="small" data-act="load">${DT.esc(DT.t("load"))}</button>
+          <button class="small ghost" data-act="export" title="${DT.esc(DT.t("exportCurrent"))}">⬇</button>
+          <button class="small ghost" data-act="delete" title="✕">✕</button>
+        </div></div>`;
+    }).join("");
+    box.querySelectorAll(".saved-item").forEach(item=>{
+      const rec = ()=> DT.records.get(item.dataset.id);
+      item.querySelector('[data-act="load"]').onclick = ()=>{ const r=rec(); if(r && tab.load) tab.load(r); };
+      item.querySelector('[data-act="export"]').onclick = ()=>{ const r=rec(); if(r) DT.io.exportRecord(r); };
+      item.querySelector('[data-act="delete"]').onclick = ()=>{ const r=rec(); if(!r) return;
+        if(!confirm(DT.t("deleteConfirm",{name:r.name}))) return;
+        DT.records.remove(r.id); };
+    });
+  }};
+  libraries.add(lib); lib.render();
+  return lib;
+};
+DT.refreshLibraries = ()=> libraries.forEach(l=> l.render());
+DT.records.onChange(ev=>{
+  // Si lo que una pestaña tiene abierto se borró (aquí, en Veil o en otra pestaña) o cambió fuera, se entera.
+  if(ev.type==="remove" || ev.type==="external"){
+    for(const t of DT.tabs.values()){
+      if(!t._mounted || typeof t.current!=="function") continue;
+      const c = t.current(); if(!c) continue;
+      const fresh = DT.records.get(c.id);
+      try{
+        if(!fresh) t.onRemoved && t.onRemoved(c);
+        else if(ev.type==="external" && (fresh.savedAt||0) > (c.savedAt||0)) t.load && t.load(fresh);
+      }catch(e){ console.error(e); }
+    }
+  }
+  DT.refreshLibraries();
+});
+
+/* ===================== PESTAÑAS ===================== */
+// DT.registerTab({
+//   id, icon, order, title:{en,es}, heading?:{en,es}, tagline:{en,es}, strings:{en:{…},es:{…}}, template:"tpl-…",
+//   mount(panel, DT), onShow(), onLang(),
+//   summary(rec), validate(data), load(rec), current(), onRemoved(rec), adoptForeign(obj),
+//   toMarkdown(rec, {dm}) → texto para copiar / mandar a la pantalla de DM
+// })
+DT.tabs = new Map();
+DT.tabList = ()=> [...DT.tabs.values()].sort((a,b)=> (a.order??100)-(b.order??100));
+DT.registerTab = function(def){
+  if(!def || !/^[a-z0-9-]+$/.test(def.id||"")) throw new Error("[dndtables] registerTab: id must match [a-z0-9-]+");
+  if(DT.tabs.has(def.id)) throw new Error(`[dndtables] registerTab: "${def.id}" is already registered`);
+  if(typeof def.mount!=="function") throw new Error(`[dndtables] registerTab "${def.id}": mount(panel) is required`);
+  if(!def.title || !def.title.en || !def.title.es) console.warn(`[dndtables] tab "${def.id}": title needs {en, es}`);
+  if(def.strings) DT.addStrings(def.strings);
+  DT.tabs.set(def.id, def);
+  if(DT.started) renderChrome();
+  return def;
+};
+let activeTab = null;
+DT.activeTab = ()=> activeTab;
+DT.showTab = function(id){
+  const tab = DT.tabs.get(id) || DT.tabList()[0]; if(!tab) return;
+  activeTab = tab.id;
+  const panels = document.getElementById("panels");
+  let panel = document.getElementById("panel-"+tab.id);
+  if(!panel){
+    panel = document.createElement("section"); panel.className="panel"; panel.id="panel-"+tab.id;
+    panel.setAttribute("role","tabpanel"); panels.appendChild(panel);
+    try{
+      if(tab.template){ const tpl=document.getElementById(tab.template); if(tpl) panel.appendChild(tpl.content.cloneNode(true)); }
+      DT.applyI18n(panel);
+      tab.mount(panel, DT);
+      tab._mounted = true;
+    }catch(e){
+      console.error(e);
+      panel.innerHTML = `<div class="tab-error">${DT.esc(DT.t("tabFailed"))} ${DT.esc(e && e.message)}</div>`;
+    }
+  }
+  panels.querySelectorAll(".panel").forEach(p=> p.hidden = (p!==panel));
+  DT.storage.pref("tab", tab.id);
+  renderChrome();
+  try{ tab.onShow && tab.onShow(); }catch(e){ console.error(e); }
+};
+function renderChrome(){
+  const bar = document.getElementById("tabBar");
+  const list = DT.tabList();
+  bar.hidden = list.length < 2;
+  bar.innerHTML = list.map(t=>`<button class="tabbtn" role="tab" data-tab="${DT.esc(t.id)}" aria-selected="${t.id===activeTab}">${DT.esc(t.icon||"")} ${DT.esc(DT.tx(t.title))}</button>`).join("");
+  bar.querySelectorAll(".tabbtn").forEach(b=> b.onclick = ()=> DT.showTab(b.dataset.tab));
+  const tab = DT.tabs.get(activeTab);
+  document.getElementById("appTitle").textContent = list.length<2 && tab ? `${tab.icon||""} ${DT.tx(tab.heading||tab.title)}`.trim() : DT.t("appTitle");
+  document.getElementById("appTagline").textContent = tab ? DT.tx(tab.tagline) : "";
+  document.title = (tab ? DT.tx(tab.title)+" — " : "") + DT.t("docTitle");
+  const lb=document.getElementById("langToggle"); lb.textContent = DT.lang==="en"?"ES":"EN"; lb.title = DT.lang==="en"?"Cambiar a español":"Switch to English";
+  const le=document.querySelector("#logList .logempty"); if(le) le.textContent = DT.t("logEmpty");
+  renderHostBar();
+}
+DT.onLang(()=>{ for(const t of DT.tabs.values()) if(t._mounted){ try{ t.onLang && t.onLang(); }catch(e){ console.error(e); } } DT.refreshLibraries(); });
+
+/* ===================== PESTAÑA DECLARATIVA (solo datos) ===================== */
+// Para generadores que son "tira en estas tablas y muestra el resultado". Ejemplo en docs/ADDING_TABS.md.
+// def = {id, icon, title, tagline, order?, tables:[{id, title:{en,es}, die, rows:[{w? | lo,hi, text:{en,es}}]}]}
+DT.simpleTableTab = function(def){
+  const tables = def.tables.map(td=> Object.assign(DT.table({id:td.id, die:td.die, rows:td.rows}), {title:td.title}));
+  let cur = null, refs = null, lib = null;
+  const text = (tbl, idx)=> { const row = tbl.rows[idx]; return row ? DT.tx(row.text) : "?"; };
+  function rollOne(tbl){ const r = tbl.roll(); DT.log("d"+tbl.die, r.roll, `${DT.tx(tbl.title)}: ${DT.tx(r.row.text)}`); return {roll:r.roll, i:tbl.rows.indexOf(r.row)}; }
+  function persist(){ if(cur){ DT.records.upsert(cur); DT.records.setActive(def.id, cur.id); } }
+  function render(){
+    if(!refs) return;
+    const rolls = cur ? cur.data.rolls : {};
+    refs.results.innerHTML = tables.map(tbl=>{
+      const r = rolls[tbl.id];
+      return `<div class="rcard" data-t="${DT.esc(tbl.id)}"><div class="row" style="justify-content:space-between"><span class="rt">${DT.esc(DT.tx(tbl.title))}</span><span class="die">d${tbl.die}</span></div>
+        <div class="rv">${r ? `<b>${DT.esc(r.roll)}</b> · ${DT.esc(text(tbl, r.i))}` : `<span class="sub">${DT.esc(DT.t("noResults"))}</span>`}</div>
+        <button class="small" data-act="roll">${DT.esc(DT.t("reroll"))} ${DT.esc(DT.tx(tbl.title))}</button></div>`;
+    }).join("");
+    refs.results.querySelectorAll(".rcard").forEach(card=>{
+      card.querySelector('[data-act="roll"]').onclick = ()=>{
+        if(!cur) cur = {id:DT.uid(), tab:def.id, name:newName(), data:{v:1, rolls:{}}};
+        const tbl = tables.find(t=> t.id===card.dataset.t); cur.data.rolls[tbl.id] = rollOne(tbl); persist(); render();
+      };
+    });
+    refs.name.value = cur ? cur.name : "";
+    refs.refs.innerHTML = tables.map(tbl=> `<details><summary>${DT.esc(DT.tx(tbl.title))} <span class="die">d${tbl.die}</span></summary><div class="tscroll"><table class="ref">${
+      DT.refTableHTML(tbl, [{h:DT.esc(DT.t("resultWord")), f:r=> DT.esc(DT.tx(r.row.text))}])}</table></div></details>`).join("");
+  }
+  function newName(){ return `${DT.tx(def.title)} ${DT.records.list(def.id).length+1}`; }
+  const tab = DT.registerTab({
+    id:def.id, icon:def.icon, title:def.title, tagline:def.tagline, order:def.order, strings:def.strings,
+    emptyLibraryKey:"noResults",
+    mount(panel){
+      panel.innerHTML = `<div class="controls"><div class="row">
+          <button class="primary" data-ref="rollAll">${DT.esc(DT.t("rollAll"))}</button>
+          <input type="text" data-ref="name" style="flex:1; min-width:160px">
+          <button class="small" data-ref="rename">${DT.esc(DT.t("renameBtn"))}</button>
+          <button class="small" data-ref="copy">📋 Markdown</button>
+          <button class="small host" data-ref="screen" hidden>▤</button>
+        </div></div>
+        <div class="grid" style="margin-top:14px" data-ref="results"></div>
+        <h2>💾</h2><div class="controls"><div class="savebar">
+          <button data-ref="exportAll">${DT.esc(DT.t("exportAll"))}</button><button data-ref="import">${DT.esc(DT.t("importBtn"))}</button></div>
+          <div data-ref="lib" style="margin-top:10px"></div></div>
+        <h2>📖</h2><div data-ref="refs"></div>`;
+      refs = DT.refs(panel);
+      refs.rollAll.onclick = ()=>{ cur = {id:DT.uid(), tab:def.id, name:newName(), data:{v:1, rolls:{}}}; tables.forEach(t=> cur.data.rolls[t.id]=rollOne(t)); persist(); render(); };
+      refs.rename.onclick = ()=>{ const v=refs.name.value.trim(); if(cur && v){ cur.name=v; persist(); } };
+      refs.copy.onclick = ()=>{ if(cur) DT.copyText(tab.toMarkdown(cur)); };
+      refs.screen.onclick = ()=>{ if(cur) DT.bridge.toScreen({label:cur.name, md:tab.toMarkdown(cur, {dm:true})}); };
+      refs.exportAll.onclick = ()=>{ const l=DT.records.list(def.id); if(!l.length) return alert(DT.t("alertNothingToExport")); DT.io.exportMany(l, def.id); };
+      refs.import.onclick = ()=> DT.io.pickFile();
+      lib = DT.library(refs.lib, def.id);
+      cur = DT.records.active(def.id);
+      render();
+    },
+    onShow(){ if(refs) refs.screen.hidden = !DT.host.caps.toScreen; },
+    onLang(){ if(refs){ refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); render(); } },
+    validate:data=> !!(data && data.rolls && typeof data.rolls==="object"),
+    load(rec){ cur = rec; DT.records.setActive(def.id, rec.id); render(); DT.refreshLibraries(); },
+    current: ()=> cur,
+    onRemoved(rec){ if(cur && cur.id===rec.id){ cur=null; render(); } },
+    summary(rec){ const n=Object.keys(rec.data.rolls||{}).length; return {chips:[`${n}/${tables.length}`], meta:[], detail:tables.map(t=>{ const r=rec.data.rolls[t.id]; return r?text(t,r.i):""; }).filter(Boolean).join(" · ")}; },
+    toMarkdown(rec){ return `### ${DT.mdEsc(rec.name)}\n\n`+tables.map(t=>{ const r=rec.data.rolls[t.id]; return `- **${DT.mdEsc(DT.tx(t.title))}** (d${t.die}${r?" = "+r.roll:""}): ${r?DT.mdEsc(text(t,r.i)):"—"}`; }).join("\n")+"\n"; }
+  });
+  tab.tables = tables;
+  return tab;
+};
+
+/* ===================== PUENTE CON VEIL ===================== */
+// Protocolo (postMessage, mismo origen). Todos los mensajes llevan {ns:"dndtables", v:1, type}.
+//   app → Veil   ready {app}   ·   upsert {record, title, summary}   ·   remove {id}
+//                toScreen {card:{label, md, w, h}}   ·   toArticle {requestId, recordId, link, article}
+//   Veil → app   init {world:{id,name}, lang, canEdit, caps, records}   ·   saved {id}
+//                articleDone {requestId, recordId, slug}   ·   error {message}
+DT.bridge = (function(){
+  const NSP = "dndtables", V = 1;
+  let synced = new Set(DT.storage.getJSON(SYNC_KEY, []));
+  const saveSynced = ()=> DT.storage.setJSON(SYNC_KEY, [...synced]);
+  const pending = new Map();
+  const pushed = new Map();   // id → savedAt de lo último que se le mandó a Veil
+  // Veil sirve la extensión desde su propio origen: solo se habla con un padre del MISMO origen.
+  // (Desde file:// no hay origen que comprobar, así que ahí no se habla con nadie.)
+  const ORIGIN = location.origin && location.origin!=="null" ? location.origin : null;
+  function send(type, payload){
+    if(!DT.host.embedded || !ORIGIN) return false;
+    try{ window.parent.postMessage(Object.assign({ns:NSP, v:V, type}, payload||{}), ORIGIN); return true; }catch(e){ console.warn(e); return false; }
+  }
+  function docMeta(rec){
+    const tab = DT.tabs.get(rec.tab); let s={chips:[],meta:[],detail:""};
+    try{ if(tab && tab.summary) s = Object.assign(s, tab.summary(rec)); }catch(e){}
+    return {title:rec.name, summary:[tab?DT.tx(tab.title):rec.tab, ...s.chips, ...s.meta].filter(Boolean).join(" · ")};
+  }
+  function pushUpsert(rec){
+    if(!DT.host.connected || !DT.host.canEdit) return;
+    send("upsert", Object.assign({record:rec}, docMeta(rec)));
+    pushed.set(rec.id, rec.savedAt||0);
+  }
+  // Otra pestaña (p. ej. «Abrir aparte») cambió los datos: lo que Veil aún no tiene, se le manda.
+  function resync(){
+    synced = new Set(DT.storage.getJSON(SYNC_KEY, []));
+    const all = DT.records.all(), ids = new Set(all.map(r=> r.id));
+    for(const r of all) if(pushed.get(r.id)!==(r.savedAt||0)) pushUpsert(r);
+    for(const id of [...synced]) if(!ids.has(id)){ send("remove", {id}); synced.delete(id); pushed.delete(id); }
+    saveSynced();
+  }
+  // Mezcla lo del mundo con lo local. Gana el más reciente; "synced" dice si algo que falta de un
+  // lado fue borrado (estaba sincronizado) o es nuevo (nunca llegó al otro lado).
+  function merge(worldRecs){
+    synced = new Set(DT.storage.getJSON(SYNC_KEY, []));   // otra pestaña del mismo mundo pudo cambiarlo
+    const world = new Map(); (worldRecs||[]).forEach(r=>{ if(r && r.id && r.tab && r.data) world.set(r.id, r); });
+    const local = new Map(DT.records.all().map(r=>[r.id, r]));
+    const upload=[], removeWorld=[];
+    for(const [id, w] of world){
+      const l = local.get(id);
+      if(!l){ if(synced.has(id)) removeWorld.push(id); else DT.records.upsert(w, {keepTime:true, fromHost:true}); }
+      else if((w.savedAt||0) > (l.savedAt||0)) DT.records.upsert(w, {keepTime:true, fromHost:true});
+      else if((l.savedAt||0) > (w.savedAt||0)) upload.push(l);
+    }
+    for(const [id, l] of local){ if(!world.has(id)){ if(synced.has(id)) DT.records.remove(id, {fromHost:true}); else upload.push(l); } }
+    synced = new Set([...world.keys()].filter(id=> !removeWorld.includes(id)));
+    saveSynced();
+    return {upload, removeWorld};
+  }
+  function onMessage(e){
+    if(e.source!==window.parent || !ORIGIN || e.origin!==ORIGIN) return;
+    const m = e.data; if(!m || m.ns!==NSP || m.v!==V) return;
+    if(m.type==="init"){
+      DT.host.connected = true;
+      DT.host.canEdit = m.canEdit!==false;
+      DT.host.caps = Object.assign({}, m.caps||{});
+      DT.host.worldName = (m.world && m.world.name) || DT.host.world;
+      if(DT.storage.pref("lang")==null && (m.lang==="en"||m.lang==="es") && m.lang!==DT.lang) DT.setLang(m.lang);
+      const {upload, removeWorld} = merge(Array.isArray(m.records)?m.records:[]);
+      DT.records.all().forEach(r=> pushed.set(r.id, r.savedAt||0));
+      if(DT.host.canEdit){ upload.forEach(pushUpsert); removeWorld.forEach(id=> send("remove",{id})); }
+      DT.reloadActive();
+      renderChrome();
+    } else if(m.type==="saved" && m.id){ synced.add(m.id); saveSynced(); }
+    else if(m.type==="articleDone"){ const cb=pending.get(m.requestId); pending.delete(m.requestId); cb && cb(m); }
+    else if(m.type==="error"){ DT.toast("Veil: "+String(m.message||"error")); }
+  }
+  if(DT.host.embedded){
+    window.addEventListener("message", onMessage);
+    DT.records.onChange(ev=>{
+      if(ev.opts && ev.opts.fromHost) return;
+      if(ev.type==="upsert") pushUpsert(ev.rec);
+      else if(ev.type==="remove" && DT.host.connected && DT.host.canEdit){ send("remove", {id:ev.rec.id}); synced.delete(ev.rec.id); pushed.delete(ev.rec.id); saveSynced(); }
+      else if(ev.type==="external" && DT.host.connected && DT.host.canEdit) resync();
+    });
+  }
+  return {
+    send,
+    hello(){ send("ready", {app:{name:"dndtables", version:DT.VERSION, schema:DT.SCHEMA, tabs:DT.tabList().map(t=>({id:t.id, title:t.title, icon:t.icon||""}))}}); },
+    toScreen(card){ if(send("toScreen", {card})) DT.toast(DT.t("hostSent")); },
+    toArticle(rec, article){
+      return new Promise(ok=>{
+        const requestId = DT.uid("q"); pending.set(requestId, ok);
+        send("toArticle", {requestId, recordId:rec.id, link:(rec.links&&rec.links.article)||"", article});
+        setTimeout(()=>{ if(pending.has(requestId)){ pending.delete(requestId); ok(null); } }, 120000);
+      });
+    },
+    merge   // expuesto para las pruebas
+  };
+})();
+function renderHostBar(){
+  const hb = document.getElementById("hostBar");
+  if(!DT.host.embedded || !DT.host.connected){ hb.hidden = true; return; }
+  hb.hidden = false;
+  hb.textContent = DT.host.canEdit ? DT.t("hostConnected",{world:DT.host.worldName||DT.host.world}) : DT.t("hostReader");
+}
+// La pestaña visible vuelve a leer su resultado activo (tras sincronizar con Veil o importar).
+DT.reloadActive = function(){
+  for(const t of DT.tabs.values()){ if(!t._mounted) continue; const r = DT.records.active(t.id); try{ if(r && t.load) t.load(r); else t.onShow && t.onShow(); }catch(e){ console.error(e); } }
+  DT.refreshLibraries();
+};
+
+/* ===================== ARRANQUE ===================== */
+DT.start = function(){
+  if(DT.started) return; DT.started = true;
+  document.documentElement.lang = DT.lang;
+  DT.applyI18n(document);
+  document.getElementById("clearLog").onclick=()=>{ document.getElementById("logList").innerHTML=`<div class="l logempty">${DT.esc(DT.t("logEmpty"))}</div>`; };
+  document.getElementById("langToggle").onclick=()=> DT.setLang(DT.lang==="en"?"es":"en");
+  document.getElementById("appVersion").textContent = "D&D Tables v"+DT.VERSION;
+  const wanted = DT.params.get("tab") || (location.hash.match(/^#tab=([a-z0-9-]+)/)||[])[1] || DT.storage.pref("tab");
+  DT.showTab(DT.tabs.has(wanted) ? wanted : (DT.tabList()[0]||{}).id);
+  if(DT.host.embedded){
+    DT.bridge.hello();
+    setTimeout(()=>{ if(!DT.host.connected) console.info("[dndtables] "+DT.t("hostOffline")); }, 4000);
+  }
+};
+</script>
+
+<!-- ===================== PESTAÑA · VENDEDORES ===================== -->
+<script>
+(function(){
+"use strict";
+const esc = DT.esc, tx = DT.tx, L = DT.t;
 /* ===================== DATOS ===================== */
 // Precios en piezas de cobre (pc). 1 po = 100 pc, 1 pp = 10 pc.
 const g = (name,cp)=>({name,cp});
@@ -380,125 +1159,6 @@ const PRICE_TIERS = [
   {r:[11,11], f:0.90, label:"Oferta (−10%)",      en:"Deal (−10%)"},
   {r:[12,12], f:0.85, label:"Liquidación (−15%)", en:"Clearance (−15%)"},
 ];
-
-/* ===================== i18n ===================== */
-let LANG = localStorage.getItem("lang") || "en";
-const UI = {
-  en:{
-    h1:"⚖️ Settlement Vendor Tables",
-    tagline:"Generate permanent & traveling vendors · variable prices with competition · Persuasion haggling · roll live or digital",
-    chooseSize:"1 · Choose the settlement size", chooseSizeSub:"From a wandering troupe to a megalopolis",
-    genBtn:"🎲 Generate settlement", regenPerm:"↻ Permanent only", regenTravel:"↻ Traveling only",
-    permHead:'Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span>',
-    travHead:'Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span>',
-    saveTitle:"💾 Saved cities",
-    saveNamePh:"City name", saveBtn:"Save current settlement", exportBtn:"⬇ Export .json", importBtn:"⬆ Import .json",
-    refHead:'📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span>',
-    sum1:"Settlement sizes & how many vendors",
-    ref1p:"Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.",
-    sum2:"Permanent variety vendors",
-    ref2p:"Table adjusted to the selected size. Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.",
-    sum3:"Traveling vendors",
-    ref3p:"First determine <b>how many</b> with the die from the sizes table (min. 0). Then roll <b>1d100</b> for each one here. Duplicates are valid.",
-    sum4:"Price variation & competition",
-    ref4p:"Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.",
-    sum5:"Haggling with Persuasion", hagDie:"1d20 + CHA",
-    ref5intro:"Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card):",
-    haggleRules:`<tr><th>Result</th><th>Effect on price</th></tr>`+
-      `<tr><td>Fail by 5 or more</td><td class="up">The vendor takes offense: <b>+10%</b> (and may refuse the deal)</td></tr>`+
-      `<tr><td>Below the DC</td><td>Won't budge: price unchanged</td></tr>`+
-      `<tr><td>Meet the DC</td><td class="down">−5%</td></tr>`+
-      `<tr><td>Every 3 points above the DC</td><td class="down">−5% more</td></tr>`+
-      `<tr><td>Cap</td><td>Up to the vendor's <b>max haggle</b></td></tr>`,
-    ref5note:"Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.",
-    footer:"Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.",
-    logTitle:"Roll log", clearBtn:"clear", logEmpty:"You haven't rolled anything yet.",
-    bgToggleTitle:"Pause / resume the particle background",
-    permEmpty:'Pick a size and press "Generate settlement".',
-    travNone:"No traveling vendor arrived this week. Try again in a few days.",
-    tierBasic:"Permanent · basic", tierVar:"Permanent · variety", tierTravel:"Traveling",
-    comp:"Competition", colItem:"Item", colBase:"base", colHere:"here",
-    haggleWord:"Haggle", dcPersuasion:"Persuasion DC", maxDisc:"max discount", resultD20:"d20 result:",
-    haggleBtn:"Haggle", rollWord:"roll", haggleHint:"Enter your Persuasion check to see the negotiated price.",
-    rerollPrice:"↻ Prices", rerollVendor:"↻ Change vendor",
-    permWord:"permanent", travWord:"traveling this week", loaded:"loaded",
-    dupReroll:"duplicate, rerolling", changed:"changed", travellersWord:"traveling vendor(s)",
-    persuasionIn:"Persuasion at",
-    alertPickSize:"Choose a settlement size first.", alertPickSizeShort:"Pick a size.",
-    alertNoMoreVariety:"No more variety stalls for this size.",
-    alertBasicFixed:"Basic vendors are fixed for this size. You can still reroll their prices.",
-    alertGenSave:"Generate a settlement before saving.", alertGenExport:"Generate a settlement before exporting.",
-    alertBadFile:"Invalid file. It must be a .json exported by this tool.",
-    noSaves:"No saved settlements yet. They are stored in this browser.",
-    permAbbr:"perm.", travAbbr:"trav.", load:"Load", imported:"Imported",
-    exportCurrent:"⬇ Export current", exportAll:"⬇ Export all", renameBtn:"Rename",
-    vendorsWord:"vendors", goodsWord:"goods", currentTag:"current", nameLabel:"City name",
-    noCities:"No cities generated yet. Generate one and it's saved here automatically.",
-    alertNoCities:"No saved cities to export yet.",
-    colSize:"Size", colPop:"Population", colBasics:"Guaranteed basics", colVariety:"Variety stalls", colTravWeek:"Traveling / week", min0:"(min. 0)",
-    colStall:"Stall", colVendor:"Vendor", colCategory:"Category", colHaggle:"Haggle", colExamples:"Examples",
-    troupeNote:"A troupe has no fixed variety shops — its stock arrives with the traveling vendors.",
-    colPriceLevel:"Price level", colFactor:"Factor", compRow:"Competition (same category, ≥2 vendors)", extra:"extra",
-    defaultName:"Settlement"
-  },
-  es:{
-    h1:"⚖️ Tablas de Vendedores por Asentamiento",
-    tagline:"Genera vendedores permanentes y ambulantes · precios variables con competencia · regateo por Persuasión · tira en vivo o digital",
-    chooseSize:"1 · Elige el tamaño del asentamiento", chooseSizeSub:"De troupe errante a megalópolis",
-    genBtn:"🎲 Generar asentamiento", regenPerm:"↻ Solo permanentes", regenTravel:"↻ Solo ambulantes",
-    permHead:'Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span>',
-    travHead:'Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span>',
-    saveTitle:"💾 Ciudades guardadas",
-    saveNamePh:"Nombre de la ciudad", saveBtn:"Guardar asentamiento actual", exportBtn:"⬇ Exportar .json", importBtn:"⬆ Importar .json",
-    refHead:'📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span>',
-    sum1:"Tamaños de asentamiento y cuántos vendedores",
-    ref1p:"Los ambulantes se determinan cada semana (o día). El total puede ser 0. Se permiten repetidos: dos que venden casi lo mismo generan competencia y bajan precios.",
-    sum2:"Vendedores permanentes de variedad",
-    ref2p:"Tabla ajustada al tamaño seleccionado. Tira <b>1d100</b> por cada puesto de variedad indicado en la tabla de tamaños. Repite si sale un duplicado.",
-    sum3:"Vendedores ambulantes",
-    ref3p:"Primero determina <b>cuántos</b> con el dado de la tabla de tamaños (mín. 0). Luego tira <b>1d100</b> por cada uno aquí. Los repetidos son válidos.",
-    sum4:"Variación de precios y competencia",
-    ref4p:"Tira <b>1d12</b> por vendedor para su nivel de precios frente al precio base del manual. Si dos o más venden la misma categoría, aplica además <b>−10 %</b> por competencia.",
-    sum5:"Regateo con Persuasión", hagDie:"1d20 + CAR",
-    ref5intro:"Compara tu resultado de <b>Prueba de Persuasión (Carisma)</b> con la <b>CD</b> del vendedor (indicada en cada ficha):",
-    haggleRules:'<tr><th>Resultado</th><th>Efecto sobre el precio</th></tr>'+
-      '<tr><td>Falla por 5 o más</td><td class="up">El vendedor se ofende: <b>+10 %</b> (y puede cerrarte el trato)</td></tr>'+
-      '<tr><td>Por debajo de la CD</td><td>No cede: precio sin cambios</td></tr>'+
-      '<tr><td>Iguala la CD</td><td class="down">−5 %</td></tr>'+
-      '<tr><td>Cada 3 puntos por encima de la CD</td><td class="down">−5 % adicional</td></tr>'+
-      '<tr><td>Tope</td><td>Hasta el <b>máximo de regateo</b> del vendedor</td></tr>',
-    ref5note:"Usa la calculadora de cada ficha: introduce el resultado total y verás los precios negociados. Buhoneros y charlatanes ceden mucho; templos, encantadores y herreros de renombre, poco.",
-    footer:"Precios base tomados de las tablas de equipo de D&D 5e (po = oro · pp = plata · pc = cobre). Los ítems «exóticos», mágicos o de dudosa procedencia usan valores estimados. Ajusta a tu mundo libremente.",
-    logTitle:"Registro de tiradas", clearBtn:"limpiar", logEmpty:"Aún no has tirado nada.",
-    bgToggleTitle:"Pausar / reanudar el fondo de partículas",
-    permEmpty:"Elige un tamaño y pulsa «Generar asentamiento».",
-    travNone:"Esta semana no ha llegado ningún vendedor ambulante. Vuelve a probar en unos días.",
-    tierBasic:"Permanente · básico", tierVar:"Permanente · variedad", tierTravel:"Ambulante",
-    comp:"Competencia", colItem:"Artículo", colBase:"base", colHere:"aquí",
-    haggleWord:"Regateo", dcPersuasion:"CD Persuasión", maxDisc:"máx. descuento", resultD20:"Resultado d20:",
-    haggleBtn:"Regatear", rollWord:"tirar", haggleHint:"Introduce tu tirada de Persuasión para ver el precio negociado.",
-    rerollPrice:"↻ Precios", rerollVendor:"↻ Cambiar vendedor",
-    permWord:"permanentes", travWord:"ambulante(s) esta semana", loaded:"cargado",
-    dupReroll:"repetido, repito tirada", changed:"cambio", travellersWord:"ambulante(s)",
-    persuasionIn:"Persuasión en",
-    alertPickSize:"Elige primero un tamaño de asentamiento.", alertPickSizeShort:"Elige un tamaño.",
-    alertNoMoreVariety:"No quedan más puestos de variedad para este tamaño.",
-    alertBasicFixed:"Los vendedores básicos son fijos para este tamaño. Puedes recambiar sus precios.",
-    alertGenSave:"Genera un asentamiento antes de guardar.", alertGenExport:"Genera un asentamiento antes de exportar.",
-    alertBadFile:"Archivo no válido. Debe ser un .json exportado por esta herramienta.",
-    noSaves:"No hay asentamientos guardados todavía. Se guardan en este navegador.",
-    permAbbr:"perm.", travAbbr:"amb.", load:"Cargar", imported:"Importado",
-    exportCurrent:"⬇ Exportar actual", exportAll:"⬇ Exportar todas", renameBtn:"Renombrar",
-    vendorsWord:"vendedores", goodsWord:"artículos", currentTag:"actual", nameLabel:"Nombre de la ciudad",
-    noCities:"Aún no has generado ciudades. Genera una y se guarda aquí automáticamente.",
-    alertNoCities:"No hay ciudades guardadas para exportar todavía.",
-    colSize:"Tamaño", colPop:"Población", colBasics:"Básicos garantizados", colVariety:"Puestos de variedad", colTravWeek:"Ambulantes / semana", min0:"(mín. 0)",
-    colStall:"Puesto", colVendor:"Vendedor", colCategory:"Categoría", colHaggle:"Regateo", colExamples:"Ejemplos",
-    troupeNote:"Una troupe no tiene tiendas fijas de variedad — su surtido llega con los vendedores ambulantes.",
-    colPriceLevel:"Nivel de precios", colFactor:"Factor", compRow:"Competencia (misma categoría, ≥2 vendedores)", extra:"extra",
-    defaultName:"Asentamiento"
-  }
-};
 const VEN_EN = {
   "Mercader General":"General Store","Taberna y Posada":"Tavern & Inn","Herrería":"Smithy","Puesto de Mercado":"Market Stall",
   "Templo":"Temple","Boticario":"Apothecary","Armería":"Weaponsmith","Taller de Armaduras":"Armorer","Flechería":"Fletcher",
@@ -583,502 +1243,1085 @@ const ITM_EN = {
   "Cojines bordados":"Embroidered cushions","Manta de lana":"Wool blanket","Libro raro":"Rare book","Tratado prohibido":"Forbidden treatise",
   "Mapa antiguo":"Ancient map","Manuscrito ilustrado":"Illuminated manuscript","Panfleto":"Pamphlet"
 };
-function L(k){ const d=UI[LANG]||UI.en; return d[k]!=null?d[k]:(UI.en[k]!=null?UI.en[k]:k); }
-function tv(n){ return LANG==="en"?(VEN_EN[n]||n):n; }
-function ti(n){ return LANG==="en"?(ITM_EN[n]||n):n; }
-function tc(c){ return LANG==="en"?(CAT_EN[c]||c):c; }
-function vName(key){ return tv(CATALOG[key].name); }
-function fmtPop(p){ return LANG==="en"? p.replace(/\./g,",") : p; }
-function sizeName(s){ return LANG==="en"? s.en.name : s.name; }
-function sizeSub(s){ return LANG==="en"? s.en.sub : s.sub; }
-function priceLbl(t){ return LANG==="en"? t.en : t.label; }
+
+/* ===================== DATOS NUEVOS (v3) ===================== */
+// Peso de cada tienda en su d100: w = qué tan común es; grow = cuánto más común por cada tamaño
+// por encima del mínimo (`from`). Las raras crecen en las ciudades grandes.
+const VENDOR_W = {
+  herbalist:{w:8}, chandler:{w:7}, carpenter:{w:7}, tailor:{w:7}, leatherworker:{w:6}, stable:{w:6},
+  fishmonger:{w:5}, fletcher:{w:5}, cobbler:{w:5}, weaponsmith:{w:5, grow:.2}, vintner:{w:4},
+  scribe:{w:4, grow:.25}, tinker:{w:4}, kennel:{w:3}, jeweler:{w:3, grow:.3}, armorsmith:{w:3, grow:.25},
+  alchemist:{w:3, grow:.3}, spice:{w:2, grow:.4}, perfumer:{w:2, grow:.4}, cartographer:{w:2, grow:.3},
+  moneylender:{w:2, grow:.5}, exotic:{w:1, grow:.5}, enchanter:{w:1, grow:.5},
+  // ambulantes
+  peddler:{w:12}, foodCart:{w:10}, caravan:{w:7}, fortune:{w:7}, snakeOil:{w:7}, horseTrader:{w:6},
+  bardSupply:{w:6}, potionBrewer:{w:5}, mercRecruiter:{w:5}, rug:{w:5}, relic:{w:5}, exoticBeast:{w:4},
+  bookPeddler:{w:4}, gnomeTinker:{w:4}, blackMarket:{w:3}, wanderEnchanter:{w:2}
+};
+
+// Servicios: siempre disponibles, no se agotan.
+const SERVICES = new Set(["Habitación modesta (noche)","Habitación cómoda (noche)","Servicio de sanación (donativo)",
+  "Tasación (servicio)","Copiado (por página)","Estabulación (día)","Reparación de suela","Cambio de moneda (comisión 5%)",
+  "Letra de cambio","Tasación","Alquiler de caja fuerte (mes)","Préstamo (aval requerido)","Contrato de espadachín (semana)",
+  "Lectura de fortuna","Carta astral"]);
+const isService = item => item.cp<=0 || SERVICES.has(item.name);
+
+// Existencias del día (1d6 por artículo). Índice guardado = posición en rows.
+const STOCK = DT.table({id:"stock", die:6, rows:[
+  {id:"out",    lo:1, hi:1, mult:0,    cls:"out",    name:{en:"sold out",          es:"agotado"}},
+  {id:"low",    lo:2, hi:2, mult:1.10, cls:"low",    name:{en:"few left (+10%)",   es:"pocas unidades (+10 %)"}},
+  {id:"normal", lo:3, hi:5, mult:1,    cls:"",       name:{en:"in stock",          es:"en existencia"}},
+  {id:"plenty", lo:6, hi:6, mult:0.90, cls:"plenty", name:{en:"plenty (−10%)",     es:"abundante (−10 %)"}}
+]});
+const STOCK_NORMAL = 2;
+const SPECIAL_MIN = 4;   // 1d6 ≥ 4 → el vendedor tiene una pieza especial
+
+// Piezas especiales por categoría (1d6). Precios en pc; los SRD salen de las tablas de equipo, el resto son estimados.
+const S = (es,en,cp)=>({es,en,cp});
+const SPECIALS = {
+  general:[S("Cuerda de seda (15 m)","Silk rope (50 ft)",1000),S("Farol de ojo de buey","Bullseye lantern",1000),S("Tienda para dos","Two-person tent",200),
+    S("Grilletes","Manacles",200),S("Kit de escalador","Climber's kit",2500),S("Espejo de acero","Steel mirror",500)],
+  comida:[S("Queso curado de montaña","Aged mountain cheese",150),S("Barril de arenques en salmuera","Barrel of pickled herring",400),S("Pastel de venado","Venison pie",40),
+    S("Miel silvestre (tarro)","Wild honey (jar)",60),S("Cerveza negra enana (barrilito)","Dwarven stout (small keg)",500),S("Raciones selladas en cera (5 días)","Wax-sealed rations (5 days)",300)],
+  "herrería":[S("Herraduras de hierro frío","Cold-iron horseshoes",500),S("Cerradura reforzada","Reinforced lock",2000),S("Pitones (x10)","Pitons (x10)",50),
+    S("Trampa de caza","Hunting trap",500),S("Martillo de forja de maestro","Master's forging hammer",1500),S("Abrojos (bolsa de 20)","Caltrops (bag of 20)",100)],
+  medicina:[S("Antitoxina de víbora (dosis doble)","Viper antitoxin (double dose)",8000),S("Hierba de sangre (corta hemorragias)","Bloodwort (stanches bleeding)",200),S("Láudano (frasco)","Laudanum (vial)",500),
+    S("Sanguijuelas medicinales (tarro)","Medicinal leeches (jar)",100),S("Kit de sanador de campaña","Field healer's kit",800),S("Ungüento para quemaduras","Burn salve",150)],
+  armas:[S("Daga plateada","Silvered dagger",10200),S("Espada larga de acero enano","Dwarven-steel longsword",4500),S("Hacha arrojadiza equilibrada","Balanced throwing axe",1000),
+    S("Lanza de caballería","Lance",1000),S("Red de gladiador","Gladiator's net",100),S("Estoque de cazoleta grabada","Engraved cup-hilt rapier",6000)],
+  armadura:[S("Escudo con blasón pintado","Painted heraldic shield",2000),S("Camisa de mallas a medida","Tailored chain shirt",7500),S("Yelmo con visera","Visored helm",1500),
+    S("Guanteletes de placas","Plate gauntlets",1200),S("Armadura de piel de oso","Bear-hide armor",1500),S("Armadura de placas (de segunda mano)","Plate armor (secondhand)",120000)],
+  distancia:[S("Arco largo de tejo","Yew longbow",8000),S("Flechas plateadas (x10)","Silvered arrows (x10)",10100),S("Cerbatana y dardos (x50)","Blowgun & needles (x50)",1100),
+    S("Ballesta de mano","Hand crossbow",7500),S("Carcaj impermeable","Waterproof quiver",300),S("Honda trenzada y balas de plomo (x20)","Braided sling & lead bullets (x20)",50)],
+  cuero:[S("Botas de suela silenciosa","Soft-soled quiet boots",800),S("Mochila con doble fondo","Backpack with hidden compartment",1500),S("Bandolera con 6 bolsillos","Six-pouch bandolier",300),
+    S("Guantes de cetrería","Falconer's gloves",200),S("Silla de montar militar","Military saddle",2000),S("Odre grande","Large waterskin",60)],
+  ropa:[S("Capa con capucha forrada de piel","Fur-lined hooded cloak",800),S("Traje de cortesano a la moda","Fashionable courtier's outfit",3000),S("Túnica de viaje impermeable","Waterproof travel robe",400),
+    S("Disfraz de noble extranjero","Foreign noble costume",1500),S("Bufanda de lana de montaña","Mountain wool scarf",50),S("Uniforme de la guardia (¿cómo lo consiguió?)","City watch uniform (how did they get it?)",1000)],
+  lujo:[S("Perla negra","Black pearl",50000),S("Ámbar con un insecto atrapado","Amber with a trapped insect",10000),S("Juego de ajedrez de marfil","Ivory chess set",5000),
+    S("Espejo de plata pulida","Polished silver mirror",3000),S("Caja de música","Music box",2500),S("Licor feérico (botella)","Fey liqueur (bottle)",2000)],
+  alquimia:[S("Fuego alquímico (pack de 3)","Alchemist's fire (pack of 3)",13500),S("Tiza luminosa","Glowing chalk",100),S("Humo embotellado (nube de 3 m, 1 min)","Bottled smoke (10-ft cloud, 1 min)",2500),
+    S("Pegamento alquímico","Alchemical glue",1000),S("Aceite de lámpara (x5)","Lamp oil (x5)",50),S("Ácido fuerte (frasco doble)","Strong acid (double flask)",5000)],
+  saber:[S("Bestiario ilustrado","Illustrated bestiary",5000),S("Mapa de una mazmorra (¿auténtico?)","Dungeon map (authentic?)",2500),S("Diario de un explorador desaparecido","Journal of a missing explorer",1500),
+    S("Genealogía de la nobleza local","Local nobility genealogy",1000),S("Libro de conjuros en blanco, de calidad","Fine blank spellbook",5000),S("Carta celeste","Celestial chart",1200)],
+  bestias:[S("Perro guardián adiestrado","Trained guard dog",5000),S("Palomas mensajeras (pareja)","Messenger pigeons (pair)",400),S("Hurón ladrón","Thieving ferret",800),
+    S("Caballo de guerra veterano","Veteran warhorse",40000),S("Buey de carga","Pack ox",1500),S("Cuervo que imita voces","Voice-mimicking raven",2500)],
+  madera:[S("Bote de remos","Rowboat",5000),S("Arcón con doble fondo","Chest with false bottom",2000),S("Bastón de fresno tallado","Carved ash staff",500),
+    S("Escalera plegable","Folding ladder",300),S("Carreta cubierta","Covered wagon",5000),S("Cofre de roble con flejes de hierro","Iron-banded oak strongbox",1500)],
+  herramientas:[S("Útiles de ladrón de maestro","Masterwork thieves' tools",7500),S("Herramientas de navegante","Navigator's tools",2500),S("Kit de falsificación","Forgery kit",1500),
+    S("Kit de disfraz","Disguise kit",2500),S("Herramientas de hojalatero","Tinker's tools",5000),S("Catalejo pequeño (usado)","Small spyglass (used)",60000)],
+  magia:[S("Vela que el viento no apaga","Windproof candle",2500),S("Anillo que brilla cerca del veneno (baratija)","Ring that glows near poison (trinket)",10000),S("Tinta invisible (se revela con calor)","Invisible ink (heat-revealed)",1000),
+    S("Pergamino de conjuro menor","Minor spell scroll",7500),S("Varita de fuegos artificiales (5 cargas, inofensiva)","Firework wand (5 charges, harmless)",5000),S("Brújula que apunta a casa","Compass that points home",15000)],
+  finanzas:[S("Pagaré de un noble arruinado","IOU from a ruined noble",5000),S("Monedas antiguas de coleccionista","Collector's ancient coins",3000),S("Seguro de caravana (1 viaje)","Caravan insurance (1 trip)",2000),
+    S("Participación en una expedición minera","Share in a mining expedition",10000),S("Lingote de plata sellado","Stamped silver ingot",5000),S("Carta de crédito internacional","International letter of credit",500)],
+  fe:[S("Agua bendita (pack de 3)","Holy water (pack of 3)",7000),S("Reliquia auténtica de un santo menor","Genuine relic of a minor saint",5000),S("Bendición para el viaje (servicio)","Travel blessing (service)",500),
+    S("Símbolo sagrado de plata","Silver holy symbol",2500),S("Incienso de consagración","Consecration incense",300),S("Rosario de cuentas de hueso","Bone prayer beads",200)],
+  ilegal:[S("Veneno de serpiente (vial)","Serpent venom (vial)",20000),S("Llave maestra de la cárcel","Master key to the jail",10000),S("Sello falsificado del gremio","Forged guild seal",5000),
+    S("Mapa de las alcantarillas","Sewer map",1500),S("Esencia de éter (vial)","Essence of ether (vial)",30000),S("Nombre de un guardia sobornable","Name of a bribable guard",2500)]
+};
+const SPECIAL_T = {};
+for(const cat of Object.keys(SPECIALS)) SPECIAL_T[cat] = DT.table({id:"special-"+cat, die:6, rows:SPECIALS[cat].map((x,i)=> Object.assign({lo:i+1, hi:i+1}, x))});
+
+// El tendero: ascendencia (d20 con pesos), rasgo (d20), manía (d12), actitud (d6 → CD de regateo), rumor (d20), veracidad (d6).
+const ANCESTRY = DT.table({id:"ancestry", die:20, rows:[
+  {id:"human",     w:8, name:{en:"human",es:"humano"},        names:["Aldric","Mirela","Tomás","Ysolde","Bram","Catalina","Oswin","Leofa","Darío","Maren","Hugo","Selma","Ivo","Rosalind","Emeric","Tilde"]},
+  {id:"dwarf",     w:2, name:{en:"dwarf",es:"enano"},         names:["Thora","Brokk","Hildis","Durgan","Vistra","Korrin","Gunnvor","Ragni"]},
+  {id:"elf",       w:2, name:{en:"elf",es:"elfo"},            names:["Ilyra","Thaeris","Saelwen","Elorin","Faelyn","Caelindra","Varis","Sylvaen"]},
+  {id:"halfling",  w:2, name:{en:"halfling",es:"mediano"},    names:["Pip","Tobin","Posy","Wendel","Marigold","Cob","Lilac","Bartolo"]},
+  {id:"gnome",     w:2, name:{en:"gnome",es:"gnomo"},         names:["Fizzwick","Orla","Bimble","Quillon","Zook","Nissa","Tibbet","Pennigrew"]},
+  {id:"halfelf",   w:1, name:{en:"half-elf",es:"semielfo"},   names:["Aerin","Talia","Corwin","Lyra","Evander","Siri"]},
+  {id:"halforc",   w:1, name:{en:"half-orc",es:"semiorco"},   names:["Grusha","Dorn","Ketta","Brakk","Ovra","Rurk"]},
+  {id:"tiefling",  w:1, name:{en:"tiefling",es:"tiflin"},     names:["Nyx","Damaris","Vex","Lethe","Morrow","Sable"]},
+  {id:"dragonborn",w:1, name:{en:"dragonborn",es:"dracónido"},names:["Vorrak","Sethra","Kaldrix","Nyrra","Tharex","Uzra"]}
+]});
+const listTable = (id, die, items)=> DT.table({id, die, rows:items.map((x,i)=>({lo:i+1, hi:i+1, text:{es:x[0], en:x[1]}}))});
+const TRAIT = listTable("trait", 20, [
+  ["No para de hablar de su familia","Won't stop talking about their family"],
+  ["Desconfía de cualquiera que lleve armadura","Distrusts anyone wearing armor"],
+  ["Regatea por deporte y lo disfruta","Haggles for sport and loves it"],
+  ["Supersticioso: escupe antes de cerrar un trato","Superstitious: spits before closing a deal"],
+  ["Exmercenario; exagera sus batallas","Ex-mercenary; exaggerates their battles"],
+  ["Tímido: su aprendiz habla por él","Shy: their apprentice does the talking"],
+  ["Obsesionado con la limpieza","Obsessed with cleanliness"],
+  ["Colecciona rumores y paga por ellos","Collects rumors and pays for them"],
+  ["Siempre de mal humor antes del mediodía","Always grumpy before noon"],
+  ["Generoso con los niños, duro con los adultos","Generous with kids, hard on adults"],
+  ["Pésima memoria para las caras","Terrible memory for faces"],
+  ["Orgulloso de su gremio; cita sus normas","Proud of their guild; quotes its bylaws"],
+  ["Recién llegado; aún no conoce los precios de aquí","New in town; still learning local prices"],
+  ["Endeudado con alguien peligroso","In debt to someone dangerous"],
+  ["Poeta frustrado: rima cuando se pone nervioso","Frustrated poet: rhymes when nervous"],
+  ["Devoto: cierra la tienda en los días sagrados","Devout: closes shop on holy days"],
+  ["Chismoso incorregible","Incorrigible gossip"],
+  ["Cada venta es un duelo de ingenio","Every sale is a battle of wits"],
+  ["Apostador: acepta apuestas en vez de monedas","Gambler: takes wagers instead of coin"],
+  ["Aventurero retirado; reconoce el oficio al instante","Retired adventurer; spots the trade instantly"]
+]);
+const QUIRK = listTable("quirk", 12, [
+  ["Tamborilea con los dedos","Drums their fingers"],
+  ["Tiene un gato o un loro sobre el mostrador","Keeps a cat or parrot on the counter"],
+  ["Muerde cada moneda","Bites every coin"],
+  ["Lleva un monóculo sin cristal","Wears a monocle with no lens"],
+  ["Silba siempre la misma canción","Always whistles the same tune"],
+  ["Llama «chaval» a todo el mundo","Calls everyone \"kiddo\""],
+  ["Lo apunta todo en un libro enorme","Writes everything in a huge ledger"],
+  ["Huele fuerte a ajo","Smells strongly of garlic"],
+  ["Habla de sí en tercera persona","Talks about themself in the third person"],
+  ["Colecciona un botón de cada cliente","Collects a button from every customer"],
+  ["Le tiembla un ojo cuando miente","Their eye twitches when they lie"],
+  ["Viste demasiado elegante para su tienda","Dresses far too fancy for their shop"]
+]);
+const ATTITUDE = DT.table({id:"attitude", die:6, rows:[
+  {id:"hostile",     lo:1, hi:1, dc:3,  cls:"bad",  emoji:"😠", name:{en:"hostile",        es:"hostil"}},
+  {id:"wary",        lo:2, hi:2, dc:1,  cls:"bad",  emoji:"🤨", name:{en:"wary",           es:"desconfiado"}},
+  {id:"indifferent", lo:3, hi:4, dc:0,  cls:"",     emoji:"😐", name:{en:"indifferent",    es:"indiferente"}},
+  {id:"friendly",    lo:5, hi:5, dc:-1, cls:"good", emoji:"🙂", name:{en:"friendly",       es:"amistoso"}},
+  {id:"delighted",   lo:6, hi:6, dc:-2, cls:"good", emoji:"😄", name:{en:"delighted by you",es:"encantado contigo"}}
+]});
+const RUMOR = listTable("rumor", 20, [
+  ["Algo en las alcantarillas se está comiendo a los gatos","Something in the sewers is eating the cats"],
+  ["El alcalde se ve de noche con alguien encapuchado","The mayor meets someone hooded at night"],
+  ["Una caravana perdida dejó su carga en el paso de montaña","A lost caravan left its cargo at the mountain pass"],
+  ["El templo esconde un tesoro bajo el altar","The temple hides a treasure under the altar"],
+  ["Han visto un dragón al norte","A dragon was sighted to the north"],
+  ["El herrero forja armas para unos bandidos","The smith forges weapons for bandits"],
+  ["Pagan bien por escoltar a un mago excéntrico","Good pay to escort an eccentric wizard"],
+  ["Las tumbas del cementerio viejo están vacías","The graves in the old cemetery are empty"],
+  ["Alguien está comprando toda la plata del pueblo","Someone is buying up all the silver in town"],
+  ["La hija del noble se fugó con un bardo","The noble's daughter eloped with a bard"],
+  ["Se ven luces en la torre abandonada","Lights are seen in the abandoned tower"],
+  ["Un gremio rival planea incendiar el mercado","A rival guild plans to burn the market"],
+  ["El agua de un pozo cura enfermedades","The water of one well cures disease"],
+  ["Ofrecen recompensa por un lobo gigante","There's a bounty on a giant wolf"],
+  ["Un barco trajo una enfermedad extraña","A ship brought a strange illness"],
+  ["El capitán de la guardia acepta sobornos","The watch captain takes bribes"],
+  ["Unos enanos buscan mineros para una mina reabierta","Dwarves are hiring for a reopened mine"],
+  ["Un mapa del tesoro pasa de taberna en taberna","A treasure map is making the tavern rounds"],
+  ["El bosque cercano está maldito","The nearby woods are cursed"],
+  ["Un viejo aventurero vende su equipo antes de morir","An old adventurer is selling their gear before dying"]
+]);
+const TRUTH = DT.table({id:"truth", die:6, rows:[
+  {id:"false",   lo:1, hi:2, cls:"bad",  name:{en:"false",      es:"falso"}},
+  {id:"partial", lo:3, hi:5, cls:"",     name:{en:"half-true",  es:"medio cierto"}},
+  {id:"true",    lo:6, hi:6, cls:"good", name:{en:"true",       es:"cierto"}}
+]});
+
+// Estado del asentamiento (1d20, una vez). price: {all|categoría: ±fracción} · stock: ±al 1d6 de existencias
+// travel: ±ambulantes por semana · weights: multiplica el peso de ambulantes · dc/max: regateo.
+const STATES = DT.table({id:"state", die:20, rows:[
+  {id:"normal",     lo:1,  hi:7,  icon:"🏘️", name:{en:"Ordinary times", es:"Tiempos normales"},
+    desc:{en:"Nothing unusual. Book prices.", es:"Nada fuera de lo común. Precios de manual."}},
+  {id:"prosperous", lo:8,  hi:8,  icon:"💰", name:{en:"Prosperity", es:"Prosperidad"},
+    desc:{en:"Money flows. Everything costs a bit more, shelves are full and merchants come from afar.", es:"Corre el dinero. Todo cuesta un poco más, las estanterías están llenas y llegan mercaderes de lejos."},
+    price:{all:.10}, stock:{all:1}, travel:1},
+  {id:"festival",   lo:9,  hi:10, icon:"🎉", name:{en:"Festival", es:"Fiestas"},
+    desc:{en:"Streets full of visitors: food and finery sell high; stalls and performers everywhere.", es:"Calles llenas de visitantes: la comida y la ropa se encarecen; puestos y artistas por todas partes."},
+    price:{comida:.15, ropa:.10}, travel:2, weights:{foodCart:3, bardSupply:3, fortune:2}},
+  {id:"harvest",    lo:11, hi:11, icon:"🌾", name:{en:"Bountiful harvest", es:"Cosecha abundante"},
+    desc:{en:"Granaries overflow; food is cheap and plentiful.", es:"Los graneros rebosan; la comida está barata y sobra."},
+    price:{comida:-.20}, stock:{comida:1}, weights:{foodCart:2}},
+  {id:"pilgrimage", lo:12, hi:12, icon:"🕯️", name:{en:"Pilgrimage", es:"Peregrinación"},
+    desc:{en:"Pilgrims crowd the temple. Faith items rise; relic sellers and seers flock in.", es:"Los peregrinos llenan el templo. Suben los objetos de fe; acuden vendedores de reliquias y adivinos."},
+    price:{fe:.20}, travel:1, weights:{relic:3, fortune:2, snakeOil:1.5}},
+  {id:"goldrush",   lo:13, hi:13, icon:"⛏️", name:{en:"Gold rush", es:"Fiebre del oro"},
+    desc:{en:"A strike nearby: prospectors pay anything, especially for tools.", es:"Hallazgo cercano: los buscadores pagan lo que sea, sobre todo por herramientas."},
+    price:{all:.15, herramientas:.20}, travel:1, weights:{caravan:2, peddler:2, horseTrader:1.5}},
+  {id:"crackdown",  lo:14, hi:14, icon:"🛡️", name:{en:"Guard crackdown", es:"Mano dura de la guardia"},
+    desc:{en:"Patrols and inspections. No smugglers; everyone haggles nervously.", es:"Patrullas e inspecciones. Ni rastro de contrabandistas; todos regatean con nervios."},
+    dc:1, weights:{blackMarket:0, snakeOil:.5}},
+  {id:"depression", lo:15, hi:15, icon:"📉", name:{en:"Hard times", es:"Crisis económica"},
+    desc:{en:"Nobody is buying: prices drop, shelves thin out and vendors give in more easily.", es:"Nadie compra: bajan los precios, escasea el surtido y los vendedores ceden más fácil."},
+    price:{all:-.10}, stock:{all:-1}, travel:-1, max:.05},
+  {id:"drought",    lo:16, hi:16, icon:"☀️", name:{en:"Drought", es:"Sequía"},
+    desc:{en:"Poor harvest: food and animals are scarce and expensive.", es:"Mala cosecha: la comida y los animales escasean y se encarecen."},
+    price:{comida:.30, bestias:.10}, stock:{comida:-1}},
+  {id:"embargo",    lo:17, hi:17, icon:"⛓️", name:{en:"Trade embargo", es:"Bloqueo comercial"},
+    desc:{en:"The roads are closed to foreign trade: luxury and alchemy soar and smugglers thrive.", es:"Los caminos están cerrados al comercio extranjero: se disparan el lujo y la alquimia y prospera el contrabando."},
+    price:{lujo:.30, alquimia:.15, magia:.15}, stock:{lujo:-2}, travel:-1, weights:{caravan:0, rug:.3, blackMarket:4}},
+  {id:"war",        lo:18, hi:18, icon:"⚔️", name:{en:"War nearby", es:"Guerra cercana"},
+    desc:{en:"Armies on the march: weapons, armor and medicine are hoarded; recruiters everywhere.", es:"Ejércitos en marcha: se acaparan armas, armaduras y medicinas; reclutadores por todas partes."},
+    price:{armas:.25, armadura:.25, distancia:.20, medicina:.15, comida:.10}, stock:{armas:-1, armadura:-1}, travel:-1, weights:{mercRecruiter:4, blackMarket:2, caravan:.5}},
+  {id:"plague",     lo:19, hi:19, icon:"☣️", name:{en:"Plague", es:"Plaga"},
+    desc:{en:"Sickness in the streets: medicine flies off the shelves and charlatans swarm.", es:"Enfermedad en las calles: las medicinas vuelan y los charlatanes pululan."},
+    price:{medicina:.50, fe:.20}, stock:{medicina:-2}, travel:-2, weights:{snakeOil:4, relic:3, foodCart:.3}},
+  {id:"monsters",   lo:20, hi:20, icon:"🐺", name:{en:"Monster threat", es:"Amenaza de monstruos"},
+    desc:{en:"Something prowls the roads: fewer travelers, weapons in demand, beasts sold off cheap.", es:"Algo acecha los caminos: menos viajeros, armas muy pedidas y bestias malvendidas."},
+    price:{armas:.10, distancia:.10, bestias:-.10}, travel:-1, weights:{mercRecruiter:2}}
+]});
+
+// Evento del mercado (1d20 cada semana, antes de los ambulantes).
+// extra/less: dados de ambulantes de más / de menos · force: el primer extra es ese vendedor · remove: huyen
+// theft: un vendedor al azar pierde existencias (−2) · compExtra: la competencia baja un 10 % más
+// special: el último ambulante trae pieza especial · specialPerm: un permanente saca una a subasta · dcKey: CD por vendedor.
+const EVENTS = DT.table({id:"event", die:20, rows:[
+  {id:"quiet",     lo:1,  hi:6,  icon:"🌤️", name:{en:"Quiet week", es:"Semana tranquila"},
+    desc:{en:"Business as usual.", es:"Todo sigue como siempre."}},
+  {id:"caravan",   lo:7,  hi:8,  icon:"🐫", name:{en:"A caravan arrives", es:"Llega una caravana"},
+    desc:{en:"+1d4 extra traveling vendors; the first one is the caravan merchant.", es:"+1d4 ambulantes extra; el primero es el mercader de caravana."}, extra:"1d4", force:"caravan"},
+  {id:"fair",      lo:9,  hi:10, icon:"🎪", name:{en:"Seasonal fair", es:"Feria de temporada"},
+    desc:{en:"+1d3 extra traveling vendors; food carts and bard suppliers are more likely.", es:"+1d3 ambulantes extra; más probables las carretas de comida y los proveedores de bardos."}, extra:"1d3", weights:{foodCart:2, bardSupply:2}},
+  {id:"storm",     lo:11, hi:11, icon:"⛈️", name:{en:"Storm on the roads", es:"Tormenta en los caminos"},
+    desc:{en:"−1d3 traveling vendors (min. 0).", es:"−1d3 ambulantes (mín. 0)."}, less:"1d3"},
+  {id:"raid",      lo:12, hi:13, icon:"🚨", name:{en:"Guard raid", es:"Redada de la guardia"},
+    desc:{en:"The smuggler and the snake-oil healer flee before opening.", es:"El contrabandista y el curandero charlatán huyen antes de abrir."}, remove:["blackMarket","snakeOil"]},
+  {id:"theft",     lo:14, hi:14, icon:"🦝", name:{en:"Market theft", es:"Robo en el mercado"},
+    desc:{en:"One random vendor was robbed: their stock rolls take −2.", es:"A un vendedor al azar le robaron: sus tiradas de existencias van a −2."}, theft:true},
+  {id:"pricewar",  lo:15, hi:16, icon:"🏷️", name:{en:"Price war", es:"Guerra de precios"},
+    desc:{en:"Vendors in competition cut an extra 10%.", es:"Los vendedores en competencia rebajan un 10 % más."}, compExtra:.9},
+  {id:"shortage",  lo:17, hi:17, icon:"📦", name:{en:"Late supplies", es:"Retraso de suministros"},
+    desc:{en:"The weekly delivery didn't arrive: everything +10% and stock rolls −1.", es:"No llegó el suministro semanal: todo +10 % y existencias −1."}, price:{all:.10}, stock:{all:-1}},
+  {id:"newcomer",  lo:18, hi:18, icon:"🧳", name:{en:"A newcomer", es:"Un recién llegado"},
+    desc:{en:"+1 traveling vendor who brings a special piece for sure.", es:"+1 ambulante que trae una pieza especial seguro."}, extra:"1", special:true},
+  {id:"auction",   lo:19, hi:19, icon:"🔨", name:{en:"Square auction", es:"Subasta en la plaza"},
+    desc:{en:"A random permanent vendor puts a special piece up for auction.", es:"Un vendedor permanente al azar saca a subasta una pieza especial."}, specialPerm:true},
+  {id:"brawl",     lo:20, hi:20, icon:"🍺", name:{en:"Tavern brawl", es:"Pelea en la taberna"},
+    desc:{en:"The innkeeper is fed up with adventurers: tavern haggling DC +2 this week.", es:"El posadero está harto de aventureros: CD de regateo de la taberna +2 esta semana."}, dcKey:{tavern:2}}
+]});
+
+/* ===================== TEXTOS ===================== */
+const STRINGS = {
+  en:{
+    chooseSize:"1 · Choose the settlement size", chooseSizeSub:"From a wandering troupe to a megalopolis",
+    genBtn:"🎲 Generate settlement", regenPerm:"↻ Permanent only", newWeek:"↻ New week",
+    copyMd:"📋 Copy as Markdown", toScreen:"▤ To the DM screen", toArticle:"¶ Settlement article",
+    permHead:'Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span>',
+    travHead:'Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span>',
+    saveTitle:"💾 Saved cities", saveNamePh:"City name",
+    refHead:'📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span>',
+    sum1:"Settlement sizes & how many vendors",
+    ref1p:"Traveling vendors are determined each week (or day). The total can be 0. Duplicates are allowed: two selling almost the same thing create competition and push prices down.",
+    sumState:"Settlement state",
+    refStateP:"Roll <b>1d20</b> once per settlement. The state shifts prices and stock by category, how many traveling vendors show up, and which ones are more likely. A new state changes prices at once; traveling vendors follow it from the next week.",
+    sum2:"Permanent variety vendors",
+    ref2p:"Weighted table, adjusted to the selected size: everyday trades take wide ranges, rare shops narrow ones (and grow in big cities). Roll <b>1d100</b> for each variety stall shown in the sizes table. Reroll if a duplicate comes up.",
+    sumEvent:"Weekly market event",
+    refEventP:"Roll <b>1d20</b> at the start of each week, <b>before</b> the traveling vendors: some events add or remove vendors.",
+    sum3:"Traveling vendors",
+    ref3p:"First determine <b>how many</b> with the die from the sizes table (min. 0), adjusted by the state and the weekly event. Then roll <b>1d100</b> for each one here. Duplicates are valid.",
+    sum4:"Price variation & competition",
+    ref4p:"Roll <b>1d12</b> per vendor for its price level vs. the book's base price. If two or more sell the same category, also apply <b>−10%</b> for competition.",
+    sumStock:"Stock of the day & special piece",
+    refStockP:"Roll <b>1d6</b> per item (services are always available). The settlement state and the weekly event can add or subtract from the roll. Then <b>1d6</b> per vendor: on <b>4+</b> they have a special piece — roll <b>1d6</b> on their category's table.",
+    sumNpc:"The shopkeeper",
+    refNpcP:"One roll on each table per vendor. The <b>attitude</b> changes the haggling DC. The rumor's <b>truth</b> is for the DM only.",
+    sum5:"Haggling with Persuasion", hagDie:"1d20 + CHA",
+    ref5intro:"Compare your <b>Persuasion (Charisma) check</b> with the vendor's <b>DC</b> (shown on each card, already adjusted by the shopkeeper's attitude and the settlement state):",
+    haggleRules:`<tr><th>Result</th><th>Effect on price</th></tr>`+
+      `<tr><td>Fail by 5 or more</td><td class="up">The vendor takes offense: <b>+10%</b> (and may refuse the deal)</td></tr>`+
+      `<tr><td>Below the DC</td><td>Won't budge: price unchanged</td></tr>`+
+      `<tr><td>Meet the DC</td><td class="down">−5%</td></tr>`+
+      `<tr><td>Every 3 points above the DC</td><td class="down">−5% more</td></tr>`+
+      `<tr><td>Cap</td><td>Up to the vendor's <b>max haggle</b></td></tr>`,
+    ref5note:"Use each card's calculator: enter the total result and see the negotiated prices. Peddlers and charlatans give a lot; temples, enchanters and famed smiths, little.",
+    footer:"Base prices from the D&D 5e equipment tables (gp = gold · sp = silver · cp = copper). Exotic, magical or dubious items use estimated values. Adjust to your world freely.",
+    permEmpty:'Pick a size and press "Generate settlement".',
+    travNone:"No traveling vendor arrived this week. Try again in a few days.",
+    tierBasic:"Permanent · basic", tierVar:"Permanent · variety", tierTravel:"Traveling",
+    comp:"Competition", colItem:"Item", colBase:"base", colHere:"here",
+    haggleWord:"Haggle", dcPersuasion:"Persuasion DC", maxDisc:"max discount", resultD20:"d20 result:",
+    haggleBtn:"Haggle", rollWord:"roll", haggleHint:"Enter your Persuasion check to see the negotiated price.",
+    rerollPrice:"↻ Prices", rerollVendor:"↻ Change vendor", rerollStock:"↻ Stock", rerollNpc:"↻ Shopkeeper", rollNpc:"🎲 Roll a shopkeeper",
+    permWord:"permanent", travWord:"traveling this week", weekWord:"week",
+    dupReroll:"duplicate, rerolling", changed:"changed", travellersWord:"traveling vendor(s)",
+    persuasionIn:"Persuasion at",
+    alertPickSize:"Choose a settlement size first.", alertPickSizeShort:"Pick a size.",
+    alertNoMoreVariety:"No more variety stalls for this size.",
+    alertBasicFixed:"Basic vendors are fixed for this size. You can still reroll their prices.",
+    alertGenSave:"Generate a settlement before saving.", alertGenExport:"Generate a settlement before exporting.",
+    vendorsWord:"vendors", goodsWord:"goods",
+    noCities:"No cities generated yet. Generate one and it's saved here automatically.",
+    alertNoCities:"No saved cities to export yet.",
+    colSize:"Size", colPop:"Population", colBasics:"Guaranteed basics", colVariety:"Variety stalls", colTravWeek:"Traveling / week", min0:"(min. 0)",
+    colStall:"Stall", colVendor:"Vendor", colCategory:"Category", colHaggle:"Haggle", colExamples:"Examples",
+    troupeNote:"A troupe has no fixed variety shops — its stock arrives with the traveling vendors.",
+    colPriceLevel:"Price level", colFactor:"Factor", compRow:"Competition (same category, ≥2 vendors)", extra:"extra",
+    colState:"State", colEffects:"Effects", colEvent:"Event", colStock:"Stock", colEffect:"Effect", colPrice:"Price", colItemSpecial:"Special piece",
+    colAncestry:"Ancestry", colNames:"Names", colAttitude:"Attitude", colTrait:"Personality", colQuirk:"Quirk", colRumor:"Rumor", colTruth:"Truth (DM)",
+    stateTitle:"Settlement state", eventTitle:"Week {n} event", notRolled:"not rolled", rerollState:"↻ Reroll state",
+    special:"Special piece", rumorWord:"Rumor", dmOnly:"DM", servicesAlways:"Services: always available",
+    fxNone:"no effects", fxAll:"everything", fxTravel:"traveling {n}", fxStock:"stock", fxDC:"haggle DC {n}", fxMax:"max discount +{n}%",
+    fxMore:"more: {list}", fxFewer:"fewer: {list}", fxNo:"none: {list}", fxExtra:"+{d} traveling", fxLess:"−{d} traveling",
+    fxFlee:"flee: {list}", fxTheft:"a vendor loses stock", fxCompExtra:"competition −10% more", fxSpecial:"guaranteed special piece",
+    fxAuction:"auction of a special piece", fxDcKey:"{vendor} DC +{n}",
+    evExtra:"+{n} traveling", evLess:"−{n} traveling", evFled:"fled: {list}", evNobodyFled:"nobody to arrest",
+    evTheft:"robbed: {vendor}", evAuction:"auction at: {vendor}", evNewcomer:"newcomer: {vendor}",
+    stockLog:"stock", soldOutN:"{n} sold out", lowN:"{n} few left", specialLog:"special: {item}",
+    mdShopkeeper:"Shopkeeper", mdPrices:"Prices", mdRumors:"Rumors", mdGoods:"Goods", marketLabel:"🛒 Market — D&D Tables",
+    articleNoHost:"Open this inside Veil to create the article.", articleDone:"Veil article ready.", articleCanceled:"Article not created."
+  },
+  es:{
+    chooseSize:"1 · Elige el tamaño del asentamiento", chooseSizeSub:"De troupe errante a megalópolis",
+    genBtn:"🎲 Generar asentamiento", regenPerm:"↻ Solo permanentes", newWeek:"↻ Nueva semana",
+    copyMd:"📋 Copiar como Markdown", toScreen:"▤ A la pantalla de DM", toArticle:"¶ Artículo del asentamiento",
+    permHead:'Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span>',
+    travHead:'Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span>',
+    saveTitle:"💾 Ciudades guardadas", saveNamePh:"Nombre de la ciudad",
+    refHead:'📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span>',
+    sum1:"Tamaños de asentamiento y cuántos vendedores",
+    ref1p:"Los ambulantes se determinan cada semana (o día). El total puede ser 0. Se permiten repetidos: dos que venden casi lo mismo generan competencia y bajan precios.",
+    sumState:"Estado del asentamiento",
+    refStateP:"Tira <b>1d20</b> una vez por asentamiento. El estado mueve precios y existencias por categoría, cuántos ambulantes llegan y cuáles son más probables. Un estado nuevo cambia los precios al momento; los ambulantes lo siguen desde la semana siguiente.",
+    sum2:"Vendedores permanentes de variedad",
+    ref2p:"Tabla con pesos, ajustada al tamaño seleccionado: los oficios cotidianos ocupan rangos anchos y las tiendas raras, estrechos (y crecen en las ciudades grandes). Tira <b>1d100</b> por cada puesto de variedad indicado en la tabla de tamaños. Repite si sale un duplicado.",
+    sumEvent:"Evento semanal del mercado",
+    refEventP:"Tira <b>1d20</b> al empezar cada semana, <b>antes</b> de los ambulantes: algunos eventos añaden o quitan vendedores.",
+    sum3:"Vendedores ambulantes",
+    ref3p:"Primero determina <b>cuántos</b> con el dado de la tabla de tamaños (mín. 0), ajustado por el estado y el evento semanal. Luego tira <b>1d100</b> por cada uno aquí. Los repetidos son válidos.",
+    sum4:"Variación de precios y competencia",
+    ref4p:"Tira <b>1d12</b> por vendedor para su nivel de precios frente al precio base del manual. Si dos o más venden la misma categoría, aplica además <b>−10 %</b> por competencia.",
+    sumStock:"Existencias del día y pieza especial",
+    refStockP:"Tira <b>1d6</b> por artículo (los servicios siempre están disponibles). El estado del asentamiento y el evento semanal pueden sumar o restar a la tirada. Después <b>1d6</b> por vendedor: con <b>4+</b> tiene una pieza especial — tira <b>1d6</b> en la tabla de su categoría.",
+    sumNpc:"El tendero",
+    refNpcP:"Una tirada en cada tabla por vendedor. La <b>actitud</b> cambia la CD de regateo. La <b>veracidad</b> del rumor es solo para el DM.",
+    sum5:"Regateo con Persuasión", hagDie:"1d20 + CAR",
+    ref5intro:"Compara tu resultado de <b>Prueba de Persuasión (Carisma)</b> con la <b>CD</b> del vendedor (indicada en cada ficha, ya ajustada por la actitud del tendero y el estado del asentamiento):",
+    haggleRules:'<tr><th>Resultado</th><th>Efecto sobre el precio</th></tr>'+
+      '<tr><td>Falla por 5 o más</td><td class="up">El vendedor se ofende: <b>+10 %</b> (y puede cerrarte el trato)</td></tr>'+
+      '<tr><td>Por debajo de la CD</td><td>No cede: precio sin cambios</td></tr>'+
+      '<tr><td>Iguala la CD</td><td class="down">−5 %</td></tr>'+
+      '<tr><td>Cada 3 puntos por encima de la CD</td><td class="down">−5 % adicional</td></tr>'+
+      '<tr><td>Tope</td><td>Hasta el <b>máximo de regateo</b> del vendedor</td></tr>',
+    ref5note:"Usa la calculadora de cada ficha: introduce el resultado total y verás los precios negociados. Buhoneros y charlatanes ceden mucho; templos, encantadores y herreros de renombre, poco.",
+    footer:"Precios base tomados de las tablas de equipo de D&D 5e (po = oro · pp = plata · pc = cobre). Los ítems «exóticos», mágicos o de dudosa procedencia usan valores estimados. Ajusta a tu mundo libremente.",
+    permEmpty:"Elige un tamaño y pulsa «Generar asentamiento».",
+    travNone:"Esta semana no ha llegado ningún vendedor ambulante. Vuelve a probar en unos días.",
+    tierBasic:"Permanente · básico", tierVar:"Permanente · variedad", tierTravel:"Ambulante",
+    comp:"Competencia", colItem:"Artículo", colBase:"base", colHere:"aquí",
+    haggleWord:"Regateo", dcPersuasion:"CD Persuasión", maxDisc:"máx. descuento", resultD20:"Resultado d20:",
+    haggleBtn:"Regatear", rollWord:"tirar", haggleHint:"Introduce tu tirada de Persuasión para ver el precio negociado.",
+    rerollPrice:"↻ Precios", rerollVendor:"↻ Cambiar vendedor", rerollStock:"↻ Existencias", rerollNpc:"↻ Tendero", rollNpc:"🎲 Tirar tendero",
+    permWord:"permanentes", travWord:"ambulante(s) esta semana", weekWord:"semana",
+    dupReroll:"repetido, repito tirada", changed:"cambio", travellersWord:"ambulante(s)",
+    persuasionIn:"Persuasión en",
+    alertPickSize:"Elige primero un tamaño de asentamiento.", alertPickSizeShort:"Elige un tamaño.",
+    alertNoMoreVariety:"No quedan más puestos de variedad para este tamaño.",
+    alertBasicFixed:"Los vendedores básicos son fijos para este tamaño. Puedes recambiar sus precios.",
+    alertGenSave:"Genera un asentamiento antes de guardar.", alertGenExport:"Genera un asentamiento antes de exportar.",
+    vendorsWord:"vendedores", goodsWord:"artículos",
+    noCities:"Aún no has generado ciudades. Genera una y se guarda aquí automáticamente.",
+    alertNoCities:"No hay ciudades guardadas para exportar todavía.",
+    colSize:"Tamaño", colPop:"Población", colBasics:"Básicos garantizados", colVariety:"Puestos de variedad", colTravWeek:"Ambulantes / semana", min0:"(mín. 0)",
+    colStall:"Puesto", colVendor:"Vendedor", colCategory:"Categoría", colHaggle:"Regateo", colExamples:"Ejemplos",
+    troupeNote:"Una troupe no tiene tiendas fijas de variedad — su surtido llega con los vendedores ambulantes.",
+    colPriceLevel:"Nivel de precios", colFactor:"Factor", compRow:"Competencia (misma categoría, ≥2 vendedores)", extra:"extra",
+    colState:"Estado", colEffects:"Efectos", colEvent:"Evento", colStock:"Existencias", colEffect:"Efecto", colPrice:"Precio", colItemSpecial:"Pieza especial",
+    colAncestry:"Ascendencia", colNames:"Nombres", colAttitude:"Actitud", colTrait:"Personalidad", colQuirk:"Manía", colRumor:"Rumor", colTruth:"Veracidad (DM)",
+    stateTitle:"Estado del asentamiento", eventTitle:"Evento de la semana {n}", notRolled:"sin tirar", rerollState:"↻ Otro estado",
+    special:"Pieza especial", rumorWord:"Rumor", dmOnly:"DM", servicesAlways:"Servicios: siempre disponibles",
+    fxNone:"sin efectos", fxAll:"todo", fxTravel:"ambulantes {n}", fxStock:"existencias", fxDC:"CD de regateo {n}", fxMax:"máx. descuento +{n} %",
+    fxMore:"más: {list}", fxFewer:"menos: {list}", fxNo:"ninguno: {list}", fxExtra:"+{d} ambulantes", fxLess:"−{d} ambulantes",
+    fxFlee:"huyen: {list}", fxTheft:"un vendedor pierde existencias", fxCompExtra:"competencia −10 % más", fxSpecial:"pieza especial segura",
+    fxAuction:"subasta de una pieza especial", fxDcKey:"{vendor} CD +{n}",
+    evExtra:"+{n} ambulantes", evLess:"−{n} ambulantes", evFled:"huyeron: {list}", evNobodyFled:"nadie a quien detener",
+    evTheft:"robado: {vendor}", evAuction:"subasta en: {vendor}", evNewcomer:"recién llegado: {vendor}",
+    stockLog:"existencias", soldOutN:"{n} agotado(s)", lowN:"{n} con pocas unidades", specialLog:"especial: {item}",
+    mdShopkeeper:"Tendero", mdPrices:"Precios", mdRumors:"Rumores", mdGoods:"Artículos", marketLabel:"🛒 Mercado — Tablas D&D",
+    articleNoHost:"Abre esto dentro de Veil para crear el artículo.", articleDone:"Artículo listo en Veil.", articleCanceled:"No se creó el artículo."
+  }
+};
+
+/* ===================== AYUDAS DE IDIOMA ===================== */
+const en = ()=> DT.lang==="en";
+function tv(n){ return en()?(VEN_EN[n]||n):n; }
+function ti(n){ return en()?(ITM_EN[n]||n):n; }
+function tc(c){ return en()?(CAT_EN[c]||c):c; }
+function vName(key){ return CATALOG[key] ? tv(CATALOG[key].name) : String(key); }
+function fmtPop(p){ return en()? p.replace(/\./g,",") : p; }
+function sizeName(s){ return en()? s.en.name : s.name; }
+function sizeSub(s){ return en()? s.en.sub : s.sub; }
+function priceLbl(t){ return en()? t.en : t.label; }
 function tierByFactor(f){ return PRICE_TIERS.find(t=>Math.abs(t.f-f)<0.001) || PRICE_TIERS[3]; }
-// Escapa datos no confiables (JSON importado, localStorage, input del usuario)
-// antes de interpolarlos en innerHTML. Cierra el XSS de vendor-gen: comparte
-// origen con la sesión/bóveda de entropy.com.mx, así que un settlement
-// compartido con un nombre malicioso podía ejecutar script en quien lo importa.
-function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-function applyI18n(){
-  document.documentElement.lang = LANG;
-  document.title = LANG==="en" ? "Settlement Vendor Tables — D&D" : "Tablas de Vendedores por Asentamiento — D&D";
-  document.querySelectorAll("[data-i18n]").forEach(el=> el.textContent = L(el.getAttribute("data-i18n")));
-  document.querySelectorAll("[data-i18n-html]").forEach(el=> el.innerHTML = L(el.getAttribute("data-i18n-html")));
-  document.querySelectorAll("[data-i18n-ph]").forEach(el=> el.setAttribute("placeholder", L(el.getAttribute("data-i18n-ph"))));
-  document.querySelectorAll("[data-i18n-title]").forEach(el=> el.title = L(el.getAttribute("data-i18n-title")));
-  const lb=document.getElementById("langToggle"); if(lb){ lb.textContent = LANG==="en"?"ES":"EN"; lb.title = LANG==="en"?"Cambiar a español":"Switch to English"; }
-  const le=document.querySelector("#logList .logempty"); if(le) le.textContent = L("logEmpty");
-}
-function updateGenInfo(){
-  const gi=document.getElementById("genInfo"); if(!gi||!current||!current.permanent) return;
-  const s=SIZES.find(x=>x.key===current.sizeKey);
-  gi.textContent = (current.name?current.name+" · ":"")+(s?sizeName(s):current.sizeKey)+" · "+current.permanent.length+" "+L("permWord")+" · "+current.traveling.length+" "+L("travWord");
-}
-function setLang(l){ LANG=l; localStorage.setItem("lang",l); applyI18n(); renderSizePicker(); renderRefTables(); if(current&&current.permanent) render(); renderCities(); updateGenInfo(); }
+const pct = f => (f>0?"+":"−")+Math.round(Math.abs(f)*100)+"%";
+const signed = n => (n>0?"+":n<0?"−":"±")+Math.abs(n);
 
 /* ===================== ESTADO ===================== */
-let selectedSize = null;      // objeto SIZES
-let current = null;           // {id, name, sizeKey, permanent:[...], traveling:[...]}
-const SAVE_KEY = "dnd_vendor_saves_v1";   // formato anterior (migración)
-const CITY_KEY = "dnd_vendor_cities_v2";  // ciudades persistentes
+let selectedSize = null;   // objeto SIZES
+let cur = null;            // resultado activo: {id, tab:"vendors", name, savedAt, data:{v, sizeKey, week, state, event, permanent, traveling}}
+let refs = null;           // nodos de la pestaña (data-ref)
+let lib = null;
+const D = ()=> cur && cur.data;
 
-/* ===================== UTILIDADES ===================== */
-function rollDie(sides){ return Math.floor(Math.random()*sides)+1; }
-function rollDice(count,die,mod){ let s=0; const rolls=[]; for(let i=0;i<count;i++){const r=rollDie(die);rolls.push(r);s+=r;} return {total:Math.max(0,s+mod), rolls, mod}; }
+/* ===================== TABLAS Y PESOS ===================== */
 function sizeIndex(sz){ return SIZES.indexOf(sz)+1; }
-function travelLabel(t){ const [c,d,m]=t; return `${c}d${d}${m?(m>0?"+"+m:"−"+Math.abs(m)):""}`; }
-
-function money(cp){
-  cp = Math.round(cp);
-  if(cp<=0) return "—";
-  const gp=Math.floor(cp/100); cp-=gp*100;
-  const sp=Math.floor(cp/10); const c=cp-sp*10;
-  const loc = LANG==="en" ? "en" : "es";
-  const S = LANG==="en" ? ["gp","sp","cp"] : ["po","pp","pc"];
-  const p=[];
-  if(gp) p.push(gp.toLocaleString(loc)+" "+S[0]);
-  if(sp) p.push(sp+" "+S[1]);
-  if(c) p.push(c+" "+S[2]);
-  return p.join(" ") || ("0 "+S[2]);
-}
-
-function log(die, result, extra){
-  const list=document.getElementById("logList");
-  if(list.firstChild && list.firstChild.classList && list.firstChild.classList.contains("logempty")) list.innerHTML="";
-  const d=document.createElement("div"); d.className="l";
-  d.innerHTML = `<span class="die" style="padding:0 5px">${die}</span> → <b>${result}</b>${extra?" — "+extra:""}`;
-  list.insertBefore(d, list.firstChild);
-  while(list.children.length>40) list.removeChild(list.lastChild);
-}
-
-// Asigna rangos d100 uniformes a una lista
-function assignRanges(keys){
-  const n=keys.length, out=[]; let start=1;
-  keys.forEach((k,i)=>{ const end=Math.round(100*(i+1)/n); out.push({key:k, lo:start, hi:end}); start=end+1; });
-  return out;
-}
+function sizeOf(key){ return SIZES.find(s=>s.key===key) || null; }
+function travelLabel(t){ const [c,d,m]=t; return DT.diceLabel(c,d,m); }
 function availableVariety(sz){ const idx=sizeIndex(sz); return VARIETY_KEYS.filter(k=> (CATALOG[k].from||1) <= idx); }
-function findInRanges(ranges, roll){ return ranges.find(r=> roll>=r.lo && roll<=r.hi); }
-
 function priceTier(roll){ return PRICE_TIERS.find(t=> roll>=t.r[0] && roll<=t.r[1]); }
+function stateRow(d){ return (d && d.state && STATES.byId(d.state.id)) || STATES.byId("normal"); }
+function eventRow(d){ return (d && d.event && EVENTS.byId(d.event.id)) || EVENTS.byId("quiet"); }
+function varietyWeight(key, idx){ const w=VENDOR_W[key]||{w:1}; return w.w*(1+(w.grow||0)*Math.max(0, idx-(CATALOG[key].from||1))); }
+function travelWeight(key, st, ev){
+  const mul = o=> (o && o.weights && o.weights[key]!=null) ? o.weights[key] : 1;
+  return (VENDOR_W[key]||{w:1}).w * mul(st) * mul(ev);
+}
+function varietyTable(sz){
+  const idx = sizeIndex(sz), pool = availableVariety(sz);
+  return {pool, table: DT.table({id:"variety-"+sz.key, die:100, rows:pool.map(k=>({key:k}))}), wf: r=> varietyWeight(r.key, idx)};
+}
+const TRAVEL_T = DT.table({id:"travel", die:100, rows:TRAVEL_KEYS.map(k=>({key:k}))});
+const travelWF = (st, ev)=> r=> travelWeight(r.key, st, ev);
+
+/* ===================== PRECIOS Y REGATEO ===================== */
+function attitudeOf(v){ return v.npc ? ATTITUDE.lookup(v.npc.att).row : null; }
+function effHaggle(v, d){
+  const c=CATALOG[v.key], att=attitudeOf(v), st=stateRow(d), ev=eventRow(d);
+  const dc = c.haggle.dc + (att?att.dc:0) + (st.dc||0) + ((ev.dcKey && ev.dcKey[v.key])||0);
+  return {dc, base:c.haggle.dc, max:Math.min(0.5, c.haggle.max + (st.max||0))};
+}
+// devuelve {disc, note, cls}
+function haggleResult(v, total, d){
+  const h = effHaggle(v, d);
+  if(total===null || total==="" || total===undefined || isNaN(total)) return {disc:0, note:"", cls:""};
+  total=Number(total);
+  if(total <= h.dc-5){
+    const note = en() ? "Fail by 5+. The vendor takes offense: prices +10%." : "Fallo por 5+. El vendedor se ofende: precios +10%.";
+    return {disc:-0.10, note, cls:"bad"};
+  }
+  if(total < h.dc){
+    const note = en() ? `Doesn't meet DC ${h.dc}. No discount.` : `No alcanza la CD ${h.dc}. Sin descuento.`;
+    return {disc:0, note, cls:""};
+  }
+  const over = total - h.dc;
+  const disc = Math.min(0.05 + Math.floor(over/3)*0.05, h.max);
+  const p = Math.round(disc*100);
+  const capped = disc>=h.max ? (en()?" (cap reached)":" (tope alcanzado)") : "";
+  const note = en() ? `Deal! ${p}% discount${capped}.` : `¡Trato! Descuento del ${p}%${capped}.`;
+  return {disc, note, cls:"good"};
+}
+// Multiplicador por categoría: estado del asentamiento × evento de la semana.
+function catMult(cat, d){
+  const f = o=> (1+((o&&o.all)||0)) * (1+((o&&o[cat])||0));
+  return f(stateRow(d).price) * f(eventRow(d).price);
+}
+function vendorMult(v, d){
+  const hag = haggleResult(v, v.hagRoll, d);
+  const comp = v.comp>1 ? 0.9*(eventRow(d).compExtra||1) : 1;
+  return v.factor * comp * (1-hag.disc) * catMult(CATALOG[v.key].cat, d);
+}
+function stockLevel(v, i){ const n = v.stock ? v.stock[i] : STOCK_NORMAL; return (Number.isInteger(n) && n>=0 && n<STOCK.rows.length) ? n : STOCK_NORMAL; }
+function specialOf(v){
+  if(!v.special || v.special.roll==null) return null;
+  const tb = SPECIAL_T[CATALOG[v.key].cat]; if(!tb) return null;
+  const hit = tb.lookup(v.special.roll); return hit ? hit.row : null;
+}
+
+/* ===================== TIRADAS ===================== */
+function rollNpc(){
+  const a = ANCESTRY.roll();
+  const names = a.row.names;
+  return {anc:a.row.id, name:names[DT.rollDie(names.length)-1], trait:DT.rollDie(20), quirk:DT.rollDie(12), att:DT.rollDie(6), rumor:DT.rollDie(20), truth:DT.rollDie(6)};
+}
+function stockMod(cat, d){
+  const st=stateRow(d), ev=eventRow(d);
+  const g = o=> ((o&&o.all)||0) + ((o&&o[cat])||0);
+  return g(st.stock) + g(ev.stock);
+}
+function rollStock(key, d, extra=0){
+  const c = CATALOG[key], mod = stockMod(c.cat, d) + extra;
+  return c.goods.map(item=>{
+    if(isService(item)) return STOCK_NORMAL;
+    const n = Math.min(6, Math.max(1, DT.rollDie(6)+mod));
+    return STOCK.rows.indexOf(STOCK.lookup(n).row);
+  });
+}
+function rollSpecial(key, force){
+  const tb = SPECIAL_T[CATALOG[key].cat]; if(!tb) return null;
+  const chance = DT.rollDie(6);
+  if(!force && chance < SPECIAL_MIN) return {chance, roll:null};
+  return {chance, roll:tb.roll().roll};
+}
+function logGoods(v){
+  const out = (v.stock||[]).filter(n=>n===0).length, low = (v.stock||[]).filter(n=>n===1).length;
+  const sp = specialOf(v);
+  const parts = [];
+  if(out) parts.push(L("soldOutN",{n:out}));
+  if(low) parts.push(L("lowN",{n:low}));
+  if(sp) parts.push(L("specialLog",{item:tx(sp)}));
+  if(parts.length) DT.log("d6", "", `${vName(v.key)} · ${parts.join(", ")}`);
+}
+function logNpc(v){
+  if(!v.npc) return;
+  const a = ANCESTRY.byId(v.npc.anc), att = attitudeOf(v);
+  DT.log("NPC", "", `${vName(v.key)}: ${v.npc.name} (${tx(a.name)}) · ${att.emoji} ${tx(att.name)}`);
+}
+function makeVendor(key, tier, d, opts={}){
+  const roll = DT.rollDie(12), t = priceTier(roll);
+  DT.log("d12", roll, `${vName(key)}: ${priceLbl(t)}`);
+  const v = {key, tier, factor:t.f, priceLabel:t.label, comp:0, hagRoll:null, npc:rollNpc(), stock:rollStock(key, d), special:rollSpecial(key, !!opts.special)};
+  logNpc(v); logGoods(v);
+  return v;
+}
+function rollState(){
+  const r = STATES.roll();
+  DT.log("d20", r.roll, `${L("stateTitle")}: ${r.row.icon} ${tx(r.row.name)}`);
+  return {id:r.row.id, roll:r.roll};
+}
+function rollEvent(week){
+  const r = EVENTS.roll();
+  DT.log("d20", r.roll, `${L("eventTitle",{n:week})}: ${r.row.icon} ${tx(r.row.name)}`);
+  return {id:r.row.id, roll:r.roll};
+}
 
 /* ===================== GENERACIÓN ===================== */
-function makeVendorEntry(key, tier){
-  const roll = rollDie(12);
-  const t = priceTier(roll);
-  log("d12", roll, `${vName(key)}: ${priceLbl(t)}`);
-  return {key, tier, factor:t.f, priceLabel:t.label, comp:0, hagRoll:null};
+function newRecord(){
+  return {id:DT.uid("c"), tab:"vendors", name:randomName(), data:{v:3, sizeKey:selectedSize.key, week:1, state:null, event:null, permanent:[], traveling:[]}};
 }
-
-function generatePermanent(){
-  if(!selectedSize) return;
-  const perm = selectedSize.core.map(k=> makeVendorEntry(k,"basic"));
-  const pool = availableVariety(selectedSize);
-  const ranges = assignRanges(pool);
+function genPermanent(d){
+  const sz = sizeOf(d.sizeKey) || selectedSize;
+  const perm = sz.core.map(k=> makeVendor(k, "basic", d));
+  const {pool, table, wf} = varietyTable(sz);
   const chosen = [];
-  let attempts=0;
-  while(chosen.length < selectedSize.variety && pool.length>0 && attempts<80){
+  let attempts = 0;
+  while(chosen.length < sz.variety && pool.length>0 && attempts<120){
     attempts++;
-    const roll=rollDie(100);
-    const hit=findInRanges(ranges, roll);
-    if(!hit) continue;
-    if(chosen.includes(hit.key) || selectedSize.core.includes(hit.key)){
-      log("d100", roll, `${vName(hit.key)} (${L("dupReroll")})`);
-      continue;
-    }
-    chosen.push(hit.key);
-    log("d100", roll, vName(hit.key));
+    const r = table.roll(wf); if(!r) break;
+    const k = r.row.key;
+    if(chosen.includes(k) || sz.core.includes(k)){ DT.log("d100", r.roll, `${vName(k)} (${L("dupReroll")})`); continue; }
+    chosen.push(k);
+    DT.log("d100", r.roll, vName(k));
   }
-  chosen.forEach(k=> perm.push(makeVendorEntry(k,"variety")));
-  if(!current||!current.id) current={id:uid(), name:randomName()};
-  current.sizeKey=selectedSize.key;
-  current.permanent = perm;
-  applyCompetition();
-  render();
-  persistCurrent();
+  chosen.forEach(k=> perm.push(makeVendor(k, "variety", d)));
+  d.permanent = perm;
 }
-
-function generateTraveling(){
-  if(!selectedSize) return;
-  const [c,d,m]=selectedSize.travel;
-  const cnt = rollDice(c,d,m);
-  log(travelLabel(selectedSize.travel), cnt.total, `${cnt.rolls.join("+")}${m?(m>0?"+"+m:m):""} → ${cnt.total} ${L("travellersWord")}`);
-  const ranges = assignRanges(TRAVEL_KEYS);
-  const trav=[];
-  for(let i=0;i<cnt.total;i++){
-    const roll=rollDie(100);
-    const hit=findInRanges(ranges, roll);
-    log("d100", roll, vName(hit.key));
-    trav.push(makeVendorEntry(hit.key,"travel"));
+// Ambulantes de la semana: cuántos (dado del tamaño + estado + evento), quiénes (d100 con pesos), y lo que haga el evento.
+function genTravelers(d){
+  const sz = sizeOf(d.sizeKey) || selectedSize;
+  const st = stateRow(d), ev = eventRow(d), evd = d.event || {};
+  const [c,dd,m] = sz.travel;
+  const base = DT.rollDice(c,dd,m);
+  let count = base.total + (st.travel||0);
+  if(ev.extra){ const x=DT.parseDice(ev.extra); const r=DT.rollDice(x.count, x.die, x.mod); evd.extra=r.total; count+=r.total; if(x.count) DT.log(ev.extra, r.total, `${ev.icon} ${tx(ev.name)}`); }
+  if(ev.less){ const x=DT.parseDice(ev.less); const r=DT.rollDice(x.count, x.die, x.mod); evd.less=r.total; count-=r.total; DT.log(ev.less, r.total, `${ev.icon} ${tx(ev.name)}`); }
+  count = Math.max(0, count);
+  DT.log(travelLabel(sz.travel), base.total, `${base.rolls.join("+")}${m?(m>0?"+"+m:m):""}${st.travel?" "+signed(st.travel):""} → ${count} ${L("travellersWord")}`);
+  const wf = travelWF(st, ev);
+  let trav = [];
+  for(let i=0;i<count;i++){
+    let key;
+    if(i===0 && ev.force){ key = ev.force; DT.log("—", "", `${ev.icon} ${vName(key)}`); }
+    else { const r = TRAVEL_T.roll(wf); key = r.row.key; DT.log("d100", r.roll, vName(key)); }
+    trav.push(makeVendor(key, "travel", d, {special: ev.special && i===count-1}));
   }
-  if(!current||!current.id) current={id:uid(), name:randomName()};
-  current.sizeKey=selectedSize.key;
-  current.traveling = trav;
-  applyCompetition();
-  render();
-  persistCurrent();
+  if(ev.special && trav.length) evd.target = {key:trav[trav.length-1].key, tier:"travel"};
+  if(ev.remove){
+    const gone = [...new Set(trav.filter(v=> ev.remove.includes(v.key)).map(v=>v.key))];
+    evd.removed = gone;
+    trav = trav.filter(v=> !ev.remove.includes(v.key));
+  }
+  d.traveling = trav;
+  d.event = evd;
 }
-
+// Efectos del evento que tocan a un vendedor concreto (robo, subasta).
+function applyEventTargets(d){
+  const ev = eventRow(d), evd = d.event || {};
+  if(ev.theft){
+    const all = [...d.permanent, ...d.traveling];
+    if(all.length){ const i = DT.rollDie(all.length)-1, v = all[i]; v.stock = rollStock(v.key, d, -2); evd.target = {key:v.key, tier:v.tier}; DT.log("d"+all.length, i+1, `${ev.icon} ${vName(v.key)}`); }
+  }
+  if(ev.specialPerm && d.permanent.length){
+    const i = DT.rollDie(d.permanent.length)-1, v = d.permanent[i];
+    v.special = rollSpecial(v.key, true); evd.target = {key:v.key, tier:v.tier};
+    DT.log("d"+d.permanent.length, i+1, `${ev.icon} ${vName(v.key)}: ${tx(specialOf(v))}`);
+  }
+}
 // Competencia: misma categoría entre vendedores presentes → −10%
-function applyCompetition(){
-  if(!current) return;
-  const all=[...(current.permanent||[]),...(current.traveling||[])];
+function applyCompetition(d){
+  if(!d) return;
+  const all=[...(d.permanent||[]),...(d.traveling||[])];
   const counts={};
   all.forEach(v=>{ const cat=CATALOG[v.key].cat; counts[cat]=(counts[cat]||0)+1; });
   all.forEach(v=>{ const cat=CATALOG[v.key].cat; v.comp = counts[cat]>1 ? counts[cat] : 0; });
 }
-
 function generateAll(){
   if(!selectedSize){ alert(L("alertPickSize")); return; }
-  current = {id:uid(), name:randomName(), sizeKey:selectedSize.key};
-  generatePermanent();
-  generateTraveling();
-  const nm=document.getElementById("saveName"); if(nm) nm.value=current.name;
-  updateGenInfo();
+  cur = newRecord();
+  const d = cur.data;
+  d.state = rollState();
+  d.event = rollEvent(1);
+  genPermanent(d); genTravelers(d); applyEventTargets(d); applyCompetition(d);
+  persist(); renderAll();
 }
-
-/* ===================== REGATEO ===================== */
-// devuelve {disc, note, cls}
-function haggleResult(vendor, total){
-  const h = CATALOG[vendor.key].haggle;
-  if(total===null || total==="" || isNaN(total)) return {disc:0, note:"", cls:""};
-  total=Number(total);
-  if(total <= h.dc-5){
-    const note = LANG==="en" ? "Fail by 5+. The vendor takes offense: prices +10%." : "Fallo por 5+. El vendedor se ofende: precios +10%.";
-    return {disc:-0.10, note, cls:"bad"};
-  }
-  if(total < h.dc){
-    const note = LANG==="en" ? `Doesn't meet DC ${h.dc}. No discount.` : `No alcanza la CD ${h.dc}. Sin descuento.`;
-    return {disc:0, note, cls:""};
-  }
-  const over = total - h.dc;
-  let disc = Math.min(0.05 + Math.floor(over/3)*0.05, h.max);
-  const pct = Math.round(disc*100);
-  const capped = disc>=h.max ? (LANG==="en"?" (cap reached)":" (tope alcanzado)") : "";
-  const note = LANG==="en" ? `Deal! ${pct}% discount${capped}.` : `¡Trato! Descuento del ${pct}%${capped}.`;
-  return {disc, note, cls:"good"};
+function regenPermanent(){
+  if(!selectedSize){ alert(L("alertPickSizeShort")); return; }
+  if(!cur || cur.data.sizeKey!==selectedSize.key){ generateAll(); return; }
+  const d = cur.data; genPermanent(d); applyCompetition(d);
+  persist(); renderAll();
 }
-
-/* ===================== RENDER ===================== */
-function vendorCard(v){
-  const c = CATALOG[v.key];
-  if(!c) return ""; // clave desconocida (JSON importado corrupto): no romper el render
-  const compMult = v.comp>1 ? 0.9 : 1;
-  const hag = haggleResult(v, v.hagRoll);
-  const discMult = 1 - hag.disc; // hag.disc negativo = recargo
-  const totalMult = v.factor * compMult * discMult;
-
-  const tierClass = v.tier==="basic"?"basic":(v.tier==="travel"?"travel":"var");
-  const tierLabel = v.tier==="basic"?L("tierBasic"):(v.tier==="travel"?L("tierTravel"):L("tierVar"));
-
-  let rows="";
-  c.goods.forEach(item=>{
-    if(item.cp<=0){ rows+=`<tr><td>${ti(item.name)}</td><td class="price">—</td></tr>`; return; }
-    const final = item.cp*totalMult;
-    const diff = final/item.cp;
-    const cls = diff>1.02?"up":(diff<0.98?"down":"");
-    rows += `<tr><td>${ti(item.name)}</td>`+
-            `<td class="base">${money(item.cp)}</td>`+
-            `<td class="price ${cls}">${money(final)}</td></tr>`;
-  });
-
-  const compTag = v.comp>1 ? `<span class="vtag comp">⚔ ${L("comp")} ×${v.comp} (−10%)</span>` : "";
-  const idx = cardId(v);
-
-  return `<div class="vendor ${v.tier==="travel"?"travel":""}" data-id="${idx}">
-    <div class="vhead">
-      <div class="vicon">${c.icon}</div>
-      <div style="flex:1">
-        <div class="vname">${vName(v.key)}</div>
-        <div style="margin-top:3px">
-          <span class="vtag ${tierClass}">${tierLabel}</span>
-          <span class="vtag">${priceLbl(tierByFactor(v.factor))}</span>
-          ${compTag}
-        </div>
-      </div>
-    </div>
-    <table class="goods">
-      <tr><td class="sub">${L("colItem")}</td><td class="base" style="text-decoration:none">${L("colBase")}</td><td class="price sub">${L("colHere")}</td></tr>
-      ${rows}
-    </table>
-    <div class="haggle">
-      <b>${L("haggleWord")}</b> · ${L("dcPersuasion")} <b>${c.haggle.dc}</b> · ${L("maxDisc")} <b>${Math.round(c.haggle.max*100)}%</b>
-      <div class="hrow">
-        <span class="sub">${L("resultD20")}</span>
-        <input type="number" class="hagInput" value="${esc(v.hagRoll)}" placeholder="17" style="width:80px">
-        <button class="small hagApply">${L("haggleBtn")}</button>
-        <button class="small ghost hagRoll">🎲 ${L("rollWord")}</button>
-      </div>
-      <div class="note ${hag.cls}">${hag.note||L("haggleHint")}</div>
-    </div>
-    <div class="vactions">
-      <button class="small rerollPrice">${L("rerollPrice")}</button>
-      <button class="small rerollVendor">${L("rerollVendor")}</button>
-    </div>
-  </div>`;
+function newWeek(){
+  if(!selectedSize){ alert(L("alertPickSizeShort")); return; }
+  if(!cur || cur.data.sizeKey!==selectedSize.key){ generateAll(); return; }
+  const d = cur.data;
+  d.week = (d.week||1)+1;
+  d.event = rollEvent(d.week);
+  d.permanent.forEach(v=>{ v.stock = rollStock(v.key, d); v.special = rollSpecial(v.key); logGoods(v); });
+  genTravelers(d); applyEventTargets(d); applyCompetition(d);
+  persist(); renderAll();
 }
-
-function cardId(v){
-  const p=(current.permanent||[]).indexOf(v); if(p>=0) return "p"+p;
-  const t=(current.traveling||[]).indexOf(v); return "t"+t;
-}
-function vendorById(id){
-  const i=parseInt(id.slice(1),10);
-  return id[0]==="p" ? current.permanent[i] : current.traveling[i];
-}
-
-function render(){
-  const pg=document.getElementById("permGrid"), tg=document.getElementById("travelGrid");
-  if(!current || !current.permanent){ pg.innerHTML=`<div class="empty">${L("permEmpty")}</div>`; }
-  else pg.innerHTML = current.permanent.map(vendorCard).join("");
-
-  if(!current || !current.traveling){ tg.innerHTML=`<div class="empty">—</div>`; }
-  else if(current.traveling.length===0){ tg.innerHTML=`<div class="empty">${L("travNone")}</div>`; }
-  else tg.innerHTML = current.traveling.map(vendorCard).join("");
-
-  wireCards();
-}
-
-function wireCards(){
-  document.querySelectorAll(".vendor").forEach(el=>{
-    const v = vendorById(el.dataset.id);
-    el.querySelector(".hagApply").onclick=()=>{ v.hagRoll = el.querySelector(".hagInput").value; refreshCard(el.dataset.id); };
-    el.querySelector(".hagRoll").onclick=()=>{ const r=rollDie(20); log("d20",r,`${L("persuasionIn")} ${vName(v.key)}`); v.hagRoll=r; el.querySelector(".hagInput").value=r; refreshCard(el.dataset.id); };
-    el.querySelector(".hagInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ v.hagRoll=e.target.value; refreshCard(el.dataset.id);} });
-    el.querySelector(".rerollPrice").onclick=()=>{ const roll=rollDie(12); const t=priceTier(roll); v.factor=t.f; v.priceLabel=t.label; log("d12",roll,`${vName(v.key)}: ${priceLbl(t)}`); refreshCard(el.dataset.id); };
-    el.querySelector(".rerollVendor").onclick=()=>{ rerollVendor(v); };
-  });
-}
-function refreshCard(id){
-  const v=vendorById(id);
-  const el=document.querySelector(`.vendor[data-id="${id}"]`);
-  const tmp=document.createElement("div"); tmp.innerHTML=vendorCard(v);
-  el.replaceWith(tmp.firstElementChild);
-  wireCards();
-  document.querySelector(`.vendor[data-id="${id}"]`).classList.add("flash");
-  persistCurrent();
-}
-function rerollVendor(v){
-  if(v.tier==="travel"){
-    const ranges=assignRanges(TRAVEL_KEYS); const roll=rollDie(100); const hit=findInRanges(ranges,roll);
-    log("d100",roll,`(${L("changed")}) ${vName(hit.key)}`);
-    const nv=makeVendorEntry(hit.key,"travel"); const i=current.traveling.indexOf(v); current.traveling[i]=nv;
-  } else if(v.tier==="variety"){
-    const pool=availableVariety(selectedSize).filter(k=> !current.permanent.some(x=>x.key===k));
-    if(pool.length===0){ alert(L("alertNoMoreVariety")); return; }
-    const ranges=assignRanges(pool); const roll=rollDie(100); const hit=findInRanges(ranges,roll);
-    log("d100",roll,`(${L("changed")}) ${vName(hit.key)}`);
-    const nv=makeVendorEntry(hit.key,"variety"); const i=current.permanent.indexOf(v); current.permanent[i]=nv;
-  } else { alert(L("alertBasicFixed")); return; }
-  applyCompetition(); render(); persistCurrent();
+function rerollState(){
+  if(!cur) return;
+  cur.data.state = rollState();
+  persist(); renderAll();
 }
 
 /* ===================== NOMBRE ALEATORIO ===================== */
 const NAME_A=["Frost","Raven","Black","Silver","Grey","Storm","Iron","Gold","Red","White","Thorn","Wolf","Bright","Shadow","Moon","Sun","Dusk","Dawn","Oak","Ash","Stone","Salt","Wind","Mist","Ember","Green","Fair","High","Deep","Old","Bram","Cael","Vor","Mor","Dun","Karr","Vel","Ald","Hollow","North","Wester","Ester","Pine","Bell","Char","Gloom","Hart"];
 const NAME_B=["holm","moor","port","ford","vale","dale","wick","ton","burg","bury","gate","watch","fell","mere","marsh","hollow","reach","crest","forge","haven","keep","cross","hedge","wood","field","stead","shire","glen","run","bridge","hall","thorpe","spire","hearth","barrow"];
-function pickName(){ return NAME_A[(Math.random()*NAME_A.length)|0] + NAME_B[(Math.random()*NAME_B.length)|0]; }
+function pickName(){ return NAME_A[(DT.rng()*NAME_A.length)|0] + NAME_B[(DT.rng()*NAME_B.length)|0]; }
 function randomName(){
-  const taken = new Set(getCities().map(c=>c.name));
+  const taken = new Set(DT.records.list("vendors").map(c=>c.name));
   for(let i=0;i<40;i++){ const n=pickName(); if(!taken.has(n)) return n; }
-  return pickName()+" "+((Math.random()*900+100)|0);
-}
-function uid(){ return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-function nowStr(){ return new Date().toLocaleString(LANG==="en"?"en":"es"); }
-
-/* ===================== PERSISTENCIA / IMPORTAR / EXPORTAR ===================== */
-function serialize(){
-  if(!current||!current.permanent) return null;
-  const strip = v=>({key:v.key,tier:v.tier,factor:v.factor,priceLabel:v.priceLabel,hagRoll:v.hagRoll});
-  return {sizeKey:current.sizeKey, permanent:current.permanent.map(strip), traveling:(current.traveling||[]).map(strip)};
-}
-function getCities(){
-  try{ const a=JSON.parse(localStorage.getItem(CITY_KEY)); if(Array.isArray(a)) return a; }catch(e){}
-  // migración desde el formato anterior, si existe
-  try{ const old=JSON.parse(localStorage.getItem(SAVE_KEY)); if(Array.isArray(old)&&old.length){ const m=old.map(o=>({id:o.id||uid(), name:o.name||"City", date:o.date||"", data:o.data})); localStorage.setItem(CITY_KEY, JSON.stringify(m)); return m; } }catch(e){}
-  return [];
-}
-function setCities(a){ localStorage.setItem(CITY_KEY, JSON.stringify(a)); }
-
-// Guarda (o actualiza) la ciudad actual en el navegador
-function persistCurrent(){
-  if(!current||!current.id||!current.permanent) return;
-  const store=getCities();
-  const entry={id:current.id, name:current.name, date:nowStr(), data:serialize()};
-  const i=store.findIndex(c=>c.id===current.id);
-  if(i>=0) store[i]=entry; else store.push(entry);
-  setCities(store); renderCities();
-}
-function loadCity(c){
-  const sz=SIZES.find(s=>s.key===c.data.sizeKey);
-  if(sz){ selectedSize=sz; renderSizePicker(); renderRefTables(); }
-  current={id:c.id, name:c.name, sizeKey:c.data.sizeKey,
-    permanent:c.data.permanent.map(v=>({...v,comp:0})),
-    traveling:(c.data.traveling||[]).map(v=>({...v,comp:0}))};
-  applyCompetition(); render();
-  const nm=document.getElementById("saveName"); if(nm) nm.value=current.name;
-  updateGenInfo(); renderCities();
+  return pickName()+" "+((DT.rng()*900+100)|0);
 }
 
-// Resumen de lo que tiene una ciudad
-function citySummary(c){
-  const perm=(c.data&&c.data.permanent)||[], trav=(c.data&&c.data.traveling)||[];
-  let goods=0; const shops=[];
-  [...perm,...trav].forEach(v=>{ const cat=CATALOG[v.key]; if(cat){ goods+=cat.goods.length; shops.push(vName(v.key)); } });
-  return {nV:perm.length+trav.length, goods, shops};
+/* ===================== DATOS GUARDADOS ===================== */
+const int = (n, lo, hi, fb)=>{ n = parseInt(n,10); return (isNaN(n) || n<lo || n>hi) ? fb : n; };
+function normNpc(n){
+  if(!n || typeof n!=="object") return null;
+  return {anc: ANCESTRY.byId(n.anc) ? n.anc : "human", name: String(n.name==null?"?":n.name).slice(0,60),
+    trait:int(n.trait,1,20,1), quirk:int(n.quirk,1,12,1), att:int(n.att,1,6,3), rumor:int(n.rumor,1,20,1), truth:int(n.truth,1,6,3)};
 }
-function renderCities(){
-  const box=document.getElementById("savedList");
-  const store=getCities().slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", LANG==="en"?"en":"es"));
-  if(store.length===0){ box.innerHTML=`<div class="sub">${L("noCities")}</div>`; return; }
-  box.innerHTML = store.map(c=>{
-    const s=SIZES.find(x=>x.key===(c.data&&c.data.sizeKey));
-    const sm=citySummary(c);
-    const isCur = current && current.id===c.id;
-    const shopList = sm.shops.join(", ");
-    return `<div class="saved-item" data-id="${esc(c.id)}"${isCur?' style="outline:1px solid var(--gold)"':''}>
-      <div style="flex:1; min-width:0">
-        <div><b>${esc(c.name)}</b> <span class="vtag var">${s?sizeName(s):esc(c.data&&c.data.sizeKey||"?")}</span>${isCur?` <span class="vtag basic">${L("currentTag")}</span>`:""}</div>
-        <div class="meta">${sm.nV} ${L("vendorsWord")} · ${sm.goods} ${L("goodsWord")}${c.date?" · "+esc(c.date):""}</div>
-        <div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(shopList)}</div>
-      </div>
-      <div class="row">
-        <button class="small loadCity" data-id="${esc(c.id)}">${L("load")}</button>
-        <button class="small ghost expCity" data-id="${esc(c.id)}" title="${L("exportCurrent")}">⬇</button>
-        <button class="small ghost delCity" data-id="${esc(c.id)}">✕</button>
-      </div>
-    </div>`; }).join("");
-  box.querySelectorAll(".loadCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) loadCity(c); });
-  box.querySelectorAll(".expCity").forEach(b=> b.onclick=()=>{ const c=getCities().find(x=>x.id===b.dataset.id); if(c) downloadJson({type:"dnd-vendor-settlement", version:2, name:c.name, data:c.data}, c.name); });
-  box.querySelectorAll(".delCity").forEach(b=> b.onclick=()=>{ const a=getCities().filter(x=>x.id!==b.dataset.id); setCities(a); if(current&&current.id===b.dataset.id){ current.id=null; updateGenInfo(); } renderCities(); });
+function normVendor(v, tier){
+  if(!v || !CATALOG[v.key]) return null;
+  const goods = CATALOG[v.key].goods.length;
+  return {key:v.key, tier:["basic","variety","travel"].includes(v.tier)?v.tier:tier,
+    factor: Number(v.factor)>0 ? Number(v.factor) : 1, priceLabel: v.priceLabel, comp:0,
+    hagRoll: (v.hagRoll===""||v.hagRoll==null) ? null : v.hagRoll,
+    npc: normNpc(v.npc),
+    stock: Array.isArray(v.stock) ? Array.from({length:goods}, (_,i)=> int(v.stock[i],0,STOCK.rows.length-1,STOCK_NORMAL)) : null,
+    special: (v.special && typeof v.special==="object") ? {chance:int(v.special.chance,1,6,null), roll:int(v.special.roll,1,6,null)} : null};
+}
+// Deja cualquier resultado (v2 incluido) con la forma v3. Lo que falte, se da por "normal".
+function normalize(rec){
+  const d = rec.data;
+  d.permanent = (Array.isArray(d.permanent)?d.permanent:[]).map(v=>normVendor(v,"variety")).filter(Boolean);
+  d.traveling = (Array.isArray(d.traveling)?d.traveling:[]).map(v=>normVendor(v,"travel")).filter(Boolean);
+  d.state = (d.state && STATES.byId(d.state.id)) ? {id:d.state.id, roll:int(d.state.roll,1,20,null)} : null;
+  if(d.event && EVENTS.byId(d.event.id)){
+    const e = d.event;
+    d.event = {id:e.id, roll:int(e.roll,1,20,null), extra:int(e.extra,0,99,undefined), less:int(e.less,0,99,undefined),
+      removed:Array.isArray(e.removed)?e.removed.filter(k=>CATALOG[k]):undefined,
+      target:(e.target && CATALOG[e.target.key])?{key:e.target.key, tier:String(e.target.tier||"")}:undefined};
+  } else d.event = null;
+  d.week = int(d.week,1,9999,1);
+  d.v = 3;
+  applyCompetition(d);
+  return rec;
+}
+function persist(){
+  if(!cur) return;
+  DT.records.upsert(cur);
+  DT.records.setActive("vendors", cur.id);
+}
+function loadRecord(rec){
+  cur = normalize(rec);
+  const sz = sizeOf(cur.data.sizeKey);
+  if(sz) selectedSize = sz;
+  DT.records.setActive("vendors", cur.id);
+  renderAll();
+  DT.refreshLibraries();
 }
 
-function downloadJson(payload, name){
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download=(name||"settlement").replace(/\s+/g,"_").toLowerCase()+".json"; a.click(); URL.revokeObjectURL(url);
+/* ===================== FICHAS ===================== */
+function fxChips(row, kind){
+  const out = [];
+  for(const [k,v] of Object.entries(row.price||{})) out.push({t:`${k==="all"?L("fxAll"):tc(k)} ${pct(v)}`, cls:v>0?"bad":"good"});
+  for(const [k,v] of Object.entries(row.stock||{})) out.push({t:`${L("fxStock")} ${k==="all"?L("fxAll"):tc(k)} ${signed(v)}`, cls:v>0?"good":"bad"});
+  if(row.travel) out.push({t:L("fxTravel",{n:signed(row.travel)}), cls:""});
+  if(row.dc) out.push({t:L("fxDC",{n:signed(row.dc)}), cls:"bad"});
+  if(row.max) out.push({t:L("fxMax",{n:Math.round(row.max*100)}), cls:"good"});
+  const w = Object.entries(row.weights||{});
+  const more = w.filter(([,m])=>m>1).map(([k,m])=>`${vName(k)} ×${m}`), fewer = w.filter(([,m])=>m>0&&m<1).map(([k])=>vName(k)), none = w.filter(([,m])=>m===0).map(([k])=>vName(k));
+  if(more.length) out.push({t:L("fxMore",{list:more.join(", ")}), cls:""});
+  if(fewer.length) out.push({t:L("fxFewer",{list:fewer.join(", ")}), cls:""});
+  if(none.length) out.push({t:L("fxNo",{list:none.join(", ")}), cls:""});
+  if(kind==="event"){
+    if(row.extra) out.push({t:L("fxExtra",{d:row.extra}), cls:""});
+    if(row.less) out.push({t:L("fxLess",{d:row.less}), cls:""});
+    if(row.remove) out.push({t:L("fxFlee",{list:row.remove.map(vName).join(", ")}), cls:""});
+    if(row.theft) out.push({t:L("fxTheft"), cls:"bad"});
+    if(row.compExtra) out.push({t:L("fxCompExtra"), cls:"good"});
+    if(row.special) out.push({t:L("fxSpecial"), cls:"good"});
+    if(row.specialPerm) out.push({t:L("fxAuction"), cls:"good"});
+    for(const [k,n] of Object.entries(row.dcKey||{})) out.push({t:L("fxDcKey",{vendor:vName(k), n}), cls:"bad"});
+  }
+  return out;
 }
-// 1) Exportar solo la ciudad actual
-function exportCurrent(){
-  const data=serialize();
-  if(!data){ alert(L("alertGenExport")); return; }
-  const name=current&&current.name ? current.name : (selectedSize?sizeName(selectedSize):"settlement");
-  downloadJson({type:"dnd-vendor-settlement", version:2, name, data}, name);
+const chipsHTML = list => list.length ? list.map(c=>`<span class="vtag ${c.cls==="bad"?"bad":c.cls==="good"?"good":"mod"}">${esc(c.t)}</span>`).join("") : `<span class="vtag">${esc(L("fxNone"))}</span>`;
+const chipsText = list => list.length ? list.map(c=>c.t).join(" · ") : L("fxNone");
+// Lo que el evento hizo de verdad esta semana (dados ya tirados).
+function eventResolved(d){
+  const ev = eventRow(d), e = d.event || {}, out = [];
+  if(e.extra) out.push({t:L("evExtra",{n:e.extra}), cls:"good"});
+  if(e.less) out.push({t:L("evLess",{n:e.less}), cls:"bad"});
+  if(ev.remove) out.push(e.removed && e.removed.length ? {t:L("evFled",{list:e.removed.map(vName).join(", ")}), cls:"bad"} : {t:L("evNobodyFled"), cls:""});
+  if(e.target && ev.theft) out.push({t:L("evTheft",{vendor:vName(e.target.key)}), cls:"bad"});
+  if(e.target && ev.specialPerm) out.push({t:L("evAuction",{vendor:vName(e.target.key)}), cls:"good"});
+  if(e.target && ev.special) out.push({t:L("evNewcomer",{vendor:vName(e.target.key)}), cls:"good"});
+  return out;
 }
-// 2) Exportar todas las ciudades persistentes
-function exportAll(){
-  const store=getCities();
-  if(!store.length){ alert(L("alertNoCities")); return; }
-  downloadJson({type:"dnd-vendor-collection", version:2, cities:store}, "cities_all");
+
+function renderStatus(){
+  const d = D();
+  refs.statusGrid.hidden = !d;
+  if(!d) return;
+  const st = stateRow(d), ev = eventRow(d);
+  const stOther = fxChips(st, "state"), evFx = fxChips(ev, "event"), evRes = eventResolved(d);
+  refs.statusGrid.innerHTML = `
+    <div class="scard">
+      <div class="shead"><div><div class="sub">🏙️ ${esc(L("stateTitle"))} · d20 ${d.state && d.state.roll ? "= "+esc(d.state.roll) : "("+esc(L("notRolled"))+")"}</div>
+        <div class="st">${st.icon} ${esc(tx(st.name))}</div></div>
+        <button class="small" data-act="rerollState">${esc(L("rerollState"))}</button></div>
+      <div class="sd">${esc(tx(st.desc))}</div>
+      <div class="fx">${chipsHTML(stOther)}</div>
+    </div>
+    <div class="scard event">
+      <div class="shead"><div><div class="sub">📅 ${esc(L("eventTitle",{n:d.week||1}))} · d20 ${d.event && d.event.roll ? "= "+esc(d.event.roll) : "("+esc(L("notRolled"))+")"}</div>
+        <div class="st">${ev.icon} ${esc(tx(ev.name))}</div></div>
+        <button class="small" data-act="newWeek">${esc(L("newWeek"))}</button></div>
+      <div class="sd">${esc(tx(ev.desc))}</div>
+      <div class="fx">${evRes.length ? chipsHTML(evRes) : chipsHTML(evFx)}</div>
+    </div>`;
+  refs.statusGrid.querySelector('[data-act="rerollState"]').onclick = rerollState;
+  refs.statusGrid.querySelector('[data-act="newWeek"]').onclick = newWeek;
 }
-function importJson(file){
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const obj=JSON.parse(e.target.result);
-      if(obj && (obj.type==="dnd-vendor-collection" || Array.isArray(obj.cities))){
-        // colección: fusiona todas las ciudades en el store
-        const store=getCities(); const ids=new Set(store.map(c=>c.id));
-        (obj.cities||[]).forEach(c=>{
-          if(!c || !c.data || !c.data.sizeKey || !c.data.permanent) return;
-          let id=c.id||uid(); if(ids.has(id)) id=uid(); ids.add(id);
-          store.push({id, name:c.name||L("imported"), date:c.date||nowStr(), data:c.data});
-        });
-        setCities(store); renderCities();
-      } else {
-        // ciudad única: carga y persiste
-        const data=obj.data||obj;
-        if(!data.sizeKey || !data.permanent) throw new Error("formato");
-        const c={id:uid(), name:(obj.name||L("imported")), date:nowStr(), data};
-        const store=getCities(); store.push(c); setCities(store);
-        loadCity(c);
-      }
-    }catch(err){ alert(L("alertBadFile")); }
+
+function npcHTML(v){
+  if(!v.npc) return `<div class="npc"><button class="small" data-act="rollNpc">${esc(L("rollNpc"))}</button></div>`;
+  const n = v.npc, a = ANCESTRY.byId(n.anc), att = attitudeOf(v), truth = TRUTH.lookup(n.truth).row;
+  return `<div class="npc">
+    <div><span class="who">🧑 ${esc(n.name)}</span> <span class="sub">· ${esc(tx(a.name))}</span>
+      <span class="vtag ${att.cls}">${att.emoji} ${esc(tx(att.name))}${att.dc?` (${esc(en()?"DC":"CD")} ${signed(att.dc)})`:""}</span></div>
+    <div class="sub">${esc(tx(TRAIT.lookup(n.trait).row.text))}</div>
+    <div class="sub">✋ ${esc(tx(QUIRK.lookup(n.quirk).row.text))}</div>
+    <details><summary>🗣 ${esc(L("rumorWord"))}</summary>«${esc(tx(RUMOR.lookup(n.rumor).row.text))}» <span class="vtag ${truth.cls}">${esc(L("dmOnly"))}: ${esc(tx(truth.name))}</span></details>
+  </div>`;
+}
+function vendorCard(v, id){
+  const d = D(), c = CATALOG[v.key];
+  if(!c) return "";
+  const mult = vendorMult(v, d), h = effHaggle(v, d), hag = haggleResult(v, v.hagRoll, d);
+  const cm = catMult(c.cat, d);
+  const tierClass = v.tier==="basic"?"basic":(v.tier==="travel"?"travel":"var");
+  const tierLabel = v.tier==="basic"?L("tierBasic"):(v.tier==="travel"?L("tierTravel"):L("tierVar"));
+  const priced = (cp, stockMul)=>{
+    const final = cp*mult*stockMul, diff = final/cp;
+    const cls = diff>1.02?"up":(diff<0.98?"down":"");
+    return `<td class="base">${DT.money(cp)}</td><td class="price ${cls}">${DT.money(final)}</td>`;
   };
-  reader.readAsText(file);
+  let rows = "";
+  const sp = specialOf(v);
+  if(sp) rows += `<tr class="special"><td>★ ${esc(tx(sp))}</td>${priced(sp.cp, 1)}</tr>`;
+  c.goods.forEach((item, i)=>{
+    if(item.cp<=0){ rows += `<tr><td>${esc(ti(item.name))}</td><td></td><td class="price">—</td></tr>`; return; }
+    const lvl = STOCK.rows[stockLevel(v, i)];
+    if(lvl.id==="out"){ rows += `<tr class="out"><td>${esc(ti(item.name))} <span class="stk out">${esc(tx(lvl.name))}</span></td><td class="base">${DT.money(item.cp)}</td><td class="price">—</td></tr>`; return; }
+    const badge = lvl.cls ? ` <span class="stk ${lvl.cls}">${esc(tx(lvl.name))}</span>` : "";
+    rows += `<tr><td>${esc(ti(item.name))}${badge}</td>${priced(item.cp, lvl.mult)}</tr>`;
+  });
+  const compTag = v.comp>1 ? `<span class="vtag comp">⚔ ${esc(L("comp"))} ×${v.comp} (−10%)</span>` : "";
+  const modTag = Math.abs(cm-1)>0.001 ? `<span class="vtag mod">${stateRow(d).icon} ${pct(cm-1)}</span>` : "";
+  const dcw = en() ? "DC" : "CD";
+  return `<div class="vendor ${v.tier==="travel"?"travel":""}" data-id="${id}">
+    <div class="vhead">
+      <div class="vicon">${c.icon}</div>
+      <div style="flex:1">
+        <div class="vname">${esc(vName(v.key))}</div>
+        <div style="margin-top:3px">
+          <span class="vtag ${tierClass}">${esc(tierLabel)}</span>
+          <span class="vtag">${esc(priceLbl(tierByFactor(v.factor)))}</span>
+          ${compTag}${modTag}
+        </div>
+      </div>
+    </div>
+    ${npcHTML(v)}
+    <table class="goods">
+      <tr><td class="sub">${esc(L("colItem"))}</td><td class="base" style="text-decoration:none">${esc(L("colBase"))}</td><td class="price sub">${esc(L("colHere"))}</td></tr>
+      ${rows}
+    </table>
+    <div class="haggle">
+      <b>${esc(L("haggleWord"))}</b> · ${esc(L("dcPersuasion"))} <b>${h.dc}</b>${h.dc!==h.base?` <span class="sub">(${dcw} ${h.base} ${signed(h.dc-h.base)})</span>`:""} · ${esc(L("maxDisc"))} <b>${Math.round(h.max*100)}%</b>
+      <div class="hrow">
+        <span class="sub">${esc(L("resultD20"))}</span>
+        <input type="number" class="hagInput" value="${esc(v.hagRoll)}" placeholder="17" style="width:80px">
+        <button class="small hagApply">${esc(L("haggleBtn"))}</button>
+        <button class="small ghost hagRoll">🎲 ${esc(L("rollWord"))}</button>
+      </div>
+      <div class="note ${hag.cls}">${esc(hag.note||L("haggleHint"))}</div>
+    </div>
+    <div class="vactions">
+      <button class="small rerollPrice">${esc(L("rerollPrice"))}</button>
+      <button class="small rerollStock">${esc(L("rerollStock"))}</button>
+      ${v.npc?`<button class="small rerollNpc">${esc(L("rerollNpc"))}</button>`:""}
+      <button class="small rerollVendor">${esc(L("rerollVendor"))}</button>
+      ${DT.host.caps.toScreen?`<button class="small host vScreen" title="${esc(L("toScreen"))}">▤</button>`:""}
+    </div>
+  </div>`;
 }
-function renameCurrent(){
-  if(!current||!current.id){ alert(L("alertGenSave")); return; }
-  const v=document.getElementById("saveName").value.trim();
-  if(v){ current.name=v; persistCurrent(); updateGenInfo(); }
+function vendorById(id){
+  const d = D(); if(!d) return null;
+  const i = parseInt(id.slice(1),10);
+  return id[0]==="p" ? d.permanent[i] : d.traveling[i];
+}
+function renderVendors(){
+  const d = D();
+  const pg = refs.permGrid, tg = refs.travelGrid;
+  if(!d){ pg.innerHTML=`<div class="empty">${esc(L("permEmpty"))}</div>`; tg.innerHTML=`<div class="empty">—</div>`; return; }
+  pg.innerHTML = d.permanent.map((v,i)=> vendorCard(v, "p"+i)).join("");
+  tg.innerHTML = d.traveling.length ? d.traveling.map((v,i)=> vendorCard(v, "t"+i)).join("") : `<div class="empty">${esc(L("travNone"))}</div>`;
+  refs.permGrid.querySelectorAll(".vendor").forEach(wireCard);
+  refs.travelGrid.querySelectorAll(".vendor").forEach(wireCard);
+}
+function wireCard(el){
+  const id = el.dataset.id, v = vendorById(id); if(!v) return;
+  const q = s=> el.querySelector(s);
+  q(".hagApply").onclick = ()=>{ v.hagRoll = q(".hagInput").value; refreshCard(id); };
+  q(".hagRoll").onclick = ()=>{ const r=DT.rollDie(20); DT.log("d20", r, `${L("persuasionIn")} ${vName(v.key)}`); v.hagRoll=r; refreshCard(id); };
+  q(".hagInput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ v.hagRoll=e.target.value; refreshCard(id); } });
+  q(".rerollPrice").onclick = ()=>{ const roll=DT.rollDie(12), t=priceTier(roll); v.factor=t.f; v.priceLabel=t.label; DT.log("d12", roll, `${vName(v.key)}: ${priceLbl(t)}`); refreshCard(id); };
+  q(".rerollStock").onclick = ()=>{ v.stock = rollStock(v.key, D()); v.special = rollSpecial(v.key); logGoods(v); refreshCard(id); };
+  const npcBtn = q(".rerollNpc") || q('[data-act="rollNpc"]');
+  if(npcBtn) npcBtn.onclick = ()=>{ v.npc = rollNpc(); logNpc(v); refreshCard(id); };
+  q(".rerollVendor").onclick = ()=> rerollVendor(v);
+  const sc = q(".vScreen"); if(sc) sc.onclick = ()=> DT.bridge.toScreen({label:`${vName(v.key)} — ${cur.name}`, w:380, h:520, md:vendorMarkdown(v, D(), true)});
+}
+function refreshCard(id){
+  const el = document.querySelector(`#panel-vendors .vendor[data-id="${id}"]`); if(!el) return;
+  const tmp = document.createElement("div"); tmp.innerHTML = vendorCard(vendorById(id), id);
+  const nu = tmp.firstElementChild; el.replaceWith(nu); wireCard(nu); nu.classList.add("flash");
+  persist(); renderInfo();
+}
+function rerollVendor(v){
+  const d = D();
+  if(v.tier==="travel"){
+    const r = TRAVEL_T.roll(travelWF(stateRow(d), eventRow(d)));
+    DT.log("d100", r.roll, `(${L("changed")}) ${vName(r.row.key)}`);
+    d.traveling[d.traveling.indexOf(v)] = makeVendor(r.row.key, "travel", d);
+  } else if(v.tier==="variety"){
+    const sz = sizeOf(d.sizeKey) || selectedSize;
+    const pool = availableVariety(sz).filter(k=> !d.permanent.some(x=>x.key===k));
+    if(pool.length===0){ alert(L("alertNoMoreVariety")); return; }
+    const idx = sizeIndex(sz);
+    const tb = DT.table({id:"variety-reroll", die:100, rows:pool.map(k=>({key:k}))});
+    const r = tb.roll(row=> varietyWeight(row.key, idx));
+    DT.log("d100", r.roll, `(${L("changed")}) ${vName(r.row.key)}`);
+    d.permanent[d.permanent.indexOf(v)] = makeVendor(r.row.key, "variety", d);
+  } else { alert(L("alertBasicFixed")); return; }
+  applyCompetition(d); persist(); renderVendors(); renderInfo();
+}
+function renderInfo(){
+  const d = D();
+  if(refs.saveName && document.activeElement!==refs.saveName) refs.saveName.value = cur ? cur.name : "";
+  refs.shareRow.hidden = !d;
+  refs.toScreen.hidden = !(d && DT.host.caps.toScreen);
+  refs.toArticle.hidden = !(d && DT.host.caps.toArticle);
+  if(!d){ refs.genInfo.textContent = ""; return; }
+  const s = sizeOf(d.sizeKey);
+  refs.genInfo.textContent = [cur.name, s?sizeName(s):d.sizeKey, `${L("weekWord")} ${d.week||1}`,
+    `${d.permanent.length} ${L("permWord")}`, `${d.traveling.length} ${L("travWord")}`].join(" · ");
+}
+function renderAll(){ renderSizePicker(); renderStatus(); renderVendors(); renderInfo(); renderRefTables(); }
+
+/* ===================== MARKDOWN (copiar · pantalla de DM · artículo de Veil) ===================== */
+const md = DT.mdEsc;
+function npcLine(v){
+  if(!v.npc) return "—";
+  const a = ANCESTRY.byId(v.npc.anc), att = attitudeOf(v);
+  return `${md(v.npc.name)} (${md(tx(a.name))}) · ${att.emoji} ${md(tx(att.name))}`;
+}
+function vendorRowMd(v, d){
+  const h = effHaggle(v, d), sp = specialOf(v), mult = vendorMult(v, d);
+  const dcw = en() ? "DC" : "CD";
+  return `| ${CATALOG[v.key].icon} ${md(vName(v.key))} | ${npcLine(v)} | ${dcw} ${h.dc} · ${Math.round(h.max*100)}% | ${Math.abs(mult-1)<0.005?"=":pct(mult-1)} | ${sp?`★ ${md(tx(sp))} (${DT.money(sp.cp*mult)})`:"—"} |`;
+}
+function settlementMarkdown(rec, opts={}){
+  const d = rec.data, s = sizeOf(d.sizeKey), st = stateRow(d), ev = eventRow(d);
+  const lines = [];
+  if(!opts.noTitle) lines.push(`### ${md(rec.name)}`, "");
+  lines.push(`*${s?md(sizeName(s)):md(d.sizeKey)}${s?` · 👥 ${fmtPop(s.pop)}`:""} · ${L("weekWord")} ${d.week||1}*`, "");
+  lines.push(`**${L("stateTitle")}:** ${st.icon} ${md(tx(st.name))} — ${md(chipsText(fxChips(st,"state")))}  `);
+  const res = eventResolved(d);
+  lines.push(`**${L("eventTitle",{n:d.week||1})}:** ${ev.icon} ${md(tx(ev.name))} — ${md(res.length?chipsText(res):tx(ev.desc))}`, "");
+  const head = `| ${L("colVendor")} | ${L("mdShopkeeper")} | ${L("colHaggle")} | ${L("mdPrices")} | ${L("special")} |\n|---|---|---|---|---|`;
+  lines.push(head, ...d.permanent.map(v=> vendorRowMd(v, d)));
+  if(d.traveling.length) lines.push(...d.traveling.map(v=> vendorRowMd(v, d).replace(/^\| /, "| 🐎 ")));
+  const rum = [...d.permanent, ...d.traveling].filter(v=> v.npc);
+  if(rum.length){
+    lines.push("", `**${L("mdRumors")}**`);
+    rum.forEach(v=>{ const t = TRUTH.lookup(v.npc.truth).row; lines.push(`- ${md(v.npc.name)} (${md(vName(v.key))}): «${md(tx(RUMOR.lookup(v.npc.rumor).row.text))}»${opts.dm?` — *${L("dmOnly")}: ${md(tx(t.name))}*`:""}`); });
+  }
+  return lines.join("\n")+"\n";
+}
+function vendorMarkdown(v, d, dm){
+  const c = CATALOG[v.key], mult = vendorMult(v, d), h = effHaggle(v, d), sp = specialOf(v);
+  const lines = [`### ${c.icon} ${md(vName(v.key))}`, "", npcLine(v)];
+  if(v.npc){
+    lines.push(`*${md(tx(TRAIT.lookup(v.npc.trait).row.text))} · ${md(tx(QUIRK.lookup(v.npc.quirk).row.text))}*`);
+    const t = TRUTH.lookup(v.npc.truth).row;
+    lines.push(`🗣 «${md(tx(RUMOR.lookup(v.npc.rumor).row.text))}»${dm?` — *${L("dmOnly")}: ${md(tx(t.name))}*`:""}`);
+  }
+  lines.push("", `**${L("dcPersuasion")} ${h.dc}** · ${L("maxDisc")} ${Math.round(h.max*100)}%`, "", `| ${L("colItem")} | ${L("colHere")} |`, "|---|---|");
+  if(sp) lines.push(`| ★ ${md(tx(sp))} | ${DT.money(sp.cp*mult)} |`);
+  c.goods.forEach((item,i)=>{
+    const lvl = STOCK.rows[stockLevel(v,i)];
+    const price = item.cp<=0 ? "—" : (lvl.id==="out" ? `~~${DT.money(item.cp)}~~ (${tx(lvl.name)})` : DT.money(item.cp*mult*lvl.mult)+(lvl.cls?` (${tx(lvl.name)})`:""));
+    lines.push(`| ${md(ti(item.name))} | ${price} |`);
+  });
+  return lines.join("\n")+"\n";
+}
+function articlePayload(rec){
+  const d = rec.data, s = sizeOf(d.sizeKey), sName = s?sizeName(s):d.sizeKey;
+  const body = settlementMarkdown(rec, {noTitle:true, dm:false});
+  return {title:rec.name, template:"settlement", fields:{kind:sName, population:s?fmtPop(s.pop):""},
+    subtitle:`${sName}${s?" · "+fmtPop(s.pop):""}`, summary:`${sName} · ${d.permanent.length+d.traveling.length} ${L("vendorsWord")}`,
+    block:`:::nota ${L("marketLabel")}\n${body.replace(/^:::.*$/gm, "")}\n:::`};
 }
 
 /* ===================== TABLAS DE REFERENCIA ===================== */
 function renderSizePicker(){
-  const box=document.getElementById("sizePicker");
+  const box = refs.sizePicker;
   box.innerHTML = SIZES.map(s=>`
     <button class="size-btn ${selectedSize&&selectedSize.key===s.key?"active":""}" data-k="${s.key}">
-      <span class="n">${sizeName(s)}</span><span class="p">${sizeSub(s)}</span><span class="p">👥 ${fmtPop(s.pop)}</span>
+      <span class="n">${esc(sizeName(s))}</span><span class="p">${esc(sizeSub(s))}</span><span class="p">👥 ${esc(fmtPop(s.pop))}</span>
     </button>`).join("");
   box.querySelectorAll(".size-btn").forEach(b=> b.onclick=()=>{ selectedSize=SIZES.find(s=>s.key===b.dataset.k); renderSizePicker(); renderRefTables(); });
 }
-
+function vendorRefCols(dcw){
+  return [
+    {h:esc(L("colVendor")), f:r=>{ const c=CATALOG[r.row.key]; return `${c.icon} <b>${esc(vName(r.row.key))}</b>`; }},
+    {h:esc(L("colCategory")), f:r=> esc(tc(CATALOG[r.row.key].cat))},
+    {h:esc(L("colHaggle")), f:r=>{ const c=CATALOG[r.row.key]; return `${dcw} ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%`; }},
+    {h:esc(L("colExamples")), f:r=> `<span class="sub">${esc(CATALOG[r.row.key].goods.slice(0,3).map(x=>ti(x.name)).join(", "))}…</span>`}
+  ];
+}
 function renderRefTables(){
-  const dcw = LANG==="en" ? "DC" : "CD";
-  // tamaños
-  const st=document.getElementById("sizeRefTable");
-  st.innerHTML = `<tr><th>${L("colSize")}</th><th>${L("colPop")}</th><th>${L("colBasics")}</th><th>${L("colVariety")} <span class="die">d100</span></th><th>${L("colTravWeek")}</th></tr>`+
+  const dcw = en() ? "DC" : "CD";
+  const d = D(), st = stateRow(d), ev = eventRow(d);
+  refs.sizeRefTable.innerHTML = `<tr><th>${esc(L("colSize"))}</th><th>${esc(L("colPop"))}</th><th>${esc(L("colBasics"))}</th><th>${esc(L("colVariety"))} <span class="die">d100</span></th><th>${esc(L("colTravWeek"))}</th></tr>`+
     SIZES.map(s=>`<tr${selectedSize&&selectedSize.key===s.key?' style="outline:2px solid var(--gold)"':''}>
-      <td><b>${sizeName(s)}</b><br><span class="sub">${sizeSub(s)}</span></td>
-      <td>${fmtPop(s.pop)}</td>
-      <td>${s.core.map(k=>vName(k)).join(", ")}</td>
+      <td><b>${esc(sizeName(s))}</b><br><span class="sub">${esc(sizeSub(s))}</span></td>
+      <td>${esc(fmtPop(s.pop))}</td>
+      <td>${esc(s.core.map(k=>vName(k)).join(", "))}</td>
       <td style="text-align:center">${s.variety}</td>
-      <td><span class="die">${travelLabel(s.travel)}</span> <span class="sub">${L("min0")}</span></td>
+      <td><span class="die">${travelLabel(s.travel)}</span> <span class="sub">${esc(L("min0"))}</span></td>
     </tr>`).join("");
 
-  // variedad segun tamaño
+  refs.stateRefTable.innerHTML = DT.refTableHTML(STATES, [
+    {h:esc(L("colState")), f:r=> `${r.row.icon} <b>${esc(tx(r.row.name))}</b><br><span class="sub">${esc(tx(r.row.desc))}</span>`},
+    {h:esc(L("colEffects")), f:r=> `<span class="sub">${esc(chipsText(fxChips(r.row,"state")))}</span>`}]);
+
   const sz = selectedSize || SIZES[3];
-  document.getElementById("varSizeLbl").textContent = `— ${sizeName(sz)}`;
-  const pool = availableVariety(sz); const ranges=assignRanges(pool);
-  const vt=document.getElementById("varRefTable");
-  vt.innerHTML = `<tr><th style="width:70px">d100</th><th>${L("colStall")}</th><th>${L("colCategory")}</th><th>${L("colHaggle")}</th><th>${L("colExamples")}</th></tr>`+
-    (pool.length? ranges.map(r=>{ const c=CATALOG[r.key]; return `<tr>
-        <td>${r.lo===r.hi?r.lo:r.lo+"–"+r.hi}</td>
-        <td>${c.icon} <b>${vName(r.key)}</b></td>
-        <td>${tc(c.cat)}</td>
-        <td>${dcw} ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
-        <td class="sub">${c.goods.slice(0,3).map(x=>ti(x.name)).join(", ")}…</td></tr>`; }).join("")
-      : `<tr><td colspan="5" class="sub">${L("troupeNote")}</td></tr>`);
+  refs.varSizeLbl.textContent = `— ${sizeName(sz)}`;
+  const vt = varietyTable(sz);
+  refs.varRefTable.innerHTML = vt.pool.length ? DT.refTableHTML(vt.table, vendorRefCols(dcw), vt.wf)
+    : `<tr><th>d100</th><th>${esc(L("colStall"))}</th></tr><tr><td colspan="2" class="sub">${esc(L("troupeNote"))}</td></tr>`;
 
-  // ambulantes
-  const tr=document.getElementById("travelRefTable");
-  const tranges=assignRanges(TRAVEL_KEYS);
-  tr.innerHTML = `<tr><th style="width:70px">d100</th><th>${L("colVendor")}</th><th>${L("colCategory")}</th><th>${L("colHaggle")}</th><th>${L("colExamples")}</th></tr>`+
-    tranges.map(r=>{ const c=CATALOG[r.key]; return `<tr>
-        <td>${r.lo===r.hi?r.lo:r.lo+"–"+r.hi}</td>
-        <td>${c.icon} <b>${vName(r.key)}</b></td>
-        <td>${tc(c.cat)}</td>
-        <td>${dcw} ${c.haggle.dc} · ${Math.round(c.haggle.max*100)}%</td>
-        <td class="sub">${c.goods.slice(0,3).map(x=>ti(x.name)).join(", ")}…</td></tr>`; }).join("");
+  refs.eventRefTable.innerHTML = DT.refTableHTML(EVENTS, [
+    {h:esc(L("colEvent")), f:r=> `${r.row.icon} <b>${esc(tx(r.row.name))}</b><br><span class="sub">${esc(tx(r.row.desc))}</span>`}]);
 
-  // precios
-  const pt=document.getElementById("priceRefTable");
-  pt.innerHTML = `<tr><th style="width:70px">d12</th><th>${L("colPriceLevel")}</th><th>${L("colFactor")}</th></tr>`+
-    PRICE_TIERS.map(t=>`<tr><td>${t.r[0]===t.r[1]?t.r[0]:t.r[0]+"–"+t.r[1]}</td><td>${priceLbl(t)}</td><td>×${t.f.toFixed(2)}</td></tr>`).join("")+
-    `<tr><td>—</td><td>${L("compRow")}</td><td>×0.90 ${L("extra")}</td></tr>`;
+  refs.travStateLbl.textContent = (st.id!=="normal" || (ev.weights)) ? `— ${st.icon} ${tx(st.name)}${ev.weights?` · ${ev.icon} ${tx(ev.name)}`:""}` : "";
+  refs.travelRefTable.innerHTML = DT.refTableHTML(TRAVEL_T, vendorRefCols(dcw), travelWF(st, ev));
+
+  refs.priceRefTable.innerHTML = `<tr><th style="width:70px">d12</th><th>${esc(L("colPriceLevel"))}</th><th>${esc(L("colFactor"))}</th></tr>`+
+    PRICE_TIERS.map(t=>`<tr><td>${t.r[0]===t.r[1]?t.r[0]:t.r[0]+"–"+t.r[1]}</td><td>${esc(priceLbl(t))}</td><td>×${t.f.toFixed(2)}</td></tr>`).join("")+
+    `<tr><td>—</td><td>${esc(L("compRow"))}</td><td>×0.90 ${esc(L("extra"))}</td></tr>`;
+
+  refs.stockRefTable.innerHTML = DT.refTableHTML(STOCK, [
+    {h:esc(L("colStock")), f:r=> `<span class="stk ${r.row.cls}">${esc(tx(r.row.name))}</span>`},
+    {h:esc(L("colEffect")), f:r=> r.row.mult===0 ? "—" : (r.row.mult===1 ? "×1" : "×"+r.row.mult.toFixed(2))}]) +
+    `<tr><td>—</td><td colspan="2" class="sub">${esc(L("servicesAlways"))}</td></tr>`;
+  const cats = Object.keys(SPECIALS);
+  const selCat = refs.specialCat.value && SPECIALS[refs.specialCat.value] ? refs.specialCat.value : cats[0];
+  refs.specialCat.innerHTML = cats.map(c=>`<option value="${esc(c)}"${c===selCat?" selected":""}>${esc(tc(c))}</option>`).join("");
+  refs.specialRefTable.innerHTML = DT.refTableHTML(SPECIAL_T[selCat], [
+    {h:esc(L("colItemSpecial")), f:r=> esc(tx(r.row))}, {h:esc(L("colPrice")), f:r=> DT.money(r.row.cp)}]);
+
+  refs.npcRefGrid.innerHTML = [
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(ANCESTRY, [{h:esc(L("colAncestry")), f:r=> `<b>${esc(tx(r.row.name))}</b><br><span class="sub">${esc(r.row.names.join(", "))}</span>`}])}</table></div>`,
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(ATTITUDE, [{h:esc(L("colAttitude")), f:r=> `${r.row.emoji} ${esc(tx(r.row.name))}`}, {h:dcw, f:r=> r.row.dc?signed(r.row.dc):"±0"}])}</table>
+     <table class="ref">${DT.refTableHTML(TRUTH, [{h:esc(L("colTruth")), f:r=> esc(tx(r.row.name))}])}</table></div>`,
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(TRAIT, [{h:esc(L("colTrait")), f:r=> esc(tx(r.row.text))}])}</table></div>`,
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(QUIRK, [{h:esc(L("colQuirk")), f:r=> esc(tx(r.row.text))}])}</table></div>`,
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(RUMOR, [{h:esc(L("colRumor")), f:r=> esc(tx(r.row.text))}])}</table></div>`
+  ].join("");
 }
 
-/* ===================== INIT ===================== */
-document.getElementById("genBtn").onclick=generateAll;
-document.getElementById("regenPerm").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} generatePermanent(); updateGenInfo(); };
-document.getElementById("regenTravel").onclick=()=>{ if(!selectedSize){alert(L("alertPickSizeShort"));return;} generateTraveling(); updateGenInfo(); };
-document.getElementById("renameBtn").onclick=renameCurrent;
-document.getElementById("saveName").addEventListener("keydown",e=>{ if(e.key==="Enter") renameCurrent(); });
-document.getElementById("exportBtn").onclick=exportCurrent;
-document.getElementById("exportAllBtn").onclick=exportAll;
-document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
-document.getElementById("importFile").onchange=e=>{ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; };
-document.getElementById("clearLog").onclick=()=>{ document.getElementById("logList").innerHTML=`<div class="l logempty">${L("logEmpty")}</div>`; };
-document.getElementById("langToggle").onclick=()=> setLang(LANG==="en"?"es":"en");
-
-selectedSize = SIZES[3]; // Villa / Town por defecto
-applyI18n();
-renderSizePicker();
-renderRefTables();
-renderCities();
+/* ===================== REGISTRO DE LA PESTAÑA ===================== */
+function citySummary(rec){
+  const d = rec.data || {}, perm = d.permanent||[], trav = d.traveling||[];
+  let goods=0; const shops=[];
+  [...perm,...trav].forEach(v=>{ const c=CATALOG[v && v.key]; if(c){ goods+=c.goods.length; shops.push(vName(v.key)); } });
+  return {nV:perm.length+trav.length, goods, shops};
+}
+const tab = DT.registerTab({
+  id:"vendors", icon:"⚖️", order:10,
+  title:{en:"Settlement Vendors", es:"Vendedores"},
+  heading:{en:"Settlement Vendor Tables", es:"Tablas de Vendedores por Asentamiento"},
+  tagline:{en:"Permanent & traveling vendors · settlement state & weekly events · shopkeepers with rumors · stock of the day · Persuasion haggling · roll live or digital",
+           es:"Vendedores permanentes y ambulantes · estado del asentamiento y eventos semanales · tenderos con rumores · existencias del día · regateo por Persuasión · tira en vivo o digital"},
+  strings:STRINGS, template:"tpl-vendors", emptyLibraryKey:"noCities",
+  mount(panel){
+    refs = DT.refs(panel);
+    refs.genBtn.onclick = generateAll;
+    refs.regenPerm.onclick = regenPermanent;
+    refs.newWeek.onclick = newWeek;
+    const rename = ()=>{ if(!cur){ alert(L("alertGenSave")); return; } const v=refs.saveName.value.trim(); if(v){ cur.name=v; persist(); renderInfo(); } };
+    refs.renameBtn.onclick = rename;
+    refs.saveName.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
+    refs.exportBtn.onclick = ()=>{ if(!cur){ alert(L("alertGenExport")); return; } DT.io.exportRecord(cur); };
+    refs.exportAllBtn.onclick = ()=>{ const l=DT.records.list("vendors"); if(!l.length){ alert(L("alertNoCities")); return; } DT.io.exportMany(l, "cities_all"); };
+    refs.importBtn.onclick = ()=> DT.io.pickFile();
+    refs.copyMd.onclick = ()=>{ if(cur) DT.copyText(settlementMarkdown(cur, {dm:true})); };
+    refs.toScreen.onclick = ()=>{ if(cur) DT.bridge.toScreen({label:cur.name, w:460, h:560, md:settlementMarkdown(cur, {dm:true})}); };
+    refs.toArticle.onclick = async ()=>{
+      if(!cur) return;
+      if(!DT.host.caps.toArticle){ DT.toast(L("articleNoHost")); return; }
+      const res = await DT.bridge.toArticle(cur, articlePayload(cur));
+      if(res && res.slug){ cur.links = Object.assign({}, cur.links, {article:res.slug}); persist(); DT.toast(L("articleDone")); }
+      else DT.toast(L("articleCanceled"));
+    };
+    refs.specialCat.onchange = renderRefTables;
+    lib = DT.library(refs.savedList, "vendors");
+    selectedSize = SIZES[3]; // Villa / Town por defecto
+    const act = DT.records.active("vendors");
+    if(act) loadRecord(act); else renderAll();
+  },
+  onShow(){ if(refs) renderInfo(); },
+  onLang(){ if(refs) renderAll(); },
+  load: loadRecord,
+  current: ()=> cur,
+  onRemoved(rec){ if(cur && cur.id===rec.id){ cur = null; renderAll(); } },
+  validate: data=> !!(data && typeof data.sizeKey==="string" && Array.isArray(data.permanent)),
+  // Formatos de la versión 2 (una ciudad o la colección "cities").
+  adoptForeign(obj){
+    if(!obj || typeof obj!=="object") return null;
+    if(obj.type==="dnd-vendor-collection" || Array.isArray(obj.cities))
+      return (obj.cities||[]).filter(c=> c && c.data).map(c=>({id:c.id, tab:"vendors", name:c.name, legacyDate:c.date, data:c.data}));
+    const data = obj.data || obj;
+    if(obj.type==="dnd-vendor-settlement" || (data && data.sizeKey && data.permanent)) return [{tab:"vendors", name:obj.name, data}];
+    return null;
+  },
+  summary(rec){
+    const s = sizeOf(rec.data && rec.data.sizeKey), sm = citySummary(rec), st = stateRow(rec.data);
+    const chips = [s?sizeName(s):String((rec.data&&rec.data.sizeKey)||"?")];
+    if(st.id!=="normal" && rec.data && rec.data.state) chips.push(`${st.icon} ${tx(st.name)}`);
+    return {chips, meta:[`${sm.nV} ${L("vendorsWord")}`, `${sm.goods} ${L("goodsWord")}`], detail:sm.shops.join(", ")};
+  },
+  toMarkdown(rec, opts={}){ return settlementMarkdown(normalize(JSON.parse(JSON.stringify(rec))), opts); }
+});
+// Para las pruebas y para quien extienda: acceso a los datos y funciones puras de esta pestaña.
+tab.api = {CATALOG, SIZES, VARIETY_KEYS, TRAVEL_KEYS, PRICE_TIERS, VENDOR_W, SPECIALS, STOCK, STATES, EVENTS, ANCESTRY, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH, TRAVEL_T,
+  varietyTable, travelWF, effHaggle, haggleResult, catMult, vendorMult, normalize, settlementMarkdown, vendorMarkdown, articlePayload,
+  current:()=>cur, select:(k)=>{ selectedSize = sizeOf(k)||selectedSize; if(refs) renderAll(); }, generateAll, newWeek, regenPermanent};
+})();
 </script>
+
+<!-- ===================== ARRANQUE ===================== -->
+<script>DT.start();</script>
 
 <!-- ===================== FONDO DE PARTÍCULAS ===================== -->
 <script>
 (function(){
+  // Dentro de Veil no hay fondo animado: la app vive en un marco y el lienzo solo gastaría batería.
+  if(window.DT && DT.host.embedded) return;
   const cvs=document.getElementById("bg"); if(!cvs || !cvs.getContext) return;
   const ctx=cvs.getContext("2d",{alpha:false});
   const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1234,8 +2477,8 @@ renderCities();
 
   const tgl=document.getElementById("bgToggle");
   function setRun(on){
-    if(on){ localStorage.removeItem("bgOff"); if(tgl){tgl.textContent="✦"; tgl.style.opacity=".5";} start(); }
-    else{ localStorage.setItem("bgOff","1"); stop();
+    if(on){ DT.storage.pref("bgOff", null); if(tgl){tgl.textContent="✦"; tgl.style.opacity=".5";} start(); }
+    else{ DT.storage.pref("bgOff","1"); stop();
       ctx.globalCompositeOperation="source-over"; ctx.fillStyle="rgb(8,9,9)"; ctx.fillRect(0,0,W,H);
       if(tgl){tgl.textContent="○"; tgl.style.opacity="1";} }
   }
@@ -1244,11 +2487,12 @@ renderCities();
   window.addEventListener("mousemove",e=>{mx=e.clientX; my=e.clientY;});
   window.addEventListener("touchmove",e=>{ if(e.touches[0]){mx=e.touches[0].clientX; my=e.touches[0].clientY;} },{passive:true});
   let rt; window.addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(resize,200); });
-  document.addEventListener("visibilitychange",()=>{ if(document.hidden) stop(); else if(!localStorage.getItem("bgOff")) start(); });
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden) stop(); else if(!DT.storage.pref("bgOff")) start(); });
 
   resize();
-  if(localStorage.getItem("bgOff")) setRun(false); else start();
+  if(DT.storage.pref("bgOff")) setRun(false); else start();
 })();
 </script>
+
 </body>
 </html>

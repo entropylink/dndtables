@@ -1,0 +1,22 @@
+{
+  "id": "dndtables",
+  "name": {
+    "es": "Tablas D&D",
+    "en": "D&D Tables"
+  },
+  "description": {
+    "es": "Generadores de tablas para el DM: vendedores por asentamiento con estado de la ciudad, evento semanal, tenderos con rumores, existencias y regateo. Los resultados se guardan con el mundo, van a la pantalla de DM y se vuelven artículos.",
+    "en": "Table generators for the DM: settlement vendors with city state, weekly event, shopkeepers with rumors, stock and haggling. Results are saved with the world, go to the DM screen and become articles."
+  },
+  "glyph": "⚅",
+  "version": "3.0.0",
+  "author": "Entropy",
+  "docKind": "tablas-dnd",
+  "veil": "1",
+  "offline": [
+    "index.js",
+    "app.html"
+  ],
+  "license": "MIT (código) · CC BY 4.0 (SRD 5.1)",
+  "source": "https://github.com/entropylink/dndtables"
+}
