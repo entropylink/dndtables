@@ -39,6 +39,11 @@ se enciende en **Gestionar extensiones**, como cualquier otra.
   un bloque `:::nota 🛒 …`. Repetirlo **solo reemplaza ese bloque**: lo que escribiste a mano
   no se toca. Si ya existe un artículo con ese nombre, pregunta antes de añadirle el mercado.
   El artículo **no** lleva la veracidad de los rumores (puede verlo un jugador).
+- **¶ Artículo en Veil** también desde **PNJ rápido** (plantilla `character`, bloque `:::nota 🧑 …`
+  en «Personalidad») y **Taberna** (plantilla `building`, bloque `:::nota 🍺 …` en «Quién lo
+  frecuenta»). Mismas reglas: repetir solo reemplaza el bloque; los secretos del DM no entran.
+- Las siete pestañas (Vendedores, Tablón de encargos, PNJ rápido, Taberna, Encuentros de viaje,
+  Clima, Botín) guardan en el mundo y mandan a la pantalla de DM.
 - **Vista lector**: la app funciona, pero no escribe en el mundo.
 
 ## Cómo se sincroniza
@@ -57,9 +62,11 @@ la próxima vez que abras la extensión.
 
 ## Límites conocidos
 
-- No es extensión de casa (`builtin`): sin servidor (iPad sin conexión) necesita que el
-  service worker de Veil ya tenga `app.html` en caché. `plugin.json` declara `offline` por si
-  un día se añade a `plugins/builtin.json` y a `app/sw.js`.
+- No es extensión de casa (`builtin`), así que **sin servidor no abre**: el service worker de
+  Veil guarda `index.js` al usarlo, pero `app.html` se abre como navegación del marco y esas
+  solo se guardan para las extensiones de casa. Para tenerla sin conexión (iPad) hay que
+  añadirla a `plugins/builtin.json` y a la lista del armazón en `app/sw.js`; `plugin.json` ya
+  declara `offline` para ese día.
 - Las ciudades que ya tenías en la versión suelta (`entropy.com.mx/vendor-gen/` o `file://`)
   viven en otro origen: pásalas con **⬇ Exportar todas** allí e **⬆ Importar .json** aquí.
 - El contrato que se comprueba al instalar está en `CONTRACT` (`install.mjs`). Si una versión

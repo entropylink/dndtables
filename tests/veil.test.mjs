@@ -141,11 +141,42 @@ await sleep(900);
 art = (await api('GET', `worlds/${W}/articles/${slug}`)).article;
 ok(art.body.startsWith('Texto escrito a mano.') && (art.body.match(/:::nota 🛒/g) || []).length === 1 && /(semana|week) 3/.test(art.body), 'repetir actualiza solo el bloque del mercado; la prosa se queda');
 
+// PNJ rápido → artículo de personaje; taberna → artículo de edificio (bloques propios, sin secretos del DM)
+await f.locator('#tabBar [data-tab="npc"]').click();
+await f.locator('#panel-npc [data-ref="rollAll"]').click();
+await f.locator('#panel-npc [data-ref="article"]').click();
+await page.locator('.modal .modal-f .btn.ghost').click();
+await sleep(600);
+const npc = await fw().evaluate(() => { const r = DT.records.active('npc'); const h = DT.tabs.get('npc').api.helpers(r); return { links: r.links, name: r.name, secret: h.text('secret'), trait: h.text('trait') }; });
+const npcArt = npc.links && npc.links.article ? await api('GET', `worlds/${W}/articles/${npc.links.article}`).then((r) => r.article) : null;
+ok(!!npcArt && npcArt.template === 'character' && /## Personalidad\n\n:::nota 🧑/.test(npcArt.body) && npcArt.body.includes(npc.trait), `PNJ → artículo de personaje con su bloque en «Personalidad» (${npc.name})`);
+ok(npcArt && !npcArt.body.includes(npc.secret), 'el artículo del PNJ no lleva su secreto');
+await api('PUT', `worlds/${W}/articles/${npc.links.article}`, { ...npcArt, body: `Nota mía.\n\n${npcArt.body}` });
+await f.locator('#panel-npc .rcard[data-t="trait"] [data-act="roll"]').click();
+await f.locator('#panel-npc [data-ref="article"]').click();
+await sleep(900);
+const npcArt2 = await api('GET', `worlds/${W}/articles/${npc.links.article}`).then((r) => r.article);
+const trait2 = await fw().evaluate(() => DT.tabs.get('npc').api.helpers(DT.records.active('npc')).text('trait'));
+ok(npcArt2.body.startsWith('Nota mía.') && (npcArt2.body.match(/:::nota 🧑/g) || []).length === 1 && npcArt2.body.includes(trait2), 'repetir en el PNJ actualiza solo su bloque');
+await f.locator('#tabBar [data-tab="tavern"]').click();
+await f.locator('#panel-tavern [data-ref="rollAll"]').click();
+await f.locator('#panel-tavern [data-ref="article"]').click();
+await page.locator('.modal .modal-f .btn.ghost').click();
+await sleep(600);
+const tav = await fw().evaluate(() => DT.records.active('tavern').links);
+const tavArt = tav && tav.article ? await api('GET', `worlds/${W}/articles/${tav.article}`).then((r) => r.article) : null;
+ok(!!tavArt && tavArt.template === 'building' && /frecuenta\n\n:::nota 🍺/.test(tavArt.body), 'taberna → artículo de edificio con su bloque en «Quién lo frecuenta»');
+await f.locator('#tabBar [data-tab="vendors"]').click();
+await sleep(1200);
+const kinds = [...new Set((await docs()).map((x) => x.tab))].sort().join();
+ok(/npc/.test(kinds) && /tavern/.test(kinds) && /vendors/.test(kinds), `los resultados de todas las pestañas son documentos del mundo (${kinds})`);
+
 // Borrado en el mundo mientras la extensión estaba cerrada → al abrir se borra aquí
+const nBefore2 = (await docs()).length;
 await f.locator('[data-ref="genBtn"]').click();
 await sleep(1500);
 d = await docs();
-ok(d.length === 2, 'segunda ciudad → segundo documento');
+ok(d.length === nBefore2 + 1, 'otra ciudad → otro documento');
 const second = await fw().evaluate(() => DT.records.active('vendors').id);
 await page.goto(`${BASE}/#/w/${W}`); await sleep(300);
 await api('DELETE', `worlds/${W}/tablas-dnd/${d.find((x) => x.record.id === second).id}`);
@@ -169,7 +200,7 @@ await loose.close();
 f = await open(); await sleep(1500);
 d = await docs();
 ok(d.some((x) => x.record.id === looseId2), 'lo creado «aparte» con la extensión cerrada se sube al volver a abrirla');
-ok(await fw().evaluate(() => DT.records.list('vendors').length) === d.length, 'la app y el mundo quedan con los mismos resultados', `${d.length}`);
+ok(await fw().evaluate(() => DT.records.all().length) === d.length, 'la app y el mundo quedan con los mismos resultados', `${d.length}`);
 
 // Borrar mientras su primer guardado va en camino (POST lento) → no queda copia en el mundo
 const before = (await docs()).length;

@@ -180,13 +180,13 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, '↻ Tendero vuelve a tirar el PNJ');
   const name = await page.inputValue('[data-ref="saveName"]');
   await page.click('#langToggle');
-  ok((await page.textContent('#appTitle')).includes('Tablas de Vendedores'), 'EN → ES cambia la cabecera');
+  ok((await page.textContent('#appTitle')).includes('Tablas D&D') && (await page.textContent('#tabBar')).includes('Vendedores'), 'EN → ES cambia la cabecera y las pestañas');
   ok((await page.textContent('#panel-vendors [data-ref="genBtn"]')).includes('Generar'), 'EN → ES cambia los botones');
   ok(/semana/.test(await page.textContent('#panel-vendors .scard.event')), 'EN → ES cambia las tarjetas de estado');
   await shot(page, 'app-es');
   await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
   ok(await page.inputValue('[data-ref="saveName"]') === name, 'al recargar vuelve la ciudad activa', name);
-  ok((await page.textContent('#appTitle')).includes('Tablas de Vendedores'), 'al recargar recuerda el idioma');
+  ok((await page.textContent('#tabBar')).includes('Vendedores'), 'al recargar recuerda el idioma');
   ok(await page.locator('#panel-vendors .saved-item').count() === 2, 'las ciudades aparecen en «Ciudades guardadas»');
   // copiar como Markdown
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
@@ -251,14 +251,14 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
       tables: [
         { id: 'sky', die: 6, title: { en: 'Sky', es: 'Cielo' }, rows: [{ lo: 1, hi: 3, text: { en: 'Clear', es: 'Despejado' } }, { lo: 4, hi: 6, text: { en: 'Cloudy', es: 'Nublado' } }] },
         { id: 'wind', die: 20, title: { en: 'Wind', es: 'Viento' }, rows: [{ w: 3, text: { en: 'Calm', es: 'Calma' } }, { w: 1, text: { en: 'Gale', es: 'Vendaval' } }] }] });
-    out.bar = document.querySelectorAll('#tabBar .tabbtn').length;
+    out.bar = document.querySelectorAll('#tabBar .tabbtn').length; out.tabs = DT.tabList().length;
     out.hidden = document.getElementById('tabBar').hidden;
     try { DT.registerTab({ id: 'vendors', mount() {} }); out.dupThrows = false; } catch { out.dupThrows = true; }
     try { DT.registerTab({ id: 'Bad Id', mount() {} }); out.badThrows = false; } catch { out.badThrows = true; }
     DT.registerTab({ id: 'test-broken', title: { en: 'Broken', es: 'Rota' }, mount() { throw new Error('boom'); } });
     return out;
   });
-  ok(r.bar === 2 && !r.hidden, 'con más de una pestaña aparece la barra de pestañas');
+  ok(r.bar === r.tabs && r.tabs >= 8 && !r.hidden, `barra de pestañas con todas las registradas (${r.bar})`);
   ok(r.dupThrows && r.badThrows, 'registerTab rechaza ids repetidos o inválidos');
   await page.click('#tabBar [data-tab="test-weather"]');
   await page.click('#panel-test-weather [data-ref="rollAll"]');
@@ -267,7 +267,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(rc === 2 && saved === 1, 'pestaña declarativa: «Tirar todo» tira cada tabla y guarda el resultado');
   ok(await page.locator('#panel-test-weather .saved-item').count() === 1, 'la biblioteca genérica lista el resultado');
   const md = await page.evaluate(() => DT.tabs.get('test-weather').toMarkdown(DT.records.list('test-weather')[0]));
-  ok(/\*\*Sky\*\* \(d6 = \d\)/.test(md), 'la pestaña declarativa exporta Markdown', md);
+  ok(/\*\*Sky\*\* \(d6: \d\)/.test(md), 'la pestaña declarativa exporta Markdown', md);
   await page.click('#tabBar [data-tab="test-broken"]');
   ok(await page.locator('#panel-test-broken .tab-error').count() === 1, 'una pestaña que falla al montar muestra su error sin tumbar la app');
   await page.click('#tabBar [data-tab="vendors"]');
@@ -278,6 +278,132 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok((await page.textContent('#appTitle')).includes('Tablas D&D'), 'con varias pestañas la cabecera es la de la app');
   const errs = errors.filter((e) => !/boom/.test(e));
   ok(!errs.length, 'sin errores de consola (salvo el de la pestaña rota a propósito)', errs.join(' | '));
+  await ctx.close();
+}
+
+/* ── 6b. Pestañas declarativas reales: todas las combinaciones de contexto ─ */
+{
+  const { ctx, page, errors } = await fresh();
+  const r = await page.evaluate(() => {
+    const out = { tabs: [], problems: [] };
+    const bad = (m) => { if (out.problems.length < 12) out.problems.push(m); };
+    const product = (ctxDefs) => ctxDefs.reduce((acc, c) => acc.flatMap((o) => c.options.map((opt) => ({ ...o, [c.id]: opt.id }))), [{}]);
+    const TOKEN = /\{(\d*)d(\d+)(?:([+-])(\d+))?(?:[*x×](\d+))?\}/g;
+    for (const tab of DT.tabList()) {
+      if (!tab.tables || !tab.api || !tab.api.rollAll) continue;
+      if (tab.id.startsWith('test-')) continue;
+      const tables = tab.tables, ctxDefs = tab.context, A = tab.api;
+      const combos = product(ctxDefs);
+      out.tabs.push(`${tab.id}:${combos.length}`);
+      const optIds = Object.fromEntries(ctxDefs.map((c) => [c.id, c.options.map((o) => o.id)]));
+      // 1) Textos: EN y ES con los mismos dados; claves de contexto y de tablas que existen.
+      tables.forEach((t, idx) => {
+        const earlier = Object.fromEntries(tables.slice(0, idx).map((x) => [x.id, x.rows.map((r) => r.id).filter((v) => v != null)]));
+        const known = { ...optIds, ...earlier };
+        for (const row of t.rows) {
+          const tt = row.text != null ? row.text : row.name;
+          if (tt && typeof tt === 'object') {
+            if (!tt.en || !tt.es) bad(`${tab.id}/${t.id}: fila sin EN o ES`);
+            const a = (tt.en.match(TOKEN) || []).join(), b = (tt.es.match(TOKEN) || []).join();
+            if (a !== b) bad(`${tab.id}/${t.id}: dados distintos EN/ES «${tt.en}» / «${tt.es}»`);
+          }
+          for (const [k, ids] of Object.entries(row.only || {})) { if (!known[k]) bad(`${tab.id}/${t.id}: only.${k} no existe`); else ids.forEach((v) => { if (!known[k].includes(v)) bad(`${tab.id}/${t.id}: only.${k}=${v} no existe`); }); }
+          for (const [k, m] of Object.entries(row.weight || {})) { if (!known[k]) bad(`${tab.id}/${t.id}: weight.${k} no existe`); else Object.keys(m).forEach((v) => { if (!known[k].includes(v)) bad(`${tab.id}/${t.id}: weight.${k}.${v} no existe`); }); }
+        }
+        for (const [k, ids] of Object.entries(t.when || {})) { if (!known[k]) bad(`${tab.id}/${t.id}: when.${k} no existe`); else ids.forEach((v) => { if (!known[k].includes(v)) bad(`${tab.id}/${t.id}: when.${k}=${v} no existe`); }); }
+      });
+      // 2) Cobertura exhaustiva: en cada combinación, y para cada valor posible de la tabla de la que
+      //    depende, la tabla tiene filas (si le toca tirarse) y caben en su dado.
+      for (const combo of combos) {
+        tables.forEach((t, idx) => {
+          const depKeys = [...t.deps].filter((k) => tables.slice(0, idx).some((x) => x.id === k));
+          const depVals = depKeys.length ? depKeys.reduce((acc, k) => { const dep = tables.find((x) => x.id === k);
+            const live = dep.rows.filter((row) => row.id != null && (!dep.conds || A.weightFn({ ...combo })(row) > 0)).map((row) => row.id);
+            return acc.flatMap((e) => live.map((v) => ({ ...e, [k]: v }))); }, [{}]) : [{}];
+          for (const dv of depVals) {
+            const env = { ...combo, ...dv };
+            if (t.when && !Object.entries(t.when).every(([k, ids]) => env[k] != null && ids.includes(env[k]))) continue;
+            try { const n = t.ranges(t.conds ? A.weightFn(env) : undefined).length; if (!n) bad(`${tab.id}/${t.id} sin filas en ${JSON.stringify(env)}`); }
+            catch (e) { bad(`${tab.id}/${t.id}: ${e.message} en ${JSON.stringify(env)}`); }
+          }
+        });
+        // 3) Tiradas reales con semillas: nada revienta, nada queda con dados sin tirar.
+        for (let seed = 1; seed <= 6; seed++) {
+          DT.seed(seed * 131 + combos.indexOf(combo));
+          let data; try { data = A.rollAll(combo); } catch (e) { bad(`${tab.id} ${JSON.stringify(combo)}: ${e.message}`); continue; }
+          const rec = { name: 'x', data };
+          for (const t of tables) {
+            const rs = data.rolls[t.id]; if (!rs) continue;
+            if (!rs.length) bad(`${tab.id}/${t.id}: tocaba tirarla y no salió nada (${JSON.stringify(combo)})`);
+            for (const lang of ['en', 'es']) { DT.lang = lang; rs.forEach((x) => { const txt = A.resText(t, x); if (TOKEN.test(txt) || /\{\d*d\d/.test(txt)) bad(`${tab.id}/${t.id}: dados sin tirar «${txt}»`); }); }
+            DT.lang = 'en';
+          }
+          const mdx = A.markdown(rec, { dm: false });
+          const dmTables = tables.filter((t) => t.dm && data.rolls[t.id] && data.rolls[t.id].length);
+          dmTables.forEach((t) => { if (mdx.includes(`**${DT.tx(t.title)}**`)) bad(`${tab.id}: la tabla DM ${t.id} sale en el Markdown para jugadores`); });
+        }
+      }
+    }
+    return out;
+  });
+  ok(r.tabs.length === 5, `pestañas declarativas revisadas: ${r.tabs.join(', ')}`);
+  ok(!r.problems.length, 'datos: EN/ES con los mismos dados, condiciones que apuntan a algo que existe, ninguna tabla vacía en ninguna combinación, sin dados sin tirar, lo del DM fuera del Markdown de jugadores', r.problems.join(' | '));
+  // Taberna: el adjetivo concuerda en español
+  const tav = await page.evaluate(() => {
+    const T = DT.tabs.get('tavern'), out = [];
+    DT.lang = 'es';
+    for (let seed = 1; seed <= 300; seed++) {
+      DT.seed(seed); const data = T.api.rollAll({ quality: 'common' }); const h = T.api.helpers({ name: '', data });
+      const A = h.row('nameA'), J = h.row('adj'), P = h.row('pattern');
+      const name = T.tables && DT.tabs.get('tavern').api && (DT.tabs.get('tavern').api.helpers ? null : null);
+      if (P.id === 'adj') { const expect = (A.text.es.charAt(0).toUpperCase() + A.text.es.slice(1)) + ' ' + J[A.g]; out.push(expect); }
+    }
+    DT.lang = 'en';
+    return out;
+  });
+  ok(tav.length > 50 && tav.every((n) => /^(El|La) /.test(n)) && !tav.some((n) => /^La .* (Dorado|Borracho|Tuerto|Oxidado|Negro|Rojo|Viejo)$/.test(n)), `taberna: «La Jarra Dorada», nunca «La Jarra Dorado» (${tav.slice(0, 3).join(' · ')})`);
+  ok(!errors.length, 'sin errores de consola revisando las pestañas', errors.slice(0, 3).join(' | '));
+  await ctx.close();
+}
+
+/* ── 6c. Pestañas en la interfaz y Tablón de encargos ──────────────────── */
+{
+  const { ctx, page, errors } = await fresh();
+  await page.click('#panel-vendors [data-ref="genBtn"]');
+  const city = await page.evaluate(() => DT.records.active('vendors'));
+  for (const id of ['npc', 'tavern', 'encounters', 'weather', 'loot']) {
+    await page.click(`#tabBar [data-tab="${id}"]`);
+    await page.click(`#panel-${id} [data-ref="rollAll"]`);
+  }
+  const counts = await page.evaluate(() => Object.fromEntries(['npc', 'tavern', 'encounters', 'weather', 'loot'].map((id) => [id, DT.records.list(id).length])));
+  ok(Object.values(counts).every((n) => n === 1), 'cada pestaña guarda su resultado', JSON.stringify(counts));
+  const names = await page.evaluate(() => ({ npc: DT.records.active('npc').name, tavern: DT.records.active('tavern').name }));
+  ok(names.npc.length > 1 && !/Quick NPC/.test(names.npc) && /^The /.test(names.tavern), `nombres compuestos: PNJ «${names.npc}», taberna «${names.tavern}»`);
+  // Clima: cambiar el contexto cambia la tabla de referencia
+  await page.click('#tabBar [data-tab="weather"]');
+  await page.selectOption('#panel-weather select[data-ctx="climate"]', 'tropical');
+  const tropicalHasFreezing = await page.evaluate(() => [...document.querySelectorAll('#panel-weather details')][0].textContent.includes('Freezing'));
+  ok(!tropicalHasFreezing, 'clima tropical: la tabla de referencia ya no ofrece «Helada»');
+  // Tablón: con la ciudad guardada, el primer encargo sale de un rumor de sus tenderos
+  await page.click('#tabBar [data-tab="jobs"]');
+  await page.selectOption('#panel-jobs [data-ref="where"]', `city:${city.id}`);
+  await page.selectOption('#panel-jobs [data-ref="tier"]', 't2');
+  await page.click('#panel-jobs [data-ref="roll"]');
+  const board = await page.evaluate(() => { const T = DT.tabs.get('jobs'); const b = DT.records.active('jobs'); return { b, dm: T.toMarkdown(b, { dm: true }), pl: T.toMarkdown(b, { dm: false }), rewards: b.data.jobs.map((j) => T.api.reward(j)) }; });
+  const shopNames = city.data.permanent.concat(city.data.traveling).map((v) => v.npc.name);
+  ok(board.b.data.city.id === city.id && board.b.data.jobs[0].rumorJob && shopNames.includes(board.b.data.jobs[0].shop.name), 'tablón de una ciudad guardada: el primer encargo es el rumor de uno de sus tenderos');
+  ok(board.b.data.jobs.length >= 1 && board.b.data.jobs.length <= 5, `villa: 1d4 encargos (${board.b.data.jobs.length})`);
+  ok(board.rewards.every((n) => n >= 50 && n <= 1200), `niveles 5–10: recompensas entre 2d6×50 × ½ y × 2 (${board.rewards.join(', ')})`);
+  ok(/\(DM\)/.test(board.dm) && !/\(DM\)/.test(board.pl), 'Markdown del tablón: complicaciones solo en la versión del DM');
+  ok(/(Is the rumor true\?|¿Es cierto el rumor\?) \(DM\): (false|half-true|true|falso|medio cierto|cierto)/.test(board.dm), 'el encargo del rumor dice si el rumor es cierto (DM)', board.dm.split('\n').filter((l) => /DM/.test(l)).join(' / '));
+  ok(!/: \?(\n|$)|: $/m.test(board.dm), 'ningún campo del tablón sale vacío o con «?»');
+  ok(await page.locator('#panel-jobs .rcard').count() === board.b.data.jobs.length, 'una tarjeta por encargo');
+  await page.locator('#panel-jobs .rcard').first().locator('[data-act="reroll"]').click();
+  ok(await page.evaluate(() => DT.records.active('jobs').data.jobs[0].rumorJob), '↻ en el encargo del rumor saca otro rumor');
+  await page.click('#langToggle');
+  ok((await page.textContent('#panel-jobs')).includes('Encargo 1'), 'el tablón cambia de idioma');
+  await shot(page, 'app-jobs');
+  ok(!errors.length, 'sin errores de consola en las pestañas nuevas', errors.slice(0, 3).join(' | '));
   await ctx.close();
 }
 
@@ -309,6 +435,17 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.evaluate(() => document.querySelectorAll('details').forEach((d) => { d.open = true; }));
   const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok(over <= 0, `móvil 390 px: sin scroll horizontal (${over}px de más)`);
+  const overs = [];
+  for (const id of ['jobs', 'npc', 'tavern', 'encounters', 'weather', 'loot']) {
+    await page.click(`#tabBar [data-tab="${id}"]`);
+    await page.click(id === 'jobs' ? '#panel-jobs [data-ref="roll"]' : `#panel-${id} [data-ref="rollAll"]`);
+    await page.evaluate(() => document.querySelectorAll('details').forEach((d) => { d.open = true; }));
+    const o = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    if (o > 0) overs.push(`${id}: ${o}px`);
+    await shot(page, `mobile-${id}`, true);
+  }
+  ok(!overs.length, 'móvil 390 px: ninguna pestaña desborda', overs.join(', '));
+  await page.click('#tabBar [data-tab="vendors"]');
   await shot(page, 'app-mobile', true);
   ok(!errors.length, 'sin errores de consola en móvil', errors.join(' | '));
   await ctx.close();

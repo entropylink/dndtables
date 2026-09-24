@@ -34,7 +34,7 @@ nadie.
 | Veil → app | `saved` | `id` | Ese resultado ya está en el mundo. |
 | app → Veil | `remove` | `id` | Borrar su documento. |
 | app → Veil | `toScreen` | `card:{label, md, w, h}` | `ctx.toScreen({kind:"snap", md, …})`: Veil pregunta a qué pantalla. |
-| app → Veil | `toArticle` | `requestId`, `recordId`, `link`, `article:{title, template, fields, subtitle, summary, block}` | Crear el artículo o actualizar su bloque `:::nota 🛒 … :::`. |
+| app → Veil | `toArticle` | `requestId`, `recordId`, `link`, `article:{title, template, fields, subtitle, summary, marker, section, block}` | Crear el artículo o actualizar su bloque `:::nota <marker> … :::` (🛒 mercado, 🧑 PNJ, 🍺 taberna). `section`: dónde va la primera vez (expresión sobre el nombre de la sección de la plantilla). |
 | Veil → app | `articleDone` | `requestId`, `recordId`, `slug` (o `null` si se canceló) | La app guarda el enlace en `record.links.article`. |
 | Veil → app | `error` | `message` | Se enseña como aviso. |
 

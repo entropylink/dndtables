@@ -314,8 +314,9 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.0.0";
+DT.VERSION = "3.1.0";
 DT.SCHEMA = 3;
+DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
 /* ===================== ANFITRIÓN (suelta o dentro de Veil) ===================== */
 // app.html?velo=<mundo> → los datos se guardan con prefijo de mundo. Si además está en un
@@ -417,7 +418,10 @@ DT.addStrings({
     hostReader:"Veil reader view: what you change here is not saved to the world.",
     hostSent:"Sent to Veil.", hostOffline:"Veil didn't answer; working locally.",
     hostReadFailed:"Veil couldn't read this world's results: working locally. Nothing is saved to the world until you reopen this tool.",
-    rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result"
+    rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result",
+    noneThisTime:"Nothing this time.", dependsOn:"Shown for: {what}", rollName:"Roll another name",
+    copyMdShort:"📋 Copy as Markdown", toScreenShort:"▤ To the DM screen", toArticleShort:"¶ Veil article",
+    savedTitle:"💾 Saved", refTitle:"📖 Reference tables", articleReady:"Veil article ready.", articleNotMade:"Article not created."
   },
   es:{
     appTitle:"🎲 Tablas D&D", docTitle:"Tablas D&D",
@@ -434,7 +438,10 @@ DT.addStrings({
     hostReader:"Vista lector de Veil: lo que cambies aquí no se guarda en el mundo.",
     hostSent:"Enviado a Veil.", hostOffline:"Veil no respondió; se trabaja en local.",
     hostReadFailed:"Veil no pudo leer los resultados del mundo: se trabaja en local. No se guarda nada en el mundo hasta que vuelvas a abrir la herramienta.",
-    rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado"
+    rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado",
+    noneThisTime:"Nada esta vez.", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
+    copyMdShort:"📋 Copiar como Markdown", toScreenShort:"▤ A la pantalla de DM", toArticleShort:"¶ Artículo en Veil",
+    savedTitle:"💾 Guardados", refTitle:"📖 Tablas de referencia", articleReady:"Artículo listo en Veil.", articleNotMade:"No se creó el artículo."
   }
 });
 
@@ -494,6 +501,11 @@ DT.parseDice = function(str){
   const n = parseInt(src,10); return isNaN(n) ? null : {count:0, die:1, mod:n};
 };
 DT.rangeLabel = r => r.lo===r.hi ? String(r.lo) : `${r.lo}–${r.hi}`;
+// Atajos para escribir tablas en los datos: "texto en español|English text".
+//   DT.row("Lobos|Wolves", {w:2, only:{…}})  → una fila con peso
+//   DT.rowsFixed(["Uno|One", "Dos|Two"])      → filas 1, 2, 3… (una cara cada una)
+DT.row = (x, extra)=>{ const [es,en] = String(x).split("|"); return Object.assign({text:{es, en:en==null?es:en}}, extra||{}); };
+DT.rowsFixed = list=> list.map((x,i)=> Object.assign(DT.row(x), {lo:i+1, hi:i+1}));
 
 // Reparte las caras de un dado entre filas con peso (resto mayor; toda fila con peso > 0 recibe ≥ 1 cara).
 // Devuelve un rango {lo,hi} por fila (null si su peso es 0). Así un d100 con pesos significa algo
@@ -792,72 +804,243 @@ function renderChrome(){
 DT.onLang(()=>{ for(const t of DT.tabs.values()) if(t._mounted){ try{ t.onLang && t.onLang(); }catch(e){ console.error(e); } } DT.refreshLibraries(); });
 
 /* ===================== PESTAÑA DECLARATIVA (solo datos) ===================== */
-// Para generadores que son "tira en estas tablas y muestra el resultado". Ejemplo en docs/ADDING_TABS.md.
-// def = {id, icon, title, tagline, order?, tables:[{id, title:{en,es}, die, rows:[{w? | lo,hi, text:{en,es}}]}]}
+// Para generadores del tipo "tira en estas tablas y enséñame el resultado". Guía: docs/ADDING_TABS.md.
+// def = {id, icon, title, tagline, order?, strings?,
+//   context?: [{id, title, options:[{id, text}], default?}],      → selectores; se guardan en data.ctx
+//   tables:   [{id, title, die, hidden?, dm?, when?, count?, rows:[{id?, text, note?, w? | lo,hi, only?, weight?}]}],
+//   recordName?(h), article?(rec, h)}
+//  · only:{clave:[ids]}             la fila solo vale si el contexto —o el resultado de una tabla ANTERIOR— coincide
+//  · weight:{clave:{id:factor}}     cambia su peso según lo mismo (las filas condicionadas usan pesos, no lo/hi)
+//  · when:{clave:[ids]}             la tabla entera solo se tira si coincide
+//  · count: "1d4" | 3 | {clave:{id:"1d4", default:1}}   tira la tabla varias veces
+//  · {2d6*10} en el texto se tira al salir la fila y se guarda; EN y ES llevan los mismos dados en el mismo orden
+//  · hidden: no sale como tarjeta (p. ej. piezas del nombre) · dm: no sale en lo que ven los jugadores
+const DICE_TOKEN = /\{(\d*)d(\d+)(?:([+-])(\d+))?(?:[*x×](\d+))?\}/g;
+DT.inlineDice = {
+  roll(text){
+    const vals = [];
+    String(text).replace(DICE_TOKEN, (m,c,d,sg,k,mul)=>{
+      let s=0; const n=c?+c:1; for(let i=0;i<n;i++) s+=DT.rollDie(+d);
+      if(k) s += (sg==="-"?-1:1)*(+k); if(mul) s *= +mul;
+      vals.push(Math.max(0,s)); return m;
+    });
+    return vals;
+  },
+  fill(text, vals){ let i=0; return String(text).replace(DICE_TOKEN, m=>{ const v = vals ? vals[i] : null; i++; return v!=null ? Number(v).toLocaleString(DT.lang==="en"?"en":"es") : m; }); },
+  tokens(text){ return (String(text).match(DICE_TOKEN)||[]); }
+};
 DT.simpleTableTab = function(def){
-  const tables = def.tables.map(td=> Object.assign(DT.table({id:td.id, die:td.die, rows:td.rows}), {title:td.title}));
-  let cur = null, refs = null, lib = null;
-  const text = (tbl, idx)=> { const row = tbl.rows[idx]; return row ? DT.tx(row.text) : "?"; };
-  function rollOne(tbl){ const r = tbl.roll(); DT.log("d"+tbl.die, r.roll, `${DT.tx(tbl.title)}: ${DT.tx(r.row.text)}`); return {roll:r.roll, i:tbl.rows.indexOf(r.row)}; }
+  const ctxDefs = def.context || [];
+  const rowText = row => row ? (row.text!=null ? row.text : row.name) : "";
+  const srcText = row => { const t = rowText(row); return typeof t==="string" ? t : (t.en ?? t.es ?? ""); };
+  const tables = def.tables.map(td=>{
+    const t = DT.table({id:td.id, die:td.die, rows:td.rows});
+    const conds = td.rows.some(r=> r.only || r.weight);
+    if(t.fixed && conds) throw new Error(`[dndtables] ${def.id}/${td.id}: rows with only/weight must use weights (w), not lo/hi`);
+    return Object.assign(t, {title:td.title, hidden:!!td.hidden, dm:!!td.dm, when:td.when||null, count:td.count==null?1:td.count, conds});
+  });
+  const byId = new Map(tables.map(t=>[t.id, t]));
+  const keysOf = t=>{ const ks=new Set(Object.keys(t.when||{})); t.rows.forEach(r=>{ Object.keys(r.only||{}).forEach(k=>ks.add(k)); Object.keys(r.weight||{}).forEach(k=>ks.add(k)); }); if(t.count && typeof t.count==="object") Object.keys(t.count).forEach(k=>ks.add(k)); return ks; };
+  tables.forEach((t,idx)=>{
+    t.deps = keysOf(t);
+    for(const k of t.deps) if(!ctxDefs.some(c=>c.id===k) && !tables.slice(0,idx).some(x=>x.id===k)) console.warn(`[dndtables] ${def.id}/${t.id}: condition key "${k}" is neither a context nor an earlier table`);
+  });
+  const matches = (cond, env)=> !cond || Object.entries(cond).every(([k,ids])=> env[k]!=null && ids.includes(env[k]));
+  const weightFn = env=> row=>{
+    if(!matches(row.only, env)) return 0;
+    let w = row.w==null ? 1 : row.w;
+    for(const [k,m] of Object.entries(row.weight||{})){ const f = m[env[k]]; if(f!=null) w *= f; }
+    return w;
+  };
+  const defaultCtx = ()=> Object.fromEntries(ctxDefs.map(c=> [c.id, c.default || (c.options[0]||{}).id]));
+  // Lo que ve una tabla: el contexto + la fila (id) que salió en cada tabla anterior.
+  function envFor(data, uptoId){
+    const env = Object.assign({}, data.ctx);
+    for(const t of tables){
+      if(t.id===uptoId) break;
+      const r = (data.rolls[t.id]||[])[0];
+      if(r && t.rows[r.i] && t.rows[r.i].id!=null) env[t.id] = t.rows[r.i].id;
+    }
+    return env;
+  }
+  function countFor(t, env){
+    let c = t.count;
+    if(c && typeof c==="object"){ const [k,map] = Object.entries(c)[0]; c = map[env[k]] ?? map.default ?? 1; }
+    if(typeof c==="number") return c;
+    const p = DT.parseDice(c); if(!p) return 1;
+    const r = DT.rollDice(p.count, p.die, p.mod);
+    if(p.count) DT.log(c, r.total, `${DT.tx(t.title)} ×`);
+    return r.total;
+  }
+  function rollTable(t, data){
+    const env = envFor(data, t.id);
+    if(t.when && !matches(t.when, env)){ delete data.rolls[t.id]; return; }
+    const n = countFor(t, env), wf = t.conds ? weightFn(env) : undefined, out = [];
+    for(let k=0;k<n;k++){
+      const r = t.roll(wf); if(!r) break;
+      const vals = DT.inlineDice.roll(srcText(r.row));
+      out.push(vals.length ? {roll:r.roll, i:t.rows.indexOf(r.row), vals} : {roll:r.roll, i:t.rows.indexOf(r.row)});
+      DT.log("d"+t.die, r.roll, `${DT.tx(t.title)}: ${DT.inlineDice.fill(DT.tx(rowText(r.row)), vals)}`);
+    }
+    data.rolls[t.id] = out;
+  }
+  // Volver a tirar una tabla arrastra a las que dependen de ella (y a las que dependen de esas).
+  function rerollFrom(tid, data){
+    const idx = tables.findIndex(t=> t.id===tid); if(idx<0) return;
+    const changed = new Set([tid]);
+    rollTable(tables[idx], data);
+    for(let j=idx+1;j<tables.length;j++){ const t=tables[j]; if([...t.deps].some(k=> changed.has(k))){ rollTable(t, data); changed.add(t.id); } }
+  }
+  function rollAll(ctx){ const data = {v:2, ctx:Object.assign(defaultCtx(), ctx||{}), rolls:{}}; tables.forEach(t=> rollTable(t, data)); return data; }
+  const resText = (t, r)=> r && t.rows[r.i] ? DT.inlineDice.fill(DT.tx(rowText(t.rows[r.i])), r.vals) : "";
+  const ctxText = (data, key)=>{ const c=ctxDefs.find(x=>x.id===key); const o=c && c.options.find(o=> o.id===(data.ctx||{})[key]); return o ? DT.tx(o.text) : ""; };
+  function markdown(rec, opts={}){
+    const d = rec.data, lines = [];
+    if(!opts.noTitle) lines.push(`### ${DT.mdEsc(rec.name)}`, "");
+    const cl = ctxDefs.map(c=> ctxText(d, c.id)).filter(Boolean);
+    if(cl.length) lines.push(`*${cl.map(DT.mdEsc).join(" · ")}*`, "");
+    for(const t of tables){
+      if(t.hidden || (t.dm && !opts.dm)) continue;
+      const rs = d.rolls[t.id]; if(!rs || !rs.length) continue;
+      const items = rs.map(r=>{ const note = t.rows[r.i] && t.rows[r.i].note; return DT.mdEsc(resText(t, r))+(note?` — *${DT.mdEsc(DT.tx(note))}*`:""); });
+      lines.push(`- **${DT.mdEsc(DT.tx(t.title))}** (d${t.die}: ${rs.map(r=>r.roll).join(", ")}): ${items.join("; ")}`);
+    }
+    return lines.join("\n")+"\n";
+  }
+  const helpers = rec=>({
+    text:(tid,k=0)=> resText(byId.get(tid), (rec.data.rolls[tid]||[])[k]),
+    texts:(tid)=> (rec.data.rolls[tid]||[]).map(r=> resText(byId.get(tid), r)),
+    row:(tid,k=0)=>{ const r=(rec.data.rolls[tid]||[])[k]; return r ? byId.get(tid).rows[r.i] : null; },
+    ctx:(key)=> (rec.data.ctx||{})[key], ctxText:(key)=> ctxText(rec.data, key),
+    markdown:(opts)=> markdown(rec, opts),
+    block:(marker, label)=> `:::nota ${marker} ${label}\n${markdown(rec, {noTitle:true, dm:false}).replace(/^:::.*$/gm,"")}\n:::`
+  });
+  function normalize(rec){
+    const d = rec.data; d.ctx = Object.assign(defaultCtx(), d.ctx||{}); d.rolls = d.rolls || {};
+    for(const t of tables){
+      let rs = d.rolls[t.id]; if(rs==null) continue;
+      if(!Array.isArray(rs)) rs = [rs];
+      d.rolls[t.id] = rs.filter(r=> r && Number.isInteger(r.i) && r.i>=0 && r.i<t.rows.length)
+        .map(r=> ({roll:parseInt(r.roll,10)||null, i:r.i, vals:Array.isArray(r.vals)?r.vals.map(Number):undefined}));
+    }
+    d.v = 2; return rec;
+  }
+  let cur = null, refs = null;
+  const selCtx = ()=>{ const c = defaultCtx(); if(refs) refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ c[s.dataset.ctx]=s.value; }); return c; };
   function persist(){ if(cur){ DT.records.setActive(def.id, cur.id); DT.records.upsert(cur); } }
+  function newName(){ return `${DT.tx(def.title)} ${DT.records.list(def.id).length+1}`; }
+  function renderCtx(){
+    refs.ctx.innerHTML = ctxDefs.map(c=>`<label class="sub">${DT.esc(DT.tx(c.title))} <select data-ctx="${DT.esc(c.id)}">${
+      c.options.map(o=>`<option value="${DT.esc(o.id)}">${DT.esc(DT.tx(o.text))}</option>`).join("")}</select></label>`).join("");
+    const c = cur ? cur.data.ctx : defaultCtx();
+    refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(c[s.dataset.ctx]!=null) s.value = c[s.dataset.ctx]; s.onchange = renderRefs; });
+  }
   function render(){
     if(!refs) return;
     refs.screen.hidden = !DT.host.caps.toScreen;
-    const rolls = cur ? cur.data.rolls : {};
-    refs.results.innerHTML = tables.map(tbl=>{
-      const r = rolls[tbl.id];
-      return `<div class="rcard" data-t="${DT.esc(tbl.id)}"><div class="row" style="justify-content:space-between"><span class="rt">${DT.esc(DT.tx(tbl.title))}</span><span class="die">d${tbl.die}</span></div>
-        <div class="rv">${r ? `<b>${DT.esc(r.roll)}</b> · ${DT.esc(text(tbl, r.i))}` : `<span class="sub">${DT.esc(DT.t("noResults"))}</span>`}</div>
-        <button class="small" data-act="roll">${DT.esc(DT.t("reroll"))} ${DT.esc(DT.tx(tbl.title))}</button></div>`;
+    refs.article.hidden = !(def.article && DT.host.caps.toArticle && cur);
+    refs.nameDice.hidden = !def.recordName;
+    const d = cur ? cur.data : null;
+    refs.results.innerHTML = !d ? `<div class="empty">${DT.esc(DT.t("noResults"))}</div>` : tables.filter(t=> !t.hidden && d.rolls[t.id]).map(t=>{
+      const rs = d.rolls[t.id];
+      const items = rs.length ? rs.map(r=>{ const note = t.rows[r.i] && t.rows[r.i].note;
+        return `<div class="rv"><b>${DT.esc(r.roll)}</b> · ${DT.esc(resText(t, r))}${note?`<div class="sub">${DT.esc(DT.tx(note))}</div>`:""}</div>`; }).join("")
+        : `<div class="rv sub">${DT.esc(DT.t("noneThisTime"))}</div>`;
+      return `<div class="rcard" data-t="${DT.esc(t.id)}"><div class="row" style="justify-content:space-between"><span class="rt">${DT.esc(DT.tx(t.title))}${t.dm?` <span class="vtag bad">DM</span>`:""}</span><span class="die">d${t.die}</span></div>
+        ${items}<button class="small" data-act="roll">${DT.esc(DT.t("reroll"))}</button></div>`;
     }).join("");
     refs.results.querySelectorAll(".rcard").forEach(card=>{
-      card.querySelector('[data-act="roll"]').onclick = ()=>{
-        if(!cur) cur = {id:DT.uid(), tab:def.id, name:newName(), data:{v:1, rolls:{}}};
-        const tbl = tables.find(t=> t.id===card.dataset.t); cur.data.rolls[tbl.id] = rollOne(tbl); persist(); render();
-      };
+      card.querySelector('[data-act="roll"]').onclick = ()=>{ if(!cur) return; rerollFrom(card.dataset.t, cur.data); persist(); render(); };
     });
-    refs.name.value = cur ? cur.name : "";
-    refs.refs.innerHTML = tables.map(tbl=> `<details><summary>${DT.esc(DT.tx(tbl.title))} <span class="die">d${tbl.die}</span></summary><div class="tscroll"><table class="ref">${
-      DT.refTableHTML(tbl, [{h:DT.esc(DT.t("resultWord")), f:r=> DT.esc(DT.tx(r.row.text))}])}</table></div></details>`).join("");
+    if(document.activeElement!==refs.name) refs.name.value = cur ? cur.name : "";
+    renderRefs();
   }
-  function newName(){ return `${DT.tx(def.title)} ${DT.records.list(def.id).length+1}`; }
+  function renderRefs(){
+    if(!refs) return;
+    const env0 = selCtx(), d = cur ? cur.data : null;
+    refs.refs.innerHTML = tables.map(t=>{
+      // La tabla de referencia se ve con el contexto elegido; si depende de otra tabla, con lo que salió
+      // (o con su primera opción, si aún no hay nada).
+      const env = Object.assign({}, env0), notes = [];
+      for(const k of t.deps){
+        const dep = byId.get(k); if(!dep) continue;
+        const r = d && (d.rolls[k]||[])[0];
+        // Sin resultado todavía: la primera opción con la que esta tabla tiene algo que enseñar.
+        const row = r ? dep.rows[r.i] : dep.rows.find(x=> x.id!=null && (!t.conds || t.rows.some(y=> weightFn(Object.assign({}, env, {[k]:x.id}))(y)>0)));
+        if(row){ env[k] = row.id; notes.push(`${DT.tx(dep.title)} = ${DT.tx(rowText(row)).replace(DICE_TOKEN,"…")}`); }
+      }
+      let html;
+      try{ html = DT.refTableHTML(t, [{h:DT.esc(DT.t("resultWord")), f:r=> DT.esc(DT.tx(rowText(r.row)))+(r.row.note?`<br><span class="sub">${DT.esc(DT.tx(r.row.note))}</span>`:"")}], t.conds ? weightFn(env) : undefined); }
+      catch(e){ html = `<tr><td class="sub">${DT.esc(e.message)}</td></tr>`; }
+      const cnt = t.count!==1 ? ` <span class="sub">× ${DT.esc(typeof t.count==="object" ? "…" : t.count)}</span>` : "";
+      return `<details><summary>${DT.esc(DT.tx(t.title))} <span class="die">d${t.die}</span>${cnt}</summary>${notes.length?`<p class="sub">${DT.esc(DT.t("dependsOn",{what:notes.join(" · ")}))}</p>`:""}<div class="tscroll"><table class="ref">${html}</table></div></details>`;
+    }).join("");
+  }
   const tab = DT.registerTab({
-    id:def.id, icon:def.icon, title:def.title, tagline:def.tagline, order:def.order, strings:def.strings,
+    id:def.id, icon:def.icon, title:def.title, heading:def.heading, tagline:def.tagline, order:def.order, strings:def.strings,
     emptyLibraryKey:"noResults",
     mount(panel){
-      panel.innerHTML = `<div class="controls"><div class="row">
-          <button class="primary" data-ref="rollAll">${DT.esc(DT.t("rollAll"))}</button>
-          <input type="text" data-ref="name" style="flex:1; min-width:160px">
-          <button class="small" data-ref="rename">${DT.esc(DT.t("renameBtn"))}</button>
-          <button class="small" data-ref="copy">📋 Markdown</button>
-          <button class="small host" data-ref="screen" hidden>▤</button>
-        </div></div>
+      panel.innerHTML = `<div class="controls">
+          <div class="row" data-ref="ctx"></div>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" data-ref="rollAll">${DT.esc(DT.t("rollAll"))}</button>
+            <input type="text" data-ref="name" style="flex:1; min-width:160px">
+            <button class="small" data-ref="nameDice" title="${DT.esc(DT.t("rollName"))}">🎲</button>
+            <button class="small" data-ref="rename">${DT.esc(DT.t("renameBtn"))}</button>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="small" data-ref="copy">${DT.esc(DT.t("copyMdShort"))}</button>
+            <button class="small host" data-ref="screen" hidden>${DT.esc(DT.t("toScreenShort"))}</button>
+            <button class="small host" data-ref="article" hidden>${DT.esc(DT.t("toArticleShort"))}</button>
+          </div></div>
         <div class="grid" style="margin-top:14px" data-ref="results"></div>
-        <h2>💾</h2><div class="controls"><div class="savebar">
+        <h2>${DT.esc(DT.t("savedTitle"))}</h2><div class="controls"><div class="savebar">
           <button data-ref="exportAll">${DT.esc(DT.t("exportAll"))}</button><button data-ref="import">${DT.esc(DT.t("importBtn"))}</button></div>
           <div data-ref="lib" style="margin-top:10px"></div></div>
-        <h2>📖</h2><div data-ref="refs"></div>`;
+        <h2>${DT.esc(DT.t("refTitle"))}</h2><div data-ref="refs"></div>`;
       refs = DT.refs(panel);
-      refs.rollAll.onclick = ()=>{ cur = {id:DT.uid(), tab:def.id, name:newName(), data:{v:1, rolls:{}}}; tables.forEach(t=> cur.data.rolls[t.id]=rollOne(t)); persist(); render(); };
-      refs.rename.onclick = ()=>{ const v=refs.name.value.trim(); if(cur && v){ cur.name=v; persist(); } };
-      refs.copy.onclick = ()=>{ if(cur) DT.copyText(tab.toMarkdown(cur)); };
-      refs.screen.onclick = ()=>{ if(cur) DT.bridge.toScreen({label:cur.name, md:tab.toMarkdown(cur, {dm:true})}); };
+      refs.rollAll.onclick = ()=>{
+        cur = {id:DT.uid(), tab:def.id, name:"", data:rollAll(selCtx())};
+        cur.name = def.recordName ? (def.recordName(helpers(cur)) || newName()) : newName();
+        persist(); render();
+      };
+      refs.nameDice.onclick = ()=>{ if(!cur || !def.recordName) return; tables.filter(t=> t.hidden).forEach(t=> rerollFrom(t.id, cur.data)); cur.name = def.recordName(helpers(cur)) || cur.name; persist(); render(); };
+      const rename = ()=>{ const v=refs.name.value.trim(); if(cur && v){ cur.name=v; persist(); } };
+      refs.rename.onclick = rename;
+      refs.name.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
+      refs.copy.onclick = ()=>{ if(cur) DT.copyText(markdown(cur, {dm:true})); };
+      refs.screen.onclick = ()=>{ if(cur) DT.bridge.toScreen({label:cur.name, md:markdown(cur, {dm:true})}); };
+      refs.article.onclick = async ()=>{
+        if(!cur || !def.article) return;
+        const res = await DT.bridge.toArticle(cur, def.article(cur, helpers(cur)));
+        if(res && res.slug){ cur.links = Object.assign({}, cur.links, {article:res.slug}); persist(); DT.toast(DT.t("articleReady")); }
+        else DT.toast(DT.t("articleNotMade"));
+      };
       refs.exportAll.onclick = ()=>{ const l=DT.records.list(def.id); if(!l.length) return alert(DT.t("alertNothingToExport")); DT.io.exportMany(l, def.id); };
       refs.import.onclick = ()=> DT.io.pickFile();
-      lib = DT.library(refs.lib, def.id);
-      cur = DT.records.active(def.id);
-      render();
+      DT.library(refs.lib, def.id);
+      const act = DT.records.active(def.id);
+      cur = act ? normalize(act) : null;
+      renderCtx(); render();
     },
-    onShow(){ if(refs) refs.screen.hidden = !DT.host.caps.toScreen; },
-    onLang(){ if(refs){ refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); render(); } },
-    validate:data=> !!(data && data.rolls && typeof data.rolls==="object"),
-    load(rec){ cur = rec; DT.records.setActive(def.id, rec.id); render(); DT.refreshLibraries(); },
+    onShow(){ if(refs) render(); },
+    onLang(){ if(refs){ const keep = selCtx(); refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); refs.copy.textContent=DT.t("copyMdShort");
+      refs.screen.textContent=DT.t("toScreenShort"); refs.article.textContent=DT.t("toArticleShort"); renderCtx();
+      refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(keep[s.dataset.ctx]!=null) s.value=keep[s.dataset.ctx]; }); render(); } },
+    validate: data=> !!(data && data.rolls && typeof data.rolls==="object"),
+    load(rec){ cur = normalize(rec); DT.records.setActive(def.id, rec.id); if(refs){ renderCtx(); render(); } DT.refreshLibraries(); },
     current: ()=> cur,
     onRemoved(rec){ if(cur && cur.id===rec.id){ cur=null; render(); } },
-    summary(rec){ const n=Object.keys(rec.data.rolls||{}).length; return {chips:[`${n}/${tables.length}`], meta:[], detail:tables.map(t=>{ const r=rec.data.rolls[t.id]; return r?text(t,r.i):""; }).filter(Boolean).join(" · ")}; },
-    toMarkdown(rec){ return `### ${DT.mdEsc(rec.name)}\n\n`+tables.map(t=>{ const r=rec.data.rolls[t.id]; return `- **${DT.mdEsc(DT.tx(t.title))}** (d${t.die}${r?" = "+r.roll:""}): ${r?DT.mdEsc(text(t,r.i)):"—"}`; }).join("\n")+"\n"; }
+    summary(rec){
+      normalize(rec);
+      const shown = tables.filter(t=> !t.hidden && !t.dm).flatMap(t=> (rec.data.rolls[t.id]||[]).map(r=> resText(t, r))).filter(Boolean);
+      return {chips: ctxDefs.map(c=> ctxText(rec.data, c.id)).filter(Boolean).slice(0,2), meta:[], detail: shown.slice(0,4).join(" · ")};
+    },
+    toMarkdown(rec, opts={}){ return markdown(normalize(JSON.parse(JSON.stringify(rec))), opts); }
   });
-  tab.tables = tables;
+  // Para las pruebas y para quien extienda.
+  tab.tables = tables; tab.context = ctxDefs;
+  tab.api = {rollAll, rerollFrom, normalize, markdown, helpers, resText, weightFn, envFor, defaultCtx, current:()=>cur};
   return tab;
 };
 
@@ -998,6 +1181,109 @@ DT.start = function(){
     setTimeout(()=>{ if(!DT.host.connected) console.info("[dndtables] "+DT.t("hostOffline")); }, 4000);
   }
 };
+</script>
+
+<!-- ===================== DATOS COMPARTIDOS ===================== -->
+<script>
+/* Tablas que usan varias pestañas. Cada una es una definición (para DT.table o DT.simpleTableTab)
+ * y su tabla ya construida. Vendedores tira el tendero con ellas; PNJ rápido, el PNJ entero. */
+(function(){
+"use strict";
+// El PNJ: ascendencia (d20 con pesos), rasgo (d20), manía (d12), actitud (d6 → CD de regateo), rumor (d20), veracidad (d6).
+const ancestry = {id:"ancestry", die:20, rows:[
+  {id:"human",     w:8, name:{en:"human",es:"humano"},        names:["Aldric","Mirela","Tomás","Ysolde","Bram","Catalina","Oswin","Leofa","Darío","Maren","Hugo","Selma","Ivo","Rosalind","Emeric","Tilde"]},
+  {id:"dwarf",     w:2, name:{en:"dwarf",es:"enano"},         names:["Thora","Brokk","Hildis","Durgan","Vistra","Korrin","Gunnvor","Ragni"]},
+  {id:"elf",       w:2, name:{en:"elf",es:"elfo"},            names:["Ilyra","Thaeris","Saelwen","Elorin","Faelyn","Caelindra","Varis","Sylvaen"]},
+  {id:"halfling",  w:2, name:{en:"halfling",es:"mediano"},    names:["Pip","Tobin","Posy","Wendel","Marigold","Cob","Lilac","Bartolo"]},
+  {id:"gnome",     w:2, name:{en:"gnome",es:"gnomo"},         names:["Fizzwick","Orla","Bimble","Quillon","Zook","Nissa","Tibbet","Pennigrew"]},
+  {id:"halfelf",   w:1, name:{en:"half-elf",es:"semielfo"},   names:["Aerin","Talia","Corwin","Lyra","Evander","Siri"]},
+  {id:"halforc",   w:1, name:{en:"half-orc",es:"semiorco"},   names:["Grusha","Dorn","Ketta","Brakk","Ovra","Rurk"]},
+  {id:"tiefling",  w:1, name:{en:"tiefling",es:"tiflin"},     names:["Nyx","Damaris","Vex","Lethe","Morrow","Sable"]},
+  {id:"dragonborn",w:1, name:{en:"dragonborn",es:"dracónido"},names:["Vorrak","Sethra","Kaldrix","Nyrra","Tharex","Uzra"]}
+]};
+const listDef = (id, die, items)=> ({id, die, rows:items.map((x,i)=>({lo:i+1, hi:i+1, text:{es:x[0], en:x[1]}}))});
+const trait = listDef("trait", 20, [
+  ["No para de hablar de su familia","Won't stop talking about their family"],
+  ["Desconfía de cualquiera que lleve armadura","Distrusts anyone wearing armor"],
+  ["Regatea por deporte y lo disfruta","Haggles for sport and loves it"],
+  ["Supersticioso: escupe antes de cerrar un trato","Superstitious: spits before closing a deal"],
+  ["Exmercenario; exagera sus batallas","Ex-mercenary; exaggerates their battles"],
+  ["Tímido: su aprendiz habla por él","Shy: their apprentice does the talking"],
+  ["Obsesionado con la limpieza","Obsessed with cleanliness"],
+  ["Colecciona rumores y paga por ellos","Collects rumors and pays for them"],
+  ["Siempre de mal humor antes del mediodía","Always grumpy before noon"],
+  ["Generoso con los niños, duro con los adultos","Generous with kids, hard on adults"],
+  ["Pésima memoria para las caras","Terrible memory for faces"],
+  ["Orgulloso de su gremio; cita sus normas","Proud of their guild; quotes its bylaws"],
+  ["Recién llegado; aún no conoce los precios de aquí","New in town; still learning local prices"],
+  ["Endeudado con alguien peligroso","In debt to someone dangerous"],
+  ["Poeta frustrado: rima cuando se pone nervioso","Frustrated poet: rhymes when nervous"],
+  ["Devoto: cierra la tienda en los días sagrados","Devout: closes shop on holy days"],
+  ["Chismoso incorregible","Incorrigible gossip"],
+  ["Cada venta es un duelo de ingenio","Every sale is a battle of wits"],
+  ["Apostador: acepta apuestas en vez de monedas","Gambler: takes wagers instead of coin"],
+  ["Aventurero retirado; reconoce el oficio al instante","Retired adventurer; spots the trade instantly"]
+]);
+const quirk = listDef("quirk", 12, [
+  ["Tamborilea con los dedos","Drums their fingers"],
+  ["Tiene un gato o un loro sobre el mostrador","Keeps a cat or parrot on the counter"],
+  ["Muerde cada moneda","Bites every coin"],
+  ["Lleva un monóculo sin cristal","Wears a monocle with no lens"],
+  ["Silba siempre la misma canción","Always whistles the same tune"],
+  ["Llama «chaval» a todo el mundo","Calls everyone \"kiddo\""],
+  ["Lo apunta todo en un libro enorme","Writes everything in a huge ledger"],
+  ["Huele fuerte a ajo","Smells strongly of garlic"],
+  ["Habla de sí en tercera persona","Talks about themself in the third person"],
+  ["Colecciona un botón de cada cliente","Collects a button from every customer"],
+  ["Le tiembla un ojo cuando miente","Their eye twitches when they lie"],
+  ["Viste demasiado elegante para su tienda","Dresses far too fancy for their shop"]
+]);
+const attitude = {id:"attitude", die:6, rows:[
+  {id:"hostile",     lo:1, hi:1, dc:3,  cls:"bad",  emoji:"😠", name:{en:"hostile",        es:"hostil"}},
+  {id:"wary",        lo:2, hi:2, dc:1,  cls:"bad",  emoji:"🤨", name:{en:"wary",           es:"desconfiado"}},
+  {id:"indifferent", lo:3, hi:4, dc:0,  cls:"",     emoji:"😐", name:{en:"indifferent",    es:"indiferente"}},
+  {id:"friendly",    lo:5, hi:5, dc:-1, cls:"good", emoji:"🙂", name:{en:"friendly",       es:"amistoso"}},
+  {id:"delighted",   lo:6, hi:6, dc:-2, cls:"good", emoji:"😄", name:{en:"delighted by you",es:"encantado contigo"}}
+]};
+const rumor = listDef("rumor", 20, [
+  ["Algo en las alcantarillas se está comiendo a los gatos","Something in the sewers is eating the cats"],
+  ["El alcalde se ve de noche con alguien encapuchado","The mayor meets someone hooded at night"],
+  ["Una caravana perdida dejó su carga en el paso de montaña","A lost caravan left its cargo at the mountain pass"],
+  ["El templo esconde un tesoro bajo el altar","The temple hides a treasure under the altar"],
+  ["Han visto un dragón al norte","A dragon was sighted to the north"],
+  ["El herrero forja armas para unos bandidos","The smith forges weapons for bandits"],
+  ["Pagan bien por escoltar a un mago excéntrico","Good pay to escort an eccentric wizard"],
+  ["Las tumbas del cementerio viejo están vacías","The graves in the old cemetery are empty"],
+  ["Alguien está comprando toda la plata del pueblo","Someone is buying up all the silver in town"],
+  ["La hija del noble se fugó con un bardo","The noble's daughter eloped with a bard"],
+  ["Se ven luces en la torre abandonada","Lights are seen in the abandoned tower"],
+  ["Un gremio rival planea incendiar el mercado","A rival guild plans to burn the market"],
+  ["El agua de un pozo cura enfermedades","The water of one well cures disease"],
+  ["Ofrecen recompensa por un lobo gigante","There's a bounty on a giant wolf"],
+  ["Un barco trajo una enfermedad extraña","A ship brought a strange illness"],
+  ["El capitán de la guardia acepta sobornos","The watch captain takes bribes"],
+  ["Unos enanos buscan mineros para una mina reabierta","Dwarves are hiring for a reopened mine"],
+  ["Un mapa del tesoro pasa de taberna en taberna","A treasure map is making the tavern rounds"],
+  ["El bosque cercano está maldito","The nearby woods are cursed"],
+  ["Un viejo aventurero vende su equipo antes de morir","An old adventurer is selling their gear before dying"]
+]);
+const truth = {id:"truth", die:6, rows:[
+  {id:"false",   lo:1, hi:2, cls:"bad",  name:{en:"false",      es:"falso"}},
+  {id:"partial", lo:3, hi:5, cls:"",     name:{en:"half-true",  es:"medio cierto"}},
+  {id:"true",    lo:6, hi:6, cls:"good", name:{en:"true",       es:"cierto"}}
+]};
+
+
+// La actitud mueve la CD de las pruebas sociales (en Vendedores, la del regateo).
+attitude.rows.forEach(r=>{ r.note = r.dc ? {en:`Social checks against them: DC ${r.dc>0?"+":"−"}${Math.abs(r.dc)}`, es:`Pruebas sociales contra él: CD ${r.dc>0?"+":"−"}${Math.abs(r.dc)}`} : {en:"Social checks: normal DC", es:"Pruebas sociales: CD normal"}; });
+DT.lib.npc = {
+  // Filas de nombre que dependen de la ascendencia que salió en la tabla `key` (para DT.simpleTableTab).
+  nameRows: key=> ancestry.rows.flatMap(a=> a.names.map(n=> ({id:a.id+":"+n, text:n, only:{[key]:[a.id]}}))),
+  defs:{ancestry, trait, quirk, attitude, rumor, truth},
+  ANCESTRY:DT.table(ancestry), TRAIT:DT.table(trait), QUIRK:DT.table(quirk),
+  ATTITUDE:DT.table(attitude), RUMOR:DT.table(rumor), TRUTH:DT.table(truth)
+};
+})();
 </script>
 
 <!-- ===================== PESTAÑA · VENDEDORES ===================== -->
@@ -1338,89 +1624,8 @@ const SPECIALS = {
 const SPECIAL_T = {};
 for(const cat of Object.keys(SPECIALS)) SPECIAL_T[cat] = DT.table({id:"special-"+cat, die:6, rows:SPECIALS[cat].map((x,i)=> Object.assign({lo:i+1, hi:i+1}, x))});
 
-// El tendero: ascendencia (d20 con pesos), rasgo (d20), manía (d12), actitud (d6 → CD de regateo), rumor (d20), veracidad (d6).
-const ANCESTRY = DT.table({id:"ancestry", die:20, rows:[
-  {id:"human",     w:8, name:{en:"human",es:"humano"},        names:["Aldric","Mirela","Tomás","Ysolde","Bram","Catalina","Oswin","Leofa","Darío","Maren","Hugo","Selma","Ivo","Rosalind","Emeric","Tilde"]},
-  {id:"dwarf",     w:2, name:{en:"dwarf",es:"enano"},         names:["Thora","Brokk","Hildis","Durgan","Vistra","Korrin","Gunnvor","Ragni"]},
-  {id:"elf",       w:2, name:{en:"elf",es:"elfo"},            names:["Ilyra","Thaeris","Saelwen","Elorin","Faelyn","Caelindra","Varis","Sylvaen"]},
-  {id:"halfling",  w:2, name:{en:"halfling",es:"mediano"},    names:["Pip","Tobin","Posy","Wendel","Marigold","Cob","Lilac","Bartolo"]},
-  {id:"gnome",     w:2, name:{en:"gnome",es:"gnomo"},         names:["Fizzwick","Orla","Bimble","Quillon","Zook","Nissa","Tibbet","Pennigrew"]},
-  {id:"halfelf",   w:1, name:{en:"half-elf",es:"semielfo"},   names:["Aerin","Talia","Corwin","Lyra","Evander","Siri"]},
-  {id:"halforc",   w:1, name:{en:"half-orc",es:"semiorco"},   names:["Grusha","Dorn","Ketta","Brakk","Ovra","Rurk"]},
-  {id:"tiefling",  w:1, name:{en:"tiefling",es:"tiflin"},     names:["Nyx","Damaris","Vex","Lethe","Morrow","Sable"]},
-  {id:"dragonborn",w:1, name:{en:"dragonborn",es:"dracónido"},names:["Vorrak","Sethra","Kaldrix","Nyrra","Tharex","Uzra"]}
-]});
-const listTable = (id, die, items)=> DT.table({id, die, rows:items.map((x,i)=>({lo:i+1, hi:i+1, text:{es:x[0], en:x[1]}}))});
-const TRAIT = listTable("trait", 20, [
-  ["No para de hablar de su familia","Won't stop talking about their family"],
-  ["Desconfía de cualquiera que lleve armadura","Distrusts anyone wearing armor"],
-  ["Regatea por deporte y lo disfruta","Haggles for sport and loves it"],
-  ["Supersticioso: escupe antes de cerrar un trato","Superstitious: spits before closing a deal"],
-  ["Exmercenario; exagera sus batallas","Ex-mercenary; exaggerates their battles"],
-  ["Tímido: su aprendiz habla por él","Shy: their apprentice does the talking"],
-  ["Obsesionado con la limpieza","Obsessed with cleanliness"],
-  ["Colecciona rumores y paga por ellos","Collects rumors and pays for them"],
-  ["Siempre de mal humor antes del mediodía","Always grumpy before noon"],
-  ["Generoso con los niños, duro con los adultos","Generous with kids, hard on adults"],
-  ["Pésima memoria para las caras","Terrible memory for faces"],
-  ["Orgulloso de su gremio; cita sus normas","Proud of their guild; quotes its bylaws"],
-  ["Recién llegado; aún no conoce los precios de aquí","New in town; still learning local prices"],
-  ["Endeudado con alguien peligroso","In debt to someone dangerous"],
-  ["Poeta frustrado: rima cuando se pone nervioso","Frustrated poet: rhymes when nervous"],
-  ["Devoto: cierra la tienda en los días sagrados","Devout: closes shop on holy days"],
-  ["Chismoso incorregible","Incorrigible gossip"],
-  ["Cada venta es un duelo de ingenio","Every sale is a battle of wits"],
-  ["Apostador: acepta apuestas en vez de monedas","Gambler: takes wagers instead of coin"],
-  ["Aventurero retirado; reconoce el oficio al instante","Retired adventurer; spots the trade instantly"]
-]);
-const QUIRK = listTable("quirk", 12, [
-  ["Tamborilea con los dedos","Drums their fingers"],
-  ["Tiene un gato o un loro sobre el mostrador","Keeps a cat or parrot on the counter"],
-  ["Muerde cada moneda","Bites every coin"],
-  ["Lleva un monóculo sin cristal","Wears a monocle with no lens"],
-  ["Silba siempre la misma canción","Always whistles the same tune"],
-  ["Llama «chaval» a todo el mundo","Calls everyone \"kiddo\""],
-  ["Lo apunta todo en un libro enorme","Writes everything in a huge ledger"],
-  ["Huele fuerte a ajo","Smells strongly of garlic"],
-  ["Habla de sí en tercera persona","Talks about themself in the third person"],
-  ["Colecciona un botón de cada cliente","Collects a button from every customer"],
-  ["Le tiembla un ojo cuando miente","Their eye twitches when they lie"],
-  ["Viste demasiado elegante para su tienda","Dresses far too fancy for their shop"]
-]);
-const ATTITUDE = DT.table({id:"attitude", die:6, rows:[
-  {id:"hostile",     lo:1, hi:1, dc:3,  cls:"bad",  emoji:"😠", name:{en:"hostile",        es:"hostil"}},
-  {id:"wary",        lo:2, hi:2, dc:1,  cls:"bad",  emoji:"🤨", name:{en:"wary",           es:"desconfiado"}},
-  {id:"indifferent", lo:3, hi:4, dc:0,  cls:"",     emoji:"😐", name:{en:"indifferent",    es:"indiferente"}},
-  {id:"friendly",    lo:5, hi:5, dc:-1, cls:"good", emoji:"🙂", name:{en:"friendly",       es:"amistoso"}},
-  {id:"delighted",   lo:6, hi:6, dc:-2, cls:"good", emoji:"😄", name:{en:"delighted by you",es:"encantado contigo"}}
-]});
-const RUMOR = listTable("rumor", 20, [
-  ["Algo en las alcantarillas se está comiendo a los gatos","Something in the sewers is eating the cats"],
-  ["El alcalde se ve de noche con alguien encapuchado","The mayor meets someone hooded at night"],
-  ["Una caravana perdida dejó su carga en el paso de montaña","A lost caravan left its cargo at the mountain pass"],
-  ["El templo esconde un tesoro bajo el altar","The temple hides a treasure under the altar"],
-  ["Han visto un dragón al norte","A dragon was sighted to the north"],
-  ["El herrero forja armas para unos bandidos","The smith forges weapons for bandits"],
-  ["Pagan bien por escoltar a un mago excéntrico","Good pay to escort an eccentric wizard"],
-  ["Las tumbas del cementerio viejo están vacías","The graves in the old cemetery are empty"],
-  ["Alguien está comprando toda la plata del pueblo","Someone is buying up all the silver in town"],
-  ["La hija del noble se fugó con un bardo","The noble's daughter eloped with a bard"],
-  ["Se ven luces en la torre abandonada","Lights are seen in the abandoned tower"],
-  ["Un gremio rival planea incendiar el mercado","A rival guild plans to burn the market"],
-  ["El agua de un pozo cura enfermedades","The water of one well cures disease"],
-  ["Ofrecen recompensa por un lobo gigante","There's a bounty on a giant wolf"],
-  ["Un barco trajo una enfermedad extraña","A ship brought a strange illness"],
-  ["El capitán de la guardia acepta sobornos","The watch captain takes bribes"],
-  ["Unos enanos buscan mineros para una mina reabierta","Dwarves are hiring for a reopened mine"],
-  ["Un mapa del tesoro pasa de taberna en taberna","A treasure map is making the tavern rounds"],
-  ["El bosque cercano está maldito","The nearby woods are cursed"],
-  ["Un viejo aventurero vende su equipo antes de morir","An old adventurer is selling their gear before dying"]
-]);
-const TRUTH = DT.table({id:"truth", die:6, rows:[
-  {id:"false",   lo:1, hi:2, cls:"bad",  name:{en:"false",      es:"falso"}},
-  {id:"partial", lo:3, hi:5, cls:"",     name:{en:"half-true",  es:"medio cierto"}},
-  {id:"true",    lo:6, hi:6, cls:"good", name:{en:"true",       es:"cierto"}}
-]});
+// El tendero: tablas compartidas con la pestaña de PNJ (bloque DATOS COMPARTIDOS).
+const {ANCESTRY, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH} = DT.lib.npc;
 
 // Estado del asentamiento (1d20, una vez). price: {all|categoría: ±fracción} · stock: ±al 1d6 de existencias
 // travel: ±ambulantes por semana · weights: multiplica el peso de ambulantes · dc/max: regateo.
@@ -2189,7 +2394,7 @@ function articlePayload(rec){
   const body = settlementMarkdown(rec, {noTitle:true, dm:false});
   return {title:rec.name, template:"settlement", fields:{kind:sName, population:s?fmtPop(s.pop):""},
     subtitle:`${sName}${s?" · "+fmtPop(s.pop):""}`, summary:`${sName} · ${d.permanent.length+d.traveling.length} ${L("vendorsWord")}`,
-    block:`:::nota ${L("marketLabel")}\n${body.replace(/^:::.*$/gm, "")}\n:::`};
+    marker:"🛒", section:"econom", block:`:::nota ${L("marketLabel")}\n${body.replace(/^:::.*$/gm, "")}\n:::`};
 }
 
 /* ===================== TABLAS DE REFERENCIA ===================== */
@@ -2325,9 +2530,685 @@ const tab = DT.registerTab({
   toMarkdown(rec, opts={}){ return settlementMarkdown(normalize(JSON.parse(JSON.stringify(rec))), opts); }
 });
 // Para las pruebas y para quien extienda: acceso a los datos y funciones puras de esta pestaña.
-tab.api = {CATALOG, SIZES, VARIETY_KEYS, TRAVEL_KEYS, PRICE_TIERS, VENDOR_W, SPECIALS, STOCK, STATES, EVENTS, ANCESTRY, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH, TRAVEL_T,
+DT.lib.SIZES = SIZES;   // el Tablón de encargos los usa para nombrar tamaños y contar encargos
+tab.api = {vName, CATALOG, SIZES, VARIETY_KEYS, TRAVEL_KEYS, PRICE_TIERS, VENDOR_W, SPECIALS, STOCK, STATES, EVENTS, ANCESTRY, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH, TRAVEL_T,
   varietyTable, travelWF, effHaggle, haggleResult, catMult, vendorMult, normalize, settlementMarkdown, vendorMarkdown, articlePayload,
   current:()=>cur, select:(k)=>{ selectedSize = sizeOf(k)||selectedSize; if(refs) renderAll(); }, generateAll, newWeek, regenPermanent};
+})();
+</script>
+
+<!-- ===================== PESTAÑA · TABLÓN DE ENCARGOS ===================== -->
+<script>
+(function(){
+"use strict";
+// Pestaña completa (DT.registerTab): el tablón depende del asentamiento —uno genérico o una ciudad
+// guardada en Vendedores, de cuyos tenderos salen patrones y el encargo del rumor— y del nivel del grupo.
+const esc = DT.esc, tx = DT.tx, L = DT.t, md = DT.mdEsc;
+const PATRON = DT.table({id:"job-patron", die:20, rows:DT.rowsFixed([
+  "El alcalde|The mayor", "Un sacerdote del templo|A temple priest", "Una viuda rica|A wealthy widow", "El gremio de mercaderes|The merchants' guild",
+  "El capitán de la guardia|The captain of the watch", "Un noble arruinado|A ruined noble", "Un mago excéntrico|An eccentric wizard", "Un granjero desesperado|A desperate farmer",
+  "Una compañía minera|A mining company", "Un erudito de la biblioteca|A scholar from the library", "La madre de un desaparecido|The mother of a missing person",
+  "Un contrabandista que se hace pasar por mercader|A smuggler posing as a merchant", "El herrero del pueblo|The village smith", "Un bardo famoso|A famous bard",
+  "Una orden de caballería|An order of knights", "Un anciano que conoce la región|An elder who knows the region", "El dueño de la taberna|The tavern owner",
+  "Un espía de otro reino|A spy from another realm", "Un niño con una bolsa de monedas|A child with a purse of coins", "Alguien que se niega a dar su nombre|Someone who won't give a name"])});
+const TASK = DT.table({id:"job-task", die:20, rows:DT.rowsFixed([
+  "Escoltar una caravana|Escort a caravan", "Recuperar un objeto robado|Recover a stolen item", "Limpiar un nido de monstruos|Clear out a monster nest",
+  "Investigar unas desapariciones|Investigate disappearances", "Entregar un mensaje sin abrirlo|Deliver a message without opening it", "Proteger a alguien durante una semana|Protect someone for a week",
+  "Cazar a una bestia con recompensa|Hunt a bounty beast", "Encontrar a una persona perdida|Find a missing person", "Cartografiar unas ruinas|Map some ruins",
+  "Negociar con una facción hostil|Negotiate with a hostile faction", "Vigilar un almacén de noche|Guard a warehouse at night", "Cobrar una deuda|Collect a debt",
+  "Capturar a alguien vivo|Capture someone alive", "Exorcizar una casa|Exorcise a house", "Rescatar a un rehén|Rescue a hostage", "Espiar a un rival|Spy on a rival",
+  "Llevar a un prisionero a juicio|Take a prisoner to trial", "Conseguir un ingrediente raro|Obtain a rare ingredient", "Sabotear el negocio de un competidor|Sabotage a competitor's business",
+  "Averiguar qué hay en una cripta sellada|Find out what's inside a sealed crypt"])});
+const WHERE = DT.table({id:"job-where", die:12, rows:DT.rowsFixed([
+  "En las alcantarillas|In the sewers", "En una mina abandonada|In an abandoned mine", "En el bosque cercano|In the nearby forest", "En unas ruinas antiguas|In ancient ruins",
+  "En el cementerio viejo|In the old cemetery", "En una mansión cerrada|In a shuttered mansion", "En los muelles|At the docks", "En una torre abandonada|In an abandoned tower",
+  "En el paso de montaña|At the mountain pass", "En el pantano|In the swamp", "En una aldea vecina|In a neighboring village", "En el propio mercado|Right in the market"])});
+const COMP = DT.table({id:"job-comp", die:12, rows:[
+  {lo:1, hi:3, text:{es:"Ninguna: es lo que parece", en:"None: it's what it looks like"}},
+  ...["El patrón miente sobre algo importante|The patron lies about something important", "Otro grupo va tras lo mismo|Another party is after the same thing",
+    "El objetivo es inocente|The target is innocent", "El plazo real es la mitad|The real deadline is half as long", "Lo que buscan está maldito|What they want is cursed",
+    "El guía los traicionará|The guide will betray them", "La guardia se mete de por medio|The watch gets in the way", "Es una trampa|It's a trap",
+    "Hay algo mucho más peligroso de lo que dijeron|There's something far more dangerous than they said"].map((x,i)=> Object.assign(DT.row(x), {lo:i+4, hi:i+4}))]});
+const DEADLINE = DT.table({id:"job-deadline", die:6, rows:DT.rowsFixed([
+  "Sin prisa|No rush", "Antes de un mes|Within a month", "Esta semana|This week", "En tres días|Within three days", "Para mañana|By tomorrow", "Ya mismo|Right now"])});
+const PAY = DT.table({id:"job-pay", die:6, rows:[
+  {lo:1, hi:1, mult:.5, text:{es:"La mitad, más un favor", en:"Half, plus a favor"}},
+  {lo:2, hi:4, mult:1, text:{es:"Lo acordado", en:"As agreed"}},
+  {lo:5, hi:5, mult:1.5, text:{es:"Generosa", en:"Generous"}},
+  {lo:6, hi:6, mult:2, text:{es:"Espléndida, más un objeto", en:"Lavish, plus an item"}}]});
+const TIERS = [
+  {id:"t1", dice:[2,4,10], text:{en:"Levels 1–4", es:"Niveles 1–4"}}, {id:"t2", dice:[2,6,50], text:{en:"Levels 5–10", es:"Niveles 5–10"}},
+  {id:"t3", dice:[2,6,250], text:{en:"Levels 11–16", es:"Niveles 11–16"}}, {id:"t4", dice:[2,6,1000], text:{en:"Levels 17–20", es:"Niveles 17–20"}}];
+const COUNT = {troupe:[1,2,0], hamlet:[1,2,0], village:[1,3,0], town:[1,4,0], city:[1,4,1], largeCity:[1,6,1], metropolis:[2,4,0], megalopolis:[2,4,2]};
+const SIZES = ()=> DT.lib.SIZES || [];
+const sizeText = key=>{ const s = SIZES().find(x=> x.key===key); return s ? (DT.lang==="en" ? s.en.name : s.name) : key; };
+const tierOf = id=> TIERS.find(t=> t.id===id) || TIERS[0];
+const T = (table, roll)=> { const h = table.lookup(roll); return h ? tx(h.row.text!=null ? h.row.text : h.row.name) : "?"; };   // las tablas compartidas usan text o name
+const gp = n=> Number(n).toLocaleString(DT.lang==="en"?"en":"es")+(DT.lang==="en"?" gp":" po");
+
+// Tenderos (con rumor) de una ciudad guardada en Vendedores.
+function shopkeepers(cityId){
+  const rec = cityId && DT.records.get(cityId); if(!rec || rec.tab!=="vendors") return [];
+  const V = DT.tabs.get("vendors"); if(!V || !V.api) return [];
+  return [...(rec.data.permanent||[]), ...(rec.data.traveling||[])].filter(v=> v && v.npc && V.api.CATALOG[v.key])
+    .map(v=> ({name:String(v.npc.name), vendor:v.key, rumor:v.npc.rumor, truth:v.npc.truth}));
+}
+function rollJob(tier, shops, fromRumor){
+  const t = tierOf(tier), base = DT.rollDice(t.dice[0], t.dice[1]).total * t.dice[2];
+  const j = {patron:PATRON.roll().roll, task:TASK.roll().roll, where:WHERE.roll().roll, comp:COMP.roll().roll, deadline:DEADLINE.roll().roll, pay:PAY.roll().roll, base};
+  if(shops.length){
+    if(fromRumor){ const s = shops[DT.rollDie(shops.length)-1]; j.shop = s; j.rumorJob = true; }
+    else if(DT.rollDie(6)<=2){ j.shop = shops[DT.rollDie(shops.length)-1]; }
+  }
+  DT.log("📜", "", `${j.shop ? j.shop.name : T(PATRON, j.patron)}: ${j.rumorJob ? L("jobs.rumorTask") : T(TASK, j.task)} · ${gp(reward(j))}`);
+  return j;
+}
+function reward(j){ const p = PAY.lookup(j.pay); return Math.round(j.base * (p ? p.row.mult : 1)); }
+function vendorName(key){ const V = DT.tabs.get("vendors"); return V && V.api && V.api.vName ? V.api.vName(key) : key; }
+function patronText(j){ return j.shop ? `${j.shop.name} (${vendorName(j.shop.vendor)})` : T(PATRON, j.patron); }
+function taskText(j){ return j.rumorJob ? `${L("jobs.rumorTask")}: «${T(DT.lib.npc.RUMOR, j.shop.rumor)}»` : T(TASK, j.task); }
+
+let cur = null, refs = null;
+function newBoard(){
+  const sel = refs.where.value, tier = refs.tier.value;
+  const city = sel.startsWith("city:") ? DT.records.get(sel.slice(5)) : null;
+  const size = city ? city.data.sizeKey : sel.slice(5);
+  const [c,d,m] = COUNT[size] || [1,4,0];
+  const n = Math.max(1, DT.rollDice(c,d,m).total);
+  DT.log(DT.diceLabel(c,d,m), n, L("jobs.countLog"));
+  const shops = city ? shopkeepers(city.id) : [];
+  const jobs = []; for(let i=0;i<n;i++) jobs.push(rollJob(tier, shops, i===0 && shops.length>0));
+  const name = `${L("jobs.board")} · ${city ? city.name : sizeText(size)}`;
+  cur = {id:DT.uid(), tab:"jobs", name, data:{v:1, size, city:city?{id:city.id, name:city.name}:null, tier, jobs}};
+  persist(); render();
+}
+function persist(){ if(cur){ DT.records.setActive("jobs", cur.id); DT.records.upsert(cur); } }
+function jobMarkdown(j, i, dm){
+  const lines = [`**${L("jobs.job")} ${i+1}** — ${md(taskText(j))}`, `- ${L("jobs.patron")}: ${md(patronText(j))}`, `- ${L("jobs.where")}: ${md(T(WHERE, j.where))}`,
+    `- ${L("jobs.deadline")}: ${md(T(DEADLINE, j.deadline))}`, `- ${L("jobs.reward")}: ${gp(reward(j))} (${md(T(PAY, j.pay))})`];
+  if(dm){ lines.push(`- ${L("jobs.comp")} (DM): ${md(T(COMP, j.comp))}`); if(j.rumorJob) lines.push(`- ${L("jobs.truth")} (DM): ${md(T(DT.lib.npc.TRUTH, j.shop.truth))}`); }
+  return lines.join("\n");
+}
+function boardMarkdown(rec, opts={}){
+  const d = rec.data;
+  return `### ${md(rec.name)}\n\n*${md(d.city ? d.city.name+" · " : "")}${md(sizeText(d.size))} · ${md(tx(tierOf(d.tier).text))}*\n\n` +
+    d.jobs.map((j,i)=> jobMarkdown(j, i, !!opts.dm)).join("\n\n") + "\n";
+}
+function renderSelectors(){
+  const keepW = refs.where.value, keepT = refs.tier.value;
+  const cities = DT.records.list("vendors").slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", DT.lang));
+  refs.where.innerHTML = (cities.length ? `<optgroup label="${esc(L("jobs.savedCities"))}">${cities.map(c=>`<option value="city:${esc(c.id)}">🏙 ${esc(c.name)} (${esc(sizeText(c.data.sizeKey))})</option>`).join("")}</optgroup>` : "") +
+    `<optgroup label="${esc(L("jobs.anySize"))}">${Object.keys(COUNT).map(k=>`<option value="size:${esc(k)}">${esc(sizeText(k))}</option>`).join("")}</optgroup>`;
+  refs.tier.innerHTML = TIERS.map(t=>`<option value="${t.id}">${esc(tx(t.text))}</option>`).join("");
+  const want = cur ? (cur.data.city ? "city:"+cur.data.city.id : "size:"+cur.data.size) : keepW;
+  if(want && refs.where.querySelector(`option[value="${CSS.escape(want)}"]`)) refs.where.value = want; else if(!keepW) refs.where.value = "size:town";
+  refs.tier.value = cur ? cur.data.tier : (keepT || "t1");
+}
+function render(){
+  if(!refs) return;
+  refs.shareRow.hidden = !cur;
+  refs.screen.hidden = !(cur && DT.host.caps.toScreen);
+  if(document.activeElement!==refs.name) refs.name.value = cur ? cur.name : "";
+  refs.cards.innerHTML = !cur ? `<div class="empty">${esc(L("jobs.empty"))}</div>` : cur.data.jobs.map((j,i)=>`
+    <div class="rcard" data-i="${i}">
+      <div class="row" style="justify-content:space-between"><span class="rt">📜 ${esc(L("jobs.job"))} ${i+1}</span><span class="vtag mod">${esc(gp(reward(j)))}</span></div>
+      <div class="rv"><b>${esc(taskText(j))}</b></div>
+      <div class="sub">${esc(L("jobs.patron"))}: ${esc(patronText(j))}${j.rumorJob?` <span class="vtag var">🗣 ${esc(L("jobs.fromRumor"))}</span>`:""}</div>
+      <div class="sub">${esc(L("jobs.where"))}: ${esc(T(WHERE, j.where))} · ${esc(L("jobs.deadline"))}: ${esc(T(DEADLINE, j.deadline))}</div>
+      <div class="sub">${esc(L("jobs.reward"))}: ${esc(T(PAY, j.pay))}</div>
+      <div class="note bad">${esc(L("jobs.comp"))} (DM): ${esc(T(COMP, j.comp))}${j.rumorJob?` · ${esc(L("jobs.truth"))}: ${esc(T(DT.lib.npc.TRUTH, j.shop.truth))}`:""}</div>
+      <div class="vactions"><button class="small" data-act="reroll">${esc(L("jobs.rerollJob"))}</button></div>
+    </div>`).join("");
+  refs.cards.querySelectorAll(".rcard").forEach(card=>{
+    card.querySelector('[data-act="reroll"]').onclick = ()=>{
+      const i = +card.dataset.i, old = cur.data.jobs[i];
+      const shops = cur.data.city ? shopkeepers(cur.data.city.id) : [];
+      cur.data.jobs[i] = rollJob(cur.data.tier, shops, !!old.rumorJob && shops.length>0);
+      persist(); render();
+    };
+  });
+  renderRefs();
+}
+function renderRefs(){
+  const col = [{h:esc(L("resultWord")), f:r=> esc(tx(r.row.text))}];
+  const one = (title, table, cols)=> `<details><summary>${esc(title)} <span class="die">d${table.die}</span></summary><div class="tscroll"><table class="ref">${DT.refTableHTML(table, cols||col)}</table></div></details>`;
+  refs.refs.innerHTML =
+    `<details><summary>${esc(L("jobs.howMany"))}</summary><div class="tscroll"><table class="ref"><tr><th>${esc(L("jobs.settlement"))}</th><th>${esc(L("jobs.jobsWord"))}</th></tr>${
+      Object.entries(COUNT).map(([k,[c,d,m]])=>`<tr><td>${esc(sizeText(k))}</td><td><span class="die">${DT.diceLabel(c,d,m)}</span></td></tr>`).join("")}</table></div></details>` +
+    `<details><summary>${esc(L("jobs.reward"))}</summary><div class="tscroll"><table class="ref"><tr><th>${esc(L("jobs.level"))}</th><th>${esc(L("jobs.base"))}</th></tr>${
+      TIERS.map(t=>`<tr><td>${esc(tx(t.text))}</td><td><span class="die">${t.dice[0]}d${t.dice[1]} × ${t.dice[2]}</span> ${DT.lang==="en"?"gp":"po"}</td></tr>`).join("")}</table></div></details>` +
+    one(L("jobs.patron"), PATRON) + one(L("jobs.task"), TASK) + one(L("jobs.where"), WHERE) + one(L("jobs.comp"), COMP) + one(L("jobs.deadline"), DEADLINE) +
+    one(L("jobs.payWord"), PAY, [{h:esc(L("resultWord")), f:r=> esc(tx(r.row.text))}, {h:"×", f:r=> "×"+r.row.mult}]);
+}
+const tab = DT.registerTab({
+  id:"jobs", icon:"📜", order:20,
+  title:{en:"Job Board", es:"Tablón de encargos"},
+  tagline:{en:"Who pays, for what, where, by when and how much — scaled to the settlement and the party. Pick a saved city and its shopkeepers and rumors turn into jobs.", es:"Quién paga, por qué, dónde, para cuándo y cuánto — según el asentamiento y el grupo. Elige una ciudad guardada y sus tenderos y rumores se vuelven encargos."},
+  strings:{
+    en:{"jobs.settlement":"Settlement", "jobs.level":"Party level", "jobs.new":"🎲 New board", "jobs.board":"Board", "jobs.job":"Job", "jobs.patron":"Patron", "jobs.task":"Task",
+      "jobs.where":"Where", "jobs.deadline":"Deadline", "jobs.reward":"Reward", "jobs.payWord":"Pay", "jobs.comp":"Complication", "jobs.truth":"Is the rumor true?",
+      "jobs.rumorTask":"Look into the rumor", "jobs.fromRumor":"from a rumor", "jobs.rerollJob":"↻ Another job", "jobs.savedCities":"Saved cities (Vendors tab)",
+      "jobs.anySize":"Any settlement", "jobs.empty":"Pick a settlement and the party level, then press \"New board\".", "jobs.countLog":"jobs on the board",
+      "jobs.howMany":"How many jobs", "jobs.jobsWord":"Jobs", "jobs.base":"Base reward", "jobs.handout":"📋 Handout for players", "jobs.saved":"💾 Saved boards"},
+    es:{"jobs.settlement":"Asentamiento", "jobs.level":"Nivel del grupo", "jobs.new":"🎲 Tablón nuevo", "jobs.board":"Tablón", "jobs.job":"Encargo", "jobs.patron":"Quién paga", "jobs.task":"Encargo",
+      "jobs.where":"Dónde", "jobs.deadline":"Plazo", "jobs.reward":"Recompensa", "jobs.payWord":"Paga", "jobs.comp":"Complicación", "jobs.truth":"¿Es cierto el rumor?",
+      "jobs.rumorTask":"Averiguar qué hay detrás del rumor", "jobs.fromRumor":"sale de un rumor", "jobs.rerollJob":"↻ Otro encargo", "jobs.savedCities":"Ciudades guardadas (pestaña Vendedores)",
+      "jobs.anySize":"Cualquier asentamiento", "jobs.empty":"Elige asentamiento y nivel del grupo, y pulsa «Tablón nuevo».", "jobs.countLog":"encargos en el tablón",
+      "jobs.howMany":"Cuántos encargos", "jobs.jobsWord":"Encargos", "jobs.base":"Recompensa base", "jobs.handout":"📋 Para los jugadores", "jobs.saved":"💾 Tablones guardados"}
+  },
+  emptyLibraryKey:"noResults",
+  mount(panel){
+    panel.innerHTML = `<div class="controls">
+        <div class="row">
+          <label class="sub"><span data-i18n="jobs.settlement"></span> <select data-ref="where"></select></label>
+          <label class="sub"><span data-i18n="jobs.level"></span> <select data-ref="tier"></select></label>
+          <button class="primary" data-ref="roll" data-i18n="jobs.new"></button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" data-ref="name" style="flex:1; min-width:160px"><button class="small" data-ref="rename" data-i18n="renameBtn"></button>
+        </div>
+        <div class="row" style="margin-top:10px" data-ref="shareRow" hidden>
+          <button class="small" data-ref="copy" data-i18n="copyMdShort"></button>
+          <button class="small" data-ref="handout" data-i18n="jobs.handout"></button>
+          <button class="small host" data-ref="screen" data-i18n="toScreenShort" hidden></button>
+        </div></div>
+      <div class="grid" style="margin-top:14px" data-ref="cards"></div>
+      <h2 data-i18n="jobs.saved"></h2>
+      <div class="controls"><div class="savebar"><button data-ref="exportAll" data-i18n="exportAll"></button><button data-ref="import" data-i18n="importBtn"></button></div>
+        <div data-ref="lib" style="margin-top:10px"></div></div>
+      <h2 data-i18n="refTitle"></h2><div data-ref="refs"></div>`;
+    DT.applyI18n(panel);
+    refs = DT.refs(panel);
+    refs.roll.onclick = newBoard;
+    const rename = ()=>{ const v = refs.name.value.trim(); if(cur && v){ cur.name = v; persist(); } };
+    refs.rename.onclick = rename;
+    refs.name.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
+    refs.copy.onclick = ()=>{ if(cur) DT.copyText(boardMarkdown(cur, {dm:true})); };
+    refs.handout.onclick = ()=>{ if(cur) DT.copyText(boardMarkdown(cur, {dm:false})); };
+    refs.screen.onclick = ()=>{ if(cur) DT.bridge.toScreen({label:cur.name, w:440, h:560, md:boardMarkdown(cur, {dm:true})}); };
+    refs.exportAll.onclick = ()=>{ const l = DT.records.list("jobs"); if(!l.length) return alert(L("alertNothingToExport")); DT.io.exportMany(l, "jobs"); };
+    refs.import.onclick = ()=> DT.io.pickFile();
+    DT.library(refs.lib, "jobs");
+    // Si cambian las ciudades guardadas (se genera o se borra una), el selector se entera.
+    DT.records.onChange(ev=>{ if(refs && (ev.type==="external" || (ev.rec && ev.rec.tab==="vendors"))) renderSelectors(); });
+    cur = DT.records.active("jobs");
+    renderSelectors(); render();
+  },
+  onShow(){ if(refs){ renderSelectors(); render(); } },
+  onLang(){ if(refs){ renderSelectors(); render(); } },
+  load(rec){ cur = rec; DT.records.setActive("jobs", rec.id); if(refs){ renderSelectors(); render(); } DT.refreshLibraries(); },
+  current: ()=> cur,
+  onRemoved(rec){ if(cur && cur.id===rec.id){ cur = null; render(); } },
+  validate: data=> !!(data && Array.isArray(data.jobs) && data.jobs.every(j=> j && Number.isFinite(j.base))),
+  summary(rec){ const d = rec.data; return {chips:[d.city ? d.city.name : sizeText(d.size), tx(tierOf(d.tier).text)], meta:[`${d.jobs.length} ${L("jobs.jobsWord").toLowerCase()}`], detail:d.jobs.map(taskText).join(" · ")}; },
+  toMarkdown: (rec, opts={})=> boardMarkdown(rec, opts)
+});
+tab.api = {PATRON, TASK, WHERE, COMP, DEADLINE, PAY, TIERS, COUNT, reward, rollJob, shopkeepers, boardMarkdown, current:()=>cur, newBoard:()=>newBoard(), select:(where, tier)=>{ if(refs){ refs.where.value=where; refs.tier.value=tier; } }};
+})();
+</script>
+
+<!-- ===================== PESTAÑA · PNJ RÁPIDO ===================== -->
+<script>
+(function(){
+"use strict";
+const N = DT.lib.npc.defs, R = DT.row;
+DT.simpleTableTab({
+  id:"npc", icon:"🧑", order:30,
+  title:{en:"Quick NPC", es:"PNJ rápido"},
+  tagline:{en:"Name, trade, looks, personality, what they want, what they hide and what they've heard — in one roll", es:"Nombre, oficio, aspecto, personalidad, qué quiere, qué esconde y qué ha oído — de una tirada"},
+  strings:{en:{"npc.label":"NPC — D&D Tables"}, es:{"npc.label":"PNJ — Tablas D&D"}},
+  context:[{id:"where", title:{en:"Setting", es:"Entorno"}, options:[
+    {id:"city", text:{en:"City", es:"Ciudad"}}, {id:"village", text:{en:"Village", es:"Pueblo"}}, {id:"road", text:{en:"Road / wilds", es:"Camino / tierras salvajes"}}]}],
+  tables:[
+    {id:"ancestry", title:{en:"Ancestry", es:"Ascendencia"}, die:20, rows:N.ancestry.rows},
+    {id:"name", title:{en:"Name", es:"Nombre"}, die:20, rows:DT.lib.npc.nameRows("ancestry")},
+    {id:"age", title:{en:"Age", es:"Edad"}, die:6, rows:[
+      {id:"young", lo:1, hi:1, text:{en:"Young", es:"Joven"}}, {id:"adult", lo:2, hi:4, text:{en:"Adult", es:"Adulto"}},
+      {id:"mature", lo:5, hi:5, text:{en:"Middle-aged", es:"Maduro"}}, {id:"old", lo:6, hi:6, text:{en:"Old", es:"Anciano"}}]},
+    {id:"job", title:{en:"Trade", es:"Oficio"}, die:20, rows:[
+      R("Campesino|Farmer", {weight:{where:{city:.3, village:3, road:.8}}}),
+      R("Guardia|Guard", {weight:{where:{city:2}}}),
+      R("Mercader|Merchant", {weight:{where:{city:2, road:1.5}}}),
+      R("Marinero|Sailor", {weight:{where:{village:.5}}}),
+      R("Acólito de un templo|Temple acolyte"),
+      R("Erudito|Scholar", {weight:{where:{city:2, village:.3, road:.5}}}),
+      R("Ladrón|Thief", {weight:{where:{city:2}}}),
+      R("Cazador|Hunter", {weight:{where:{city:.2, village:2, road:2}}}),
+      R("Minero|Miner", {weight:{where:{city:.5, village:1.5}}}),
+      R("Criado de una casa noble|Servant of a noble house", {weight:{where:{city:2, village:.3, road:.2}}}),
+      R("Posadero|Innkeeper"),
+      R("Aprendiz de herrero|Blacksmith's apprentice", {weight:{where:{village:1.5}}}),
+      R("Soldado veterano|Veteran soldier", {weight:{where:{road:1.5}}}),
+      R("Curandero|Healer"),
+      R("Bardo|Bard", {weight:{where:{city:1.5, road:1.5}}}),
+      R("Mendigo|Beggar", {weight:{where:{city:2, village:.5, road:.3}}}),
+      R("Escribano|Clerk", {weight:{where:{city:2, village:.5, road:.2}}}),
+      R("Pescador|Fisher", {weight:{where:{city:.5, village:1.5}}}),
+      R("Mensajero|Courier", {weight:{where:{road:3}}}),
+      R("Aventurero retirado|Retired adventurer", {weight:{where:{road:2}}})]},
+    {id:"looks", title:{en:"Looks", es:"Aspecto"}, die:20, rows:DT.rowsFixed([
+      "Cicatriz que le cruza la cara|Scar across the face", "Muy alto y encorvado|Very tall and stooped", "Diente de oro|Gold tooth",
+      "Tatuajes en los brazos|Tattooed arms", "Ropa remendada pero impecable|Patched but spotless clothes", "Pelo teñido de un color llamativo|Hair dyed a loud color",
+      "Le falta un dedo|Missing a finger", "Pecas por todas partes|Freckles everywhere", "Parche en un ojo|Eye patch", "Joyas baratas en exceso|Too much cheap jewelry",
+      "Siempre huele a humo|Always smells of smoke", "Voz ronca y grave|Deep, hoarse voice", "Muy pequeño y nervioso|Small and fidgety", "Barba o trenzas con cuentas|Beaded beard or braids",
+      "Manos manchadas de tinta|Ink-stained hands", "Cojea un poco|Walks with a slight limp", "Ojos de distinto color|Mismatched eyes", "Sombrero enorme|Enormous hat",
+      "Quemaduras viejas en las manos|Old burns on the hands", "Sonrisa permanente, un poco inquietante|Permanent, slightly unsettling smile"])},
+    {id:"trait", title:{en:"Personality", es:"Personalidad"}, die:20, rows:N.trait.rows},
+    {id:"quirk", title:{en:"Quirk", es:"Manía"}, die:12, rows:N.quirk.rows},
+    {id:"attitude", title:{en:"Attitude toward the party", es:"Actitud hacia el grupo"}, die:6, rows:N.attitude.rows},
+    {id:"wants", title:{en:"What they want", es:"Qué quiere"}, die:12, rows:DT.rowsFixed([
+      "Pagar una deuda antes de que sea tarde|Pay off a debt before it's too late", "Proteger a su familia|Protect their family", "Irse de este lugar|Get out of this place",
+      "Vengarse de alguien en concreto|Get revenge on someone specific", "Que su gremio lo respete|Earn their guild's respect", "Encontrar a alguien que desapareció|Find someone who went missing",
+      "Hacerse rico rápido|Get rich quick", "Que lo dejen en paz|Be left alone", "Recuperar algo que le robaron|Recover something stolen from them",
+      "Ganarse el favor de un noble|Win a noble's favor", "Aprender magia|Learn magic", "Redimirse de algo que hizo|Atone for something they did"])},
+    {id:"secret", title:{en:"Secret", es:"Secreto"}, die:12, dm:true, rows:DT.rowsFixed([
+      "Le cuenta a la guardia todo lo que oye|Reports everything they hear to the watch", "Tiene otra familia en otra ciudad|Has another family in another town",
+      "Es de sangre noble, desheredado|Is of noble blood, disinherited", "Todo lo que tiene es robado|Everything they own is stolen", "Adora en secreto a un dios prohibido|Secretly worships a forbidden god",
+      "Le debe la vida a un monstruo|Owes their life to a monster", "Está gravemente enfermo|Is gravely ill", "Vio un crimen y calla|Witnessed a crime and keeps quiet",
+      "Sabe dónde hay un tesoro, pero le da miedo ir|Knows where treasure lies but is afraid to go", "Es un cambiaformas (o eso cree)|Is a shapechanger (or thinks so)",
+      "Trabaja para un gremio de ladrones|Works for a thieves' guild", "No tiene ningún secreto, y le avergüenza|Has no secret at all, and is ashamed of it"])},
+    {id:"rumor", title:{en:"What they've heard", es:"Lo que ha oído"}, die:20, rows:N.rumor.rows},
+    {id:"truth", title:{en:"Is the rumor true?", es:"¿Es cierto el rumor?"}, die:6, dm:true, rows:N.truth.rows}
+  ],
+  recordName: h=> h.text("name"),
+  article:(rec, h)=>({
+    title:rec.name, template:"character", fields:{age:h.text("age")},
+    subtitle:`${h.text("ancestry")} · ${h.text("job")}`, summary:h.text("trait"),
+    marker:"🧑", section:"personal", block:h.block("🧑", DT.t("npc.label"))
+  })
+});
+})();
+</script>
+
+<!-- ===================== PESTAÑA · TABERNA ===================== -->
+<script>
+(function(){
+"use strict";
+const N = DT.lib.npc.defs, R = DT.row;
+const Q = (...ids)=> ({only:{quality:ids}});
+// Nombre: "El Yunque y la Jarra" / "The Anvil & Tankard", o "La Jarra Dorada" / "The Golden Tankard".
+// Los sustantivos de A llevan su género (g) para que el adjetivo concuerde en español.
+const nounA = [["el Yunque","Anvil","m"],["la Jarra","Tankard","f"],["el Grifo","Griffin","m"],["la Sirena","Mermaid","f"],["el Jabalí","Boar","m"],
+  ["la Corona","Crown","f"],["el Dragón","Dragon","m"],["la Linterna","Lantern","f"],["el Caldero","Cauldron","m"],["la Espada","Sword","f"],
+  ["el Cuervo","Raven","m"],["la Oca","Goose","f"],["el Barril","Barrel","m"],["la Luna","Moon","f"],["el Ciervo","Stag","m"],
+  ["la Rosa","Rose","f"],["el Tejón","Badger","m"],["la Herradura","Horseshoe","f"],["el Gigante","Giant","m"],["la Doncella","Maiden","f"]]
+  .map(([es,en,g],i)=> ({id:"a"+i, lo:i+1, hi:i+1, text:{es,en}, g}));
+const nounB = DT.rowsFixed(["el Martillo|Hammer","la Pluma|Feather","el Trol|Troll","la Vela|Candle","el Zorro|Fox","la Campana|Bell","el Carnero|Ram",
+  "la Llave|Key","el Hacha|Axe","la Serpiente|Serpent","el Oso|Bear","la Estrella|Star","el Tonel|Cask","la Rueda|Wheel","el Búho|Owl","la Mula|Mule",
+  "el Pescador|Fisherman","la Bruja|Witch","el Lobo|Wolf","la Calavera|Skull"]);
+const adj = [["Dorado","Dorada","Golden"],["Borracho","Borracha","Drunken"],["Tuerto","Tuerta","One-Eyed"],["Oxidado","Oxidada","Rusty"],["Risueño","Risueña","Laughing"],
+  ["Dormido","Dormida","Sleeping"],["Negro","Negra","Black"],["Cojo","Coja","Limping"],["Plateado","Plateada","Silver"],["Errante","Errante","Wandering"],
+  ["Feliz","Feliz","Jolly"],["Rojo","Roja","Red"],["Viejo","Vieja","Old"],["Ahogado","Ahogada","Drowned"],["Bailarín","Bailarina","Dancing"],
+  ["Hambriento","Hambrienta","Hungry"],["Verde","Verde","Green"],["Gordo","Gorda","Fat"],["Cantarín","Cantarina","Singing"],["Perdido","Perdida","Lost"]]
+  .map(([m,f,en],i)=> ({lo:i+1, hi:i+1, text:{es:m===f?m:`${m} / ${f}`, en}, m, f}));
+const cap = s=> s.charAt(0).toUpperCase()+s.slice(1);
+DT.simpleTableTab({
+  id:"tavern", icon:"🍺", order:40,
+  title:{en:"Tavern", es:"Taberna"},
+  tagline:{en:"Name, innkeeper, what's cooking, what's poured, the rooms, who's drinking and what happens tonight", es:"Nombre, posadero, qué se cocina, qué se sirve, las habitaciones, quién bebe y qué pasa esta noche"},
+  strings:{en:{"tavern.label":"Tavern — D&D Tables", "tavern.kind":"Tavern"}, es:{"tavern.label":"Taberna — Tablas D&D", "tavern.kind":"Taberna"}},
+  context:[{id:"quality", title:{en:"Class", es:"Categoría"}, default:"common", options:[
+    {id:"humble", text:{en:"Humble", es:"Humilde"}}, {id:"common", text:{en:"Common", es:"Común"}}, {id:"fine", text:{en:"Fine", es:"Refinada"}}]}],
+  tables:[
+    {id:"nameA", title:{en:"Name · first word", es:"Nombre · primera palabra"}, die:20, hidden:true, rows:nounA},
+    {id:"nameB", title:{en:"Name · second word", es:"Nombre · segunda palabra"}, die:20, hidden:true, rows:nounB},
+    {id:"adj", title:{en:"Name · adjective", es:"Nombre · adjetivo"}, die:20, hidden:true, rows:adj},
+    {id:"pattern", title:{en:"Name · pattern", es:"Nombre · forma"}, die:6, hidden:true, rows:[
+      {id:"pair", lo:1, hi:3, text:{es:"El A y el B", en:"The A & B"}}, {id:"adj", lo:4, hi:6, text:{es:"El A Adjetivo", en:"The Adjective A"}}]},
+    {id:"keeperAncestry", title:{en:"Innkeeper · ancestry", es:"Posadero · ascendencia"}, die:20, rows:N.ancestry.rows},
+    {id:"keeper", title:{en:"Innkeeper", es:"Posadero"}, die:20, rows:DT.lib.npc.nameRows("keeperAncestry")},
+    {id:"keeperTrait", title:{en:"Innkeeper · temper", es:"Posadero · carácter"}, die:20, rows:N.trait.rows},
+    {id:"dish", title:{en:"Dish of the day", es:"Plato del día"}, die:12, rows:[
+      R("Gachas con miel (3 pc)|Porridge with honey (3 cp)", Q("humble")), R("Sopa de nabo y pan duro (3 pc)|Turnip soup and stale bread (3 cp)", Q("humble")),
+      R("Guiso de lo que haya (6 pc)|Whatever-there-is stew (6 cp)", Q("humble")), R("Pan, queso y cebolla (6 pc)|Bread, cheese and onion (6 cp)", Q("humble","common")),
+      R("Estofado de cordero (3 pp)|Lamb stew (3 sp)", Q("common")), R("Pastel de carne (3 pp)|Meat pie (3 sp)", Q("common")),
+      R("Trucha asada con hierbas (5 pp)|Herb-roasted trout (5 sp)", Q("common")), R("Salchichas con col (3 pp)|Sausages and cabbage (3 sp)", Q("common")),
+      R("Faisán en salsa de vino (8 pp)|Pheasant in wine sauce (8 sp)", Q("fine")), R("Pato con cerezas (8 pp)|Duck with cherries (8 sp)", Q("fine")),
+      R("Tabla de quesos curados y fruta (8 pp)|Aged cheese and fruit board (8 sp)", Q("fine")), R("Venado con castañas (2 po)|Venison with chestnuts (2 gp)", Q("fine"))]},
+    {id:"drink", title:{en:"House drink", es:"Bebida de la casa"}, die:12, rows:[
+      R("Cerveza aguada (4 pc la jarra)|Watered ale (4 cp a mug)", Q("humble")), R("Sidra agria (3 pc)|Sour cider (3 cp)", Q("humble")),
+      R("Aguardiente casero (1 pp el vaso)|Homemade spirits (1 sp a glass)", Q("humble","common")), R("Leche de cabra (1 pc)|Goat's milk (1 cp)", Q("humble")),
+      R("Cerveza de la casa (4 pc la jarra)|House ale (4 cp a mug)", Q("common")), R("Hidromiel (5 pc)|Mead (5 cp)", Q("common")),
+      R("Vino común (2 pp la jarra)|Common wine (2 sp a pitcher)", Q("common")), R("Cerveza negra (6 pc)|Dark stout (6 cp)", Q("common","humble")),
+      R("Vino fino (10 po la botella)|Fine wine (10 gp a bottle)", Q("fine")), R("Licor de hierbas élfico (2 po la copa)|Elven herbal liqueur (2 gp a glass)", Q("fine")),
+      R("Brandy añejo (1 po la copa)|Aged brandy (1 gp a glass)", Q("fine")), R("Vino caliente con especias (5 pp)|Hot spiced wine (5 sp)", Q("fine","common"))]},
+    {id:"room", title:{en:"Rooms (per night)", es:"Habitaciones (por noche)"}, die:6, rows:[
+      R("Un rincón de la sala común (7 pc)|A corner of the common room (7 cp)", Q("humble")), R("Pajar del establo (7 pc)|Stable hayloft (7 cp)", Q("humble")),
+      R("Catre en un cuarto compartido (1 pp)|Cot in a shared room (1 sp)", Q("humble")),
+      R("Cuarto modesto (5 pp)|Modest room (5 sp)", Q("common")), R("Cuarto cómodo con chimenea (8 pp)|Comfortable room with a hearth (8 sp)", Q("common")),
+      R("Habitación de lujo (2 po)|Wealthy room (2 gp)", Q("fine")), R("Suite con baño y sirviente (4 po)|Suite with bath and servant (4 gp)", Q("fine"))]},
+    {id:"patrons", title:{en:"Who's drinking", es:"Quién está bebiendo"}, die:12, count:"1d4", rows:DT.rowsFixed([
+      "Mineros saliendo del turno|Miners off their shift", "Un bardo que desafina|An off-key bard", "Dos mercaderes discutiendo precios|Two merchants arguing over prices",
+      "Soldados fuera de servicio|Off-duty soldiers", "Alguien encapuchado, solo en un rincón|Someone hooded, alone in a corner", "Aventureros rivales|Rival adventurers",
+      "Un noble de incógnito|A noble in disguise", "Granjeros celebrando la cosecha|Farmers celebrating the harvest", "Un sacerdote que bebe de más|A priest drinking too much",
+      "Jugadores de dados|Dice players", "Un cazador presumiendo un trofeo|A hunter showing off a trophy", "Enanos cantando canciones de mina|Dwarves singing mining songs"])},
+    {id:"tonight", title:{en:"Tonight", es:"Esta noche"}, die:12, rows:DT.rowsFixed([
+      "Noche tranquila|A quiet night", "Concurso de canto: el premio es la cuenta|Singing contest: the prize is the tab", "Pelea de borrachos que escala rápido|A drunken brawl that escalates fast",
+      "Partida de dados, apuesta mínima {1d6} po|Dice game, minimum bet {1d6} gp", "Llega un pregonero con noticias|A crier arrives with news", "Alguien paga una ronda para todos|Someone buys a round for everyone",
+      "Se apaga el fuego y la sala queda a oscuras|The fire dies and the room goes dark", "Un carterista trabaja la sala|A pickpocket is working the room", "Apuesta absurda: beber {1d4+2} jarras de un trago|Absurd wager: down {1d4+2} mugs in one go",
+      "Celebran una boda|A wedding party", "Alguien jura haber visto un fantasma|Someone swears they saw a ghost", "La guardia entra a revisar a todos|The watch comes in to check everyone"])},
+    {id:"rumor", title:{en:"Heard at the bar", es:"Se oye en la barra"}, die:20, rows:N.rumor.rows},
+    {id:"truth", title:{en:"Is the rumor true?", es:"¿Es cierto el rumor?"}, die:6, dm:true, rows:N.truth.rows}
+  ],
+  recordName: h=>{
+    const A = h.row("nameA"), B = h.row("nameB"), J = h.row("adj"), P = h.row("pattern");
+    if(!A || !B || !J || !P) return "";
+    if(DT.lang==="es") return P.id==="pair" ? cap(`${A.text.es} y ${B.text.es}`) : cap(`${A.text.es} ${J[A.g]}`);
+    return P.id==="pair" ? `The ${A.text.en} & ${B.text.en}` : `The ${J.text.en} ${A.text.en}`;
+  },
+  article:(rec, h)=>({
+    title:rec.name, template:"building", fields:{kind:DT.t("tavern.kind")},
+    subtitle:`${DT.t("tavern.kind")} · ${h.ctxText("quality")}`, summary:`${h.text("keeper")} · ${h.text("drink")}`,
+    marker:"🍺", section:"frecuenta", block:h.block("🍺", DT.t("tavern.label"))
+  })
+});
+})();
+</script>
+
+<!-- ===================== PESTAÑA · ENCUENTROS DE VIAJE ===================== -->
+<script>
+(function(){
+"use strict";
+const R = DT.row;
+// Peso por nivel del grupo: bajo (niveles 1–4), medio (5–10), alto (11+). Nunca 0: todo puede salir, lo raro es raro.
+const LO = {low:3, mid:1, high:.3}, LM = {low:2, mid:2, high:.5}, MID = {low:.4, mid:3, high:1}, MH = {low:.1, mid:2, high:1.5}, HI = {low:.1, mid:.8, high:3};
+const NIGHT = {night:2.5, day:.3};
+// Criatura (nombres del SRD 5.1): en qué biomas sale, a qué nivel pesa más y, si es nocturna, cuándo.
+const C = (text, biomes, tier, time)=> R(text, {only:{biome:biomes}, weight:time ? {tier, time} : {tier}});
+const creatures = [
+  C("{1d4+1} lobos|{1d4+1} wolves", ["forest","hills","arctic","road"], LO, {night:1.5, day:1}),
+  C("{2d4} goblins|{2d4} goblins", ["forest","underdark","road"], LO, {night:1.5, day:1}),
+  C("Un oso pardo|A brown bear", ["forest","hills"], LM),
+  C("{1d4} arañas gigantes|{1d4} giant spiders", ["forest","underdark","swamp"], LM),
+  C("Un oso lechuza|An owlbear", ["forest"], MID),
+  C("{1d3} lobos terribles|{1d3} dire wolves", ["forest","arctic","hills"], MID, {night:1.5, day:1}),
+  C("Una bruja verde|A green hag", ["forest","swamp"], MID, {night:1.5, day:1}),
+  C("Un hombre lobo|A werewolf", ["forest","road"], MID, NIGHT),
+  C("Un ent enfurecido|An angry treant", ["forest"], HI),
+  C("Un dragón verde joven|A young green dragon", ["forest"], HI),
+  C("{2d4} bandidos|{2d4} bandits", ["grassland","road","coast","hills"], LO),
+  C("Un capitán bandido y {1d6+2} bandidos|A bandit captain and {1d6+2} bandits", ["road","grassland","coast"], MID),
+  C("{2d4} hienas|{2d4} hyenas", ["grassland","desert"], LO),
+  C("{1d6+2} gnolls|{1d6+2} gnolls", ["grassland","desert","hills"], LM),
+  C("{1d4} centauros|{1d4} centaurs", ["grassland"], MID),
+  C("{1d3} grifos|{1d3} griffons", ["grassland","hills"], MID),
+  C("{1d2} ogros|{1d2} ogres", ["grassland","hills","swamp","road"], MID),
+  C("Un gigante de las colinas|A hill giant", ["grassland","hills"], MH),
+  C("Un bulette|A bulette", ["grassland"], MID),
+  C("{2d4} orcos|{2d4} orcs", ["hills","forest","arctic"], LO),
+  C("{1d4} cabras gigantes|{1d4} giant goats", ["hills"], LO),
+  C("Una mantícora|A manticore", ["hills","desert"], MID),
+  C("Un guiverno|A wyvern", ["hills","coast"], MH),
+  C("{1d4} hipogrifos|{1d4} hippogriffs", ["hills","grassland"], LO),
+  C("Un gigante de piedra|A stone giant", ["hills","underdark"], HI),
+  C("Un dragón rojo joven|A young red dragon", ["hills"], HI),
+  C("{2d4} ranas gigantes|{2d4} giant frogs", ["swamp"], LO),
+  C("{1d6+2} hombres lagarto|{1d6+2} lizardfolk", ["swamp","coast"], LO),
+  C("{1d3} cocodrilos|{1d3} crocodiles", ["swamp","coast"], LO),
+  C("{1d3} fuegos fatuos|{1d3} will-o'-wisps", ["swamp"], MID, NIGHT),
+  C("Un trol|A troll", ["swamp","forest","hills"], MH),
+  C("Un montón andante|A shambling mound", ["swamp","forest"], MID),
+  C("Un dragón negro joven|A young black dragon", ["swamp"], HI),
+  C("{1d4} chacales|{1d4} jackals", ["desert","grassland"], LO),
+  C("{1d3} escorpiones gigantes|{1d3} giant scorpions", ["desert"], MID),
+  C("{1d2} momias|{1d2} mummies", ["desert"], MID, NIGHT),
+  C("Una lamia|A lamia", ["desert"], MID),
+  C("{1d4} buitres gigantes|{1d4} giant vultures", ["desert","grassland"], LO),
+  C("Un dragón azul joven|A young blue dragon", ["desert"], HI),
+  C("Un oso polar|A polar bear", ["arctic","coast"], LM),
+  C("{1d4} lobos invernales|{1d4} winter wolves", ["arctic"], MID),
+  C("Un yeti|A yeti", ["arctic"], MID),
+  C("{1d4} mefitos de hielo|{1d4} ice mephits", ["arctic"], LO),
+  C("Un gigante de escarcha|A frost giant", ["arctic"], HI),
+  C("Un dragón blanco joven|A young white dragon", ["arctic"], MH),
+  C("Un remorhaz|A remorhaz", ["arctic"], HI),
+  C("{1d4+1} cangrejos gigantes|{1d4+1} giant crabs", ["coast"], LO),
+  C("{1d6+2} sahuagin|{1d6+2} sahuagin", ["coast"], LM),
+  C("{1d4} arpías|{1d4} harpies", ["coast","hills"], LM),
+  C("{1d3} merrow|{1d3} merrow", ["coast"], MID),
+  C("Una bruja marina|A sea hag", ["coast"], MID, {night:1.5, day:1}),
+  C("Un pulpo gigante|A giant octopus", ["coast"], LO),
+  C("Un dragón de bronce joven|A young bronze dragon", ["coast"], HI),
+  C("{2d4} drow|{2d4} drow", ["underdark"], MID),
+  C("{1d6+2} duergar|{1d6+2} duergar", ["underdark"], LM),
+  C("{1d4} mantos oscuros|{1d4} darkmantles", ["underdark"], LO),
+  C("Un cubo gelatinoso|A gelatinous cube", ["underdark"], MID),
+  C("Un otyugh|An otyugh", ["underdark","swamp"], MID),
+  C("Un gusano púrpura|A purple worm", ["underdark","desert"], HI),
+  C("Un roper|A roper", ["underdark"], HI),
+  C("{1d4} necrófagos|{1d4} ghouls", ["road","swamp","underdark"], LO, NIGHT),
+  C("{1d3} tumularios|{1d3} wights", ["road","hills"], MID, NIGHT),
+  C("Una patrulla: {1d4+2} guardias|A patrol: {1d4+2} guards", ["road"], LO),
+  C("Un caballero errante y su escudero|A knight errant and their squire", ["road"], MID)
+];
+const B = (...ids)=> ({only:{biome:ids}});
+DT.simpleTableTab({
+  id:"encounters", icon:"🐺", order:50,
+  title:{en:"Travel Encounters", es:"Encuentros de viaje"},
+  tagline:{en:"Is there an encounter? What kind, who, doing what, how far and in what mood — by biome, time and party level", es:"¿Hay encuentro? De qué tipo, quién, haciendo qué, a qué distancia y de qué humor — según bioma, hora y nivel del grupo"},
+  context:[
+    {id:"biome", title:{en:"Biome", es:"Bioma"}, options:[
+      {id:"forest", text:{en:"Forest", es:"Bosque"}}, {id:"grassland", text:{en:"Grassland", es:"Llanura"}}, {id:"hills", text:{en:"Hills & mountains", es:"Colinas y montañas"}},
+      {id:"swamp", text:{en:"Swamp", es:"Pantano"}}, {id:"desert", text:{en:"Desert", es:"Desierto"}}, {id:"arctic", text:{en:"Arctic", es:"Ártico"}},
+      {id:"coast", text:{en:"Coast", es:"Costa"}}, {id:"underdark", text:{en:"Underground", es:"Subterráneo"}}, {id:"road", text:{en:"Busy road", es:"Camino transitado"}}]},
+    {id:"tier", title:{en:"Party level", es:"Nivel del grupo"}, options:[
+      {id:"low", text:{en:"Levels 1–4", es:"Niveles 1–4"}}, {id:"mid", text:{en:"Levels 5–10", es:"Niveles 5–10"}}, {id:"high", text:{en:"Levels 11+", es:"Niveles 11+"}}]},
+    {id:"time", title:{en:"Time", es:"Hora"}, options:[{id:"day", text:{en:"Day", es:"Día"}}, {id:"night", text:{en:"Night", es:"Noche"}}]},
+    {id:"threat", title:{en:"Threat", es:"Amenaza"}, options:[{id:"normal", text:{en:"Normal", es:"Normal"}}, {id:"high", text:{en:"High (monster threat)", es:"Alta (amenaza de monstruos)"}}]}],
+  tables:[
+    {id:"check", title:{en:"Encounter?", es:"¿Hay encuentro?"}, die:20, rows:[
+      R("Nada: el camino sigue tranquilo|Nothing: the way stays quiet", {id:"none", w:14, weight:{time:{night:.8}, threat:{high:.6}}}),
+      R("¡Encuentro!|Encounter!", {id:"yes", w:6, weight:{time:{night:1.5}, threat:{high:2}}})]},
+    {id:"kind", title:{en:"Kind", es:"Tipo"}, die:6, when:{check:["yes"]}, rows:[
+      R("Combate|Combat", {id:"combat", w:2, weight:{threat:{high:1.5}}}), R("Social|Social", {id:"social", w:1, weight:{time:{night:.5}}}),
+      R("Rastros de una criatura|Signs of a creature", {id:"sign", w:1}), R("Peligro natural|Natural hazard", {id:"hazard", w:1}), R("Hallazgo|Discovery", {id:"discovery", w:1})]},
+    {id:"creature", title:{en:"Creature", es:"Criatura"}, die:20, when:{kind:["combat","sign"]}, rows:creatures},
+    {id:"activity", title:{en:"Doing what", es:"Haciendo qué"}, die:8, when:{kind:["combat","sign"]}, rows:DT.rowsFixed([
+      "Cazando|Hunting", "Durmiendo|Sleeping", "Comiendo una presa|Eating a kill", "Peleando con otra cosa|Fighting something else",
+      "Vigilando su territorio|Guarding its territory", "De paso|Passing through", "Preparando una emboscada|Setting an ambush", "Huyendo de algo más grande|Fleeing something bigger"])},
+    {id:"social", title:{en:"Who", es:"Quién"}, die:12, when:{kind:["social"]}, rows:DT.rowsFixed([
+      "Mercaderes con una carreta rota|Merchants with a broken cart", "Peregrinos camino de un santuario|Pilgrims heading to a shrine", "Una patrulla que pide papeles|A patrol asking for papers",
+      "Un ermitaño que sabe demasiado|A hermit who knows too much", "Un niño perdido|A lost child", "Bandidos que cobran «peaje»|Bandits demanding a \"toll\"",
+      "Refugiados de una aldea quemada|Refugees from a burned village", "Un bardo en busca de historias|A bard looking for stories", "Aventureros rivales de vuelta de algo|Rival adventurers on their way back",
+      "Un druida que protege el lugar|A druid guarding this place", "Un mensajero herido|A wounded messenger", "Un cazarrecompensas tras alguien|A bounty hunter after someone"])},
+    {id:"hazard", title:{en:"Hazard", es:"Peligro"}, die:12, when:{kind:["hazard"]}, rows:[
+      R("Tormenta repentina|Sudden storm", {note:{es:"Visibilidad reducida: desventaja en Percepción que dependa de la vista.", en:"Poor visibility: disadvantage on sight-based Perception."}, only:{biome:["forest","grassland","hills","swamp","desert","arctic","coast","road"]}}),
+      R("Niebla espesa|Thick fog", {note:{es:"Más allá de 9 m (30 ft), todo muy oscurecido.", en:"Beyond 30 ft, everything is heavily obscured."}}),
+      R("Puente caído: rodear cuesta {1d4} horas|Collapsed bridge: going around takes {1d4} hours", B("forest","grassland","hills","swamp","road")),
+      R("Plantas venenosas|Poisonous plants", {note:{es:"CON CD 12 o envenenado 1 hora.", en:"DC 12 CON or poisoned for 1 hour."}, only:{biome:["forest","swamp","grassland"]}}),
+      R("Desprendimiento de rocas ({2d10} contundente, DES CD 13 mitad)|Rockslide ({2d10} bludgeoning, DC 13 DEX half)", B("hills","underdark")),
+      R("Arenas movedizas|Quicksand", {note:{es:"Te hundes; FUE (Atletismo) CD 12 para salir.", en:"You sink; DC 12 STR (Athletics) to get out."}, only:{biome:["swamp","desert"]}}),
+      R("Hielo fino|Thin ice", {note:{es:"Cede con más de una criatura Mediana; debajo, agua helada.", en:"Gives way under more than one Medium creature; freezing water below."}, only:{biome:["arctic"]}}),
+      R("Ventisca|Blizzard", {note:{es:"Muy oscurecido más allá de 9 m; terreno difícil.", en:"Heavily obscured beyond 30 ft; difficult terrain."}, only:{biome:["arctic","hills"]}}),
+      R("Tormenta de arena|Sandstorm", {note:{es:"Muy oscurecido; sin refugio, un nivel de cansancio al terminar el día.", en:"Heavily obscured; without shelter, one level of exhaustion at day's end."}, only:{biome:["desert"]}}),
+      R("La marea sube deprisa|The tide rises fast", B("coast")),
+      R("Gas nocivo en una galería ({1d6} veneno por turno)|Noxious gas in a tunnel ({1d6} poison per turn)", B("underdark","swamp")),
+      R("Incendio forestal a lo lejos|Wildfire in the distance", B("forest","grassland")),
+      R("Enjambre de insectos|Insect swarm", B("swamp","forest","grassland","desert")),
+      R("Una carreta volcada bloquea el paso|An overturned wagon blocks the way", B("road")),
+      R("Socavón (DES CD 12 o caída de {1d4*5} pies)|Sinkhole (DC 12 DEX or a {1d4*5}-ft fall)", B("grassland","road","hills"))]},
+    {id:"discovery", title:{en:"Discovery", es:"Hallazgo"}, die:12, when:{kind:["discovery"]}, rows:[
+      R("Un campamento abandonado a toda prisa|A hastily abandoned camp"), R("Un cadáver con un mapa en la mano|A corpse clutching a map"),
+      R("Un santuario olvidado|A forgotten shrine"), R("Un alijo escondido ({2d10} po)|A hidden cache ({2d10} gp)"),
+      R("Las ruinas de una torre|The ruins of a tower"), R("Un monolito con runas|A rune-carved monolith"), R("Un animal herido|A wounded animal"),
+      R("Huellas enormes que nadie reconoce|Huge tracks nobody recognizes"), R("Una cueva de la que sale humo|A cave with smoke coming out"),
+      R("Un pozo seco con una escalera|A dry well with a ladder", {only:{biome:["forest","grassland","hills","desert","road"]}}),
+      R("Un naufragio en la orilla|A shipwreck on the shore", B("coast")),
+      R("Hongos que brillan en la oscuridad|Mushrooms glowing in the dark", B("underdark","forest","swamp"))]},
+    {id:"reaction", title:{en:"Reaction", es:"Reacción"}, die:12, when:{kind:["combat","social"]}, rows:[
+      {lo:1, hi:3, text:{es:"Hostil: ataca o amenaza", en:"Hostile: attacks or threatens"}}, {lo:4, hi:6, text:{es:"Recelosa: se mantiene a distancia", en:"Wary: keeps its distance"}},
+      {lo:7, hi:9, text:{es:"Neutral: sigue a lo suyo", en:"Neutral: minds its own business"}}, {lo:10, hi:11, text:{es:"Curiosa: se acerca", en:"Curious: comes closer"}},
+      {lo:12, hi:12, text:{es:"Amistosa: ofrece algo", en:"Friendly: offers something"}}]},
+    {id:"distance", title:{en:"Distance", es:"Distancia"}, die:6, when:{check:["yes"]}, rows:[
+      R("{2d6*5} pies|{2d6*5} ft", B("forest","swamp","underdark")),
+      R("{2d6*10} pies|{2d6*10} ft", B("hills","road","coast")),
+      R("{2d6*50} pies|{2d6*50} ft", B("grassland","desert","arctic"))]}
+  ],
+  recordName: h=> `${h.ctxText("biome")} · ${h.text("creature") || h.text("social") || h.text("hazard") || h.text("discovery") || h.text("check")}`
+});
+})();
+</script>
+
+<!-- ===================== PESTAÑA · CLIMA ===================== -->
+<script>
+(function(){
+"use strict";
+const R = DT.row;
+const T = (...ids)=> ({temp:ids});
+DT.simpleTableTab({
+  id:"weather", icon:"⛅", order:60,
+  title:{en:"Weather", es:"Clima"},
+  tagline:{en:"Temperature, sky, wind and the odd phenomenon — by region and season, with what each one means at the table", es:"Temperatura, cielo, viento y algún fenómeno raro — según región y estación, con lo que significa en la mesa"},
+  context:[
+    {id:"climate", title:{en:"Region", es:"Región"}, options:[
+      {id:"temperate", text:{en:"Temperate", es:"Templada"}}, {id:"cold", text:{en:"Cold / polar", es:"Fría / polar"}}, {id:"arid", text:{en:"Arid / desert", es:"Árida / desierto"}},
+      {id:"tropical", text:{en:"Tropical", es:"Tropical"}}, {id:"mountain", text:{en:"High mountain", es:"Alta montaña"}}]},
+    {id:"season", title:{en:"Season", es:"Estación"}, options:[
+      {id:"spring", text:{en:"Spring", es:"Primavera"}}, {id:"summer", text:{en:"Summer", es:"Verano"}}, {id:"autumn", text:{en:"Autumn", es:"Otoño"}}, {id:"winter", text:{en:"Winter", es:"Invierno"}}]}],
+  tables:[
+    {id:"temp", title:{en:"Temperature", es:"Temperatura"}, die:20, rows:[
+      R("Helada (−10 °C o menos)|Freezing (14 °F or lower)", {id:"freezing",
+        note:{es:"Frío extremo: sin ropa de abrigo, salvación de CON CD 10 cada hora o un nivel de cansancio.", en:"Extreme cold: without cold-weather gear, DC 10 CON save each hour or gain a level of exhaustion."},
+        weight:{climate:{temperate:1, cold:6, arid:.3, tropical:0, mountain:4}, season:{spring:.3, summer:0, autumn:.5, winter:4}}}),
+      R("Frío (−10 a 5 °C)|Cold (14–41 °F)", {id:"cold", weight:{climate:{temperate:2, cold:5, arid:.8, tropical:0, mountain:4}, season:{spring:1, summer:.2, autumn:1.2, winter:3}}}),
+      R("Fresco (5 a 15 °C)|Cool (41–59 °F)", {id:"cool", weight:{climate:{temperate:4, cold:2, arid:1.5, tropical:.5, mountain:3}, season:{spring:2, summer:.8, autumn:2, winter:1}}}),
+      R("Templado (15 a 25 °C)|Mild (59–77 °F)", {id:"mild", weight:{climate:{temperate:5, cold:.8, arid:2, tropical:3, mountain:1.5}, season:{spring:2, summer:2, autumn:1.5, winter:.4}}}),
+      R("Caluroso (25 a 32 °C)|Warm (77–90 °F)", {id:"warm", weight:{climate:{temperate:2, cold:.1, arid:3, tropical:5, mountain:.4}, season:{spring:.7, summer:3, autumn:.6, winter:0}}}),
+      R("Muy caluroso (32 a 40 °C)|Hot (90–104 °F)", {id:"hot",
+        note:{es:"Beber el doble de agua; sin ella, el calor cansa como uno extremo.", en:"Drink twice the water; without it, treat as extreme heat."},
+        weight:{climate:{temperate:.5, cold:0, arid:4, tropical:3, mountain:0}, season:{spring:.3, summer:3, autumn:.3, winter:0}}}),
+      R("Calor extremo (40 °C o más)|Extreme heat (104 °F or more)", {id:"scorching",
+        note:{es:"Calor extremo: sin agua suficiente, salvación de CON cada hora (CD 5, +1 por hora) o un nivel de cansancio; desventaja con armadura media o pesada.", en:"Extreme heat: without enough water, CON save each hour (DC 5, +1 per hour) or gain a level of exhaustion; disadvantage in medium or heavy armor."},
+        weight:{climate:{temperate:.05, cold:0, arid:3, tropical:.8, mountain:0}, season:{spring:.1, summer:2, autumn:.1, winter:0}}})]},
+    {id:"sky", title:{en:"Sky", es:"Cielo"}, die:20, rows:[
+      R("Despejado|Clear", {id:"clear", w:6, weight:{climate:{arid:2, tropical:.7}}}),
+      R("Algunas nubes|Partly cloudy", {id:"partly", w:4}),
+      R("Nublado|Overcast", {id:"overcast", w:3, weight:{climate:{arid:.4}}}),
+      R("Niebla|Fog", {id:"fog", w:1.5, only:T("cold","cool","mild"), weight:{climate:{arid:.2, mountain:1.5}, season:{autumn:2, spring:1.5, summer:.3}},
+        note:{es:"Más allá de 9 m (30 ft), todo muy oscurecido.", en:"Beyond 30 ft, everything is heavily obscured."}}),
+      R("Lluvia ligera|Light rain", {id:"rain", w:3, only:T("cold","cool","mild","warm","hot"), weight:{climate:{arid:.2, tropical:2}, season:{spring:1.5, autumn:1.5, summer:.8}}}),
+      R("Lluvia fuerte o tormenta|Heavy rain or thunderstorm", {id:"storm", w:1.5, only:T("cool","mild","warm","hot"), weight:{climate:{arid:.2, tropical:3}, season:{summer:1.5, spring:1.2}},
+        note:{es:"Ligeramente oscurecido; desventaja en Percepción que dependa de la vista; apaga las llamas al aire libre.", en:"Lightly obscured; disadvantage on sight-based Perception; puts out open flames."}}),
+      R("Nieve|Snow", {id:"snow", w:3, only:T("freezing","cold"), weight:{climate:{arid:.3}},
+        note:{es:"Terreno difícil si cuaja.", en:"Difficult terrain if it settles."}}),
+      R("Ventisca|Blizzard", {id:"blizzard", w:1, only:T("freezing"),
+        note:{es:"Muy oscurecido más allá de 9 m; terreno difícil; viajar a la mitad de ritmo.", en:"Heavily obscured beyond 30 ft; difficult terrain; travel at half pace."}}),
+      R("Tormenta de arena|Sandstorm", {id:"sandstorm", w:1.5, only:{climate:["arid"]},
+        note:{es:"Muy oscurecido; sin refugio, un nivel de cansancio al acabar el día.", en:"Heavily obscured; without shelter, one level of exhaustion at day's end."}}),
+      R("Granizo|Hail", {id:"hail", w:.5, only:T("cool","mild","warm"), note:{es:"Sin cobijo, 1d4 de daño contundente por hora.", en:"Without cover, 1d4 bludgeoning per hour."}})]},
+    {id:"wind", title:{en:"Wind", es:"Viento"}, die:12, rows:[
+      R("En calma|Calm", {w:4, weight:{climate:{mountain:.5}}}),
+      R("Brisa|Breeze", {w:5}),
+      R("Viento fuerte|Strong wind", {w:2, weight:{climate:{mountain:2}},
+        note:{es:"Desventaja en ataques con armas a distancia y en Percepción que dependa del oído; apaga las llamas al aire libre; dispersa la niebla.", en:"Disadvantage on ranged weapon attacks and hearing-based Perception; puts out open flames; disperses fog."}}),
+      R("Vendaval|Gale", {w:.5, weight:{climate:{mountain:2}},
+        note:{es:"Como viento fuerte, y volar sin magia es imposible.", en:"As strong wind, and nonmagical flight is impossible."}})]},
+    {id:"omen", title:{en:"Anything unusual?", es:"¿Algo fuera de lo común?"}, die:20, rows:[
+      R("Nada especial|Nothing special", {w:13}),
+      R("Un arcoíris doble|A double rainbow", {w:2, only:{sky:["rain","storm"]}}),
+      R("Una aurora en el cielo nocturno|An aurora in the night sky", {w:1.5, only:{climate:["cold","mountain"]}}),
+      R("Lluvia de estrellas fugaces|A meteor shower", {w:1}),
+      R("Un atardecer rojo sangre|A blood-red sunset", {w:1}),
+      R("Silencio extraño: ni un pájaro|Eerie silence: not a single bird", {w:1}),
+      R("Luces raras en el horizonte|Strange lights on the horizon", {w:.5}),
+      R("Llueve ceniza de algún volcán lejano|Ash falls from some distant volcano", {w:.3}),
+      R("Un viento cálido fuera de temporada|A warm wind out of season", {w:.5}),
+      R("Un halo alrededor de la luna|A halo around the moon", {w:.5})]}
+  ],
+  recordName: h=> `${h.ctxText("climate")}, ${h.ctxText("season").toLowerCase()} · ${h.text("temp").split(" (")[0]} · ${h.text("sky")}`
+});
+})();
+</script>
+
+<!-- ===================== PESTAÑA · BOTÍN ===================== -->
+<script>
+(function(){
+"use strict";
+// Tablas propias (las de tesoro del DMG no están en el SRD 5.1). Los objetos mágicos usan nombres y rarezas del SRD 5.1.
+// Monedas: ES pc/pp/po/ppt (cobre, plata, oro, platino) · EN cp/sp/gp/pp.
+const R = DT.row;
+const W = (tier, kind)=> ({only:{tier:[tier], kind:[kind]}});
+const V = (text, id, tier, kind, w)=> R(text, {id, w:w||1, only:{tier:[tier], kind:[kind]}});
+const gems = {
+  g10:["Ágata|Agate","Cuarzo azul|Blue quartz","Hematites|Hematite","Malaquita|Malachite","Ojo de tigre|Tiger eye","Turquesa|Turquoise"],
+  g50:["Heliotropo|Bloodstone","Cornalina|Carnelian","Jaspe|Jasper","Piedra de luna|Moonstone","Ónice|Onyx","Circón|Zircon"],
+  g100:["Ámbar|Amber","Amatista|Amethyst","Granate|Garnet","Jade|Jade","Perla|Pearl","Turmalina|Tourmaline"],
+  g500:["Alejandrita|Alexandrite","Aguamarina|Aquamarine","Perla negra|Black pearl","Espinela azul|Blue spinel","Peridoto|Peridot","Topacio|Topaz"],
+  g1000:["Ópalo negro|Black opal","Zafiro azul|Blue sapphire","Esmeralda|Emerald","Ópalo de fuego|Fire opal","Ópalo|Opal","Rubí estrella|Star ruby"],
+  g5000:["Diamante|Diamond","Jacinto|Jacinth","Rubí|Ruby","Zafiro negro|Black sapphire","Diamante azul|Blue diamond","Esmeralda sin defectos|Flawless emerald"]};
+const art = {
+  a25:["Cáliz de cobre con filigrana|Copper chalice with filigree","Estatuilla de hueso tallado|Carved bone statuette","Peine de plata|Silver comb",
+    "Máscara de terciopelo bordada|Embroidered velvet mask","Espejo de mano con marco de latón|Hand mirror in a brass frame","Caja de música pequeña|Small music box"],
+  a250:["Anillo de oro con el sello de una familia|Gold signet ring of a noble family","Tapiz pequeño de una cacería|Small tapestry of a hunt","Daga ceremonial con empuñadura de plata|Ceremonial dagger with a silver hilt",
+    "Collar de plata con un colgante de ámbar|Silver necklace with an amber pendant","Cofre de maderas taraceadas|Inlaid wooden casket","Icono pintado sobre pan de oro|Icon painted on gold leaf"],
+  a750:["Copa de plata con piedras de luna|Silver goblet set with moonstones","Arpa de madera exótica|Harp of exotic wood","Ídolo de oro de un dios olvidado|Gold idol of a forgotten god",
+    "Brazalete de oro con granates|Gold bracelet with garnets","Reloj de sol portátil de plata|Portable silver sundial","Cuerno de beber con bandas de oro|Drinking horn with gold bands"],
+  a2500:["Cadena de oro con un ópalo de fuego|Gold chain with a fire opal","Retrato de un maestro antiguo|Portrait by an old master","Capa de seda bordada con perlas|Silk cloak embroidered with pearls",
+    "Brazalete de platino con zafiros|Platinum bracelet with sapphires","Ajedrez de oro y jade|Gold-and-jade chess set","Tiara de plata con esmeraldas pequeñas|Silver tiara with small emeralds"],
+  a7500:["Corona de oro enjoyada|Jeweled gold crown","Cetro de platino con un rubí|Platinum scepter with a ruby","Estatuilla de oro de un dragón con ojos de diamante|Gold dragon statuette with diamond eyes",
+    "Relicario de oro y esmeraldas|Gold-and-emerald reliquary","Espejo de plata que fue de una reina|Silver mirror that belonged to a queen","Máscara funeraria de oro|Gold funerary mask"]};
+const byGroup = (groups)=> Object.entries(groups).flatMap(([g, list])=> list.map(x=> R(x, {only:{val:[g]}})));
+const items = {
+  common:["Poción de curación|Potion of healing","Poción de trepar|Potion of climbing","Pergamino de conjuro (truco)|Spell scroll (cantrip)","Pergamino de conjuro (nivel 1)|Spell scroll (1st level)"],
+  uncommon:["Bolsa de contención|Bag of holding","Capa de protección|Cloak of protection","Botas élficas|Boots of elvenkind","Gafas de noche|Goggles of night",
+    "Varita de proyectiles mágicos|Wand of magic missiles","Arma +1|+1 weapon","Escudo +1|+1 shield","Poción de curación mayor|Potion of greater healing",
+    "Cuerda de trepar|Rope of climbing","Vara inamovible|Immovable rod","Guanteletes de fuerza de ogro|Gauntlets of ogre power","Sombrero del disfraz|Hat of disguise"],
+  rare:["Anillo de protección|Ring of protection","Arma +2|+2 weapon","Armadura +1|+1 armor","Capa de desplazamiento|Cloak of displacement","Lengua de fuego|Flame tongue",
+    "Varita de bolas de fuego|Wand of fireballs","Agujero portátil|Portable hole","Botas de velocidad|Boots of speed","Poción de curación superior|Potion of superior healing","Amuleto de salud|Amulet of health"],
+  veryrare:["Arma +3|+3 weapon","Armadura +2|+2 armor","Anillo de regeneración|Ring of regeneration","Alfombra voladora|Carpet of flying","Bastón de fuego|Staff of fire",
+    "Poción de curación suprema|Potion of supreme healing","Cinturón de fuerza de gigante de escarcha|Belt of frost giant strength","Varita de polimorfismo|Wand of polymorph"],
+  legendary:["Armadura +3|+3 armor","Espada vorpalina|Vorpal sword","Vengador sagrado|Holy avenger","Bastón de los magos|Staff of the magi",
+    "Anillo de tres deseos|Ring of three wishes","Cubo portal|Cubic gate","Baraja de muchas cosas|Deck of many things","Túnica del archimago|Robe of the archmagi"]};
+DT.simpleTableTab({
+  id:"loot", icon:"💰", order:70,
+  title:{en:"Loot", es:"Botín"},
+  tagline:{en:"Coins, gems, art objects, a magic item and a curiosity — for a pocket or a hoard, by level. Own tables; magic item names from the SRD 5.1", es:"Monedas, gemas, objetos de arte, un objeto mágico y una curiosidad — para un bolsillo o un alijo, según el nivel. Tablas propias; nombres de objetos mágicos del SRD 5.1"},
+  context:[
+    {id:"tier", title:{en:"Challenge", es:"Desafío"}, options:[
+      {id:"low", text:{en:"CR 0–4", es:"VD 0–4"}}, {id:"mid", text:{en:"CR 5–10", es:"VD 5–10"}}, {id:"high", text:{en:"CR 11–16", es:"VD 11–16"}}, {id:"epic", text:{en:"CR 17+", es:"VD 17+"}}]},
+    {id:"kind", title:{en:"Kind", es:"Tipo"}, options:[
+      {id:"pocket", text:{en:"What one creature carries", es:"Lo que lleva una criatura"}}, {id:"hoard", text:{en:"Hoard / lair", es:"Alijo / guarida"}}]}],
+  tables:[
+    {id:"coins", title:{en:"Coins", es:"Monedas"}, die:6, rows:[
+      R("{3d6} pc|{3d6} cp", W("low","pocket")), R("{2d6} pp|{2d6} sp", W("low","pocket")), R("{1d6} po|{1d6} gp", W("low","pocket")),
+      R("{4d6*10} pp y {2d6*5} po|{4d6*10} sp and {2d6*5} gp", W("low","hoard")), R("{3d6*10} po|{3d6*10} gp", W("low","hoard")), R("{1d4*100} po|{1d4*100} gp", W("low","hoard")),
+      R("{4d6} po|{4d6} gp", W("mid","pocket")), R("{2d6*5} po|{2d6*5} gp", W("mid","pocket")), R("{2d6} po y {1d4} ppt|{2d6} gp and {1d4} pp", W("mid","pocket")),
+      R("{2d6*100} po|{2d6*100} gp", W("mid","hoard")), R("{4d6*50} po y {2d6} ppt|{4d6*50} gp and {2d6} pp", W("mid","hoard")), R("{1d4*500} po|{1d4*500} gp", W("mid","hoard")),
+      R("{4d6*10} po|{4d6*10} gp", W("high","pocket")), R("{2d6*5} ppt|{2d6*5} pp", W("high","pocket")), R("{3d6*10} po|{3d6*10} gp", W("high","pocket")),
+      R("{4d6*500} po|{4d6*500} gp", W("high","hoard")), R("{2d6*1000} po|{2d6*1000} gp", W("high","hoard")), R("{3d6*100} ppt|{3d6*100} pp", W("high","hoard")),
+      R("{2d6*100} po|{2d6*100} gp", W("epic","pocket")), R("{4d6*10} ppt|{4d6*10} pp", W("epic","pocket")), R("{1d6*500} po|{1d6*500} gp", W("epic","pocket")),
+      R("{6d6*1000} po|{6d6*1000} gp", W("epic","hoard")), R("{4d6*1000} po y {2d6*100} ppt|{4d6*1000} gp and {2d6*100} pp", W("epic","hoard")), R("{3d6*500} ppt|{3d6*500} pp", W("epic","hoard"))]},
+    {id:"val", title:{en:"Valuables", es:"Objetos de valor"}, die:6, rows:[
+      V("Nada|Nothing", "none", "low","pocket", 4), V("{1d2} gema(s) de 10 po cada una|{1d2} gem(s) worth 10 gp each", "g10", "low","pocket", 2),
+      V("Nada|Nothing", "none", "low","hoard"), V("{2d4} gemas de 10 po|{2d4} gems worth 10 gp", "g10", "low","hoard"), V("{1d4} gemas de 50 po|{1d4} gems worth 50 gp", "g50", "low","hoard"), V("{1d4} objetos de arte de 25 po|{1d4} art objects worth 25 gp", "a25", "low","hoard"),
+      V("Nada|Nothing", "none", "mid","pocket", 3), V("{1d2} gema(s) de 50 po|{1d2} gem(s) worth 50 gp", "g50", "mid","pocket"), V("{1d2} objeto(s) de arte de 25 po|{1d2} art object(s) worth 25 gp", "a25", "mid","pocket"),
+      V("Nada|Nothing", "none", "mid","hoard", .5), V("{2d4} gemas de 50 po|{2d4} gems worth 50 gp", "g50", "mid","hoard"), V("{1d6} gemas de 100 po|{1d6} gems worth 100 gp", "g100", "mid","hoard"), V("{1d4} objetos de arte de 250 po|{1d4} art objects worth 250 gp", "a250", "mid","hoard"),
+      V("Nada|Nothing", "none", "high","pocket", 2), V("{1d2} gema(s) de 100 po|{1d2} gem(s) worth 100 gp", "g100", "high","pocket"), V("Un objeto de arte de 250 po|One art object worth 250 gp", "a250", "high","pocket"),
+      V("{1d6} gemas de 500 po|{1d6} gems worth 500 gp", "g500", "high","hoard"), V("{1d4} gemas de 1.000 po|{1d4} gems worth 1,000 gp", "g1000", "high","hoard"), V("{1d4} objetos de arte de 750 po|{1d4} art objects worth 750 gp", "a750", "high","hoard"), V("{1d2} objeto(s) de arte de 2.500 po|{1d2} art object(s) worth 2,500 gp", "a2500", "high","hoard"),
+      V("Nada|Nothing", "none", "epic","pocket"), V("{1d2} gema(s) de 500 po|{1d2} gem(s) worth 500 gp", "g500", "epic","pocket"), V("Un objeto de arte de 750 po|One art object worth 750 gp", "a750", "epic","pocket"),
+      V("{2d4} gemas de 1.000 po|{2d4} gems worth 1,000 gp", "g1000", "epic","hoard"), V("{1d4} gemas de 5.000 po|{1d4} gems worth 5,000 gp", "g5000", "epic","hoard"), V("{1d6} objetos de arte de 2.500 po|{1d6} art objects worth 2,500 gp", "a2500", "epic","hoard"), V("{1d4} objetos de arte de 7.500 po|{1d4} art objects worth 7,500 gp", "a7500", "epic","hoard")]},
+    {id:"gem", title:{en:"Which gems", es:"Qué gemas"}, die:6, when:{val:["g10","g50","g100","g500","g1000","g5000"]}, rows:byGroup(gems)},
+    {id:"art", title:{en:"Which art object", es:"Qué objeto de arte"}, die:6, when:{val:["a25","a250","a750","a2500","a7500"]}, rows:byGroup(art)},
+    {id:"magic", title:{en:"Magic item?", es:"¿Objeto mágico?"}, die:20, rows:[
+      R("No hay|None", {id:"none", weight:{tier:{low:12, mid:8, high:5, epic:2}, kind:{pocket:3, hoard:1}}}),
+      R("Común|Common", {id:"common", weight:{tier:{low:5, mid:3, high:1, epic:.5}}}),
+      R("Poco común|Uncommon", {id:"uncommon", weight:{tier:{low:2, mid:4, high:3, epic:1}}}),
+      R("Raro|Rare", {id:"rare", weight:{tier:{low:0, mid:1.5, high:3, epic:3}, kind:{pocket:.3}}}),
+      R("Muy raro|Very rare", {id:"veryrare", weight:{tier:{low:0, mid:.2, high:1.5, epic:3}, kind:{pocket:.2}}}),
+      R("Legendario|Legendary", {id:"legendary", weight:{tier:{low:0, mid:0, high:.2, epic:1.5}, kind:{pocket:0}}})]},
+    {id:"item", title:{en:"Which item", es:"Qué objeto"}, die:20, when:{magic:["common","uncommon","rare","veryrare","legendary"]},
+      rows:Object.entries(items).flatMap(([rar, list])=> list.map(x=> R(x, {only:{magic:[rar]}})))},
+    {id:"curio", title:{en:"Curiosity", es:"Curiosidad"}, die:20, rows:DT.rowsFixed([
+      "Un mechón de pelo atado con un lazo|A lock of hair tied with a ribbon", "Un mapa al que le falta una esquina|A map missing one corner", "Un ojo de cristal|A glass eye",
+      "Una carta de amor sin firmar|An unsigned love letter", "Un dado que siempre saca 3|A die that always rolls a 3", "La llave de una puerta que nadie conoce|The key to a door nobody knows",
+      "Un diente de dragón (¿auténtico?)|A dragon's tooth (genuine?)", "Un caballito de madera tallada|A carved wooden horse", "Un pagaré firmado por un noble|An IOU signed by a noble",
+      "Una moneda de un reino que ya no existe|A coin from a kingdom that no longer exists", "Un frasco con una luciérnaga que no se muere|A jar with a firefly that never dies",
+      "Un diario con la última página arrancada|A diary with the last page torn out", "Un anillo de latón con un nombre grabado|A brass ring engraved with a name",
+      "Una pluma que escribe sola una palabra|A quill that writes one word by itself", "Un silbato de hueso|A bone whistle", "Una piedra siempre tibia|A stone that's always warm",
+      "Un retrato en miniatura|A miniature portrait", "Un yesquero con unas iniciales|A tinderbox with initials", "Un saquito de semillas desconocidas|A pouch of unknown seeds",
+      "Una campanilla sin badajo|A little bell with no clapper"])}
+  ]
+});
 })();
 </script>
 

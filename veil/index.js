@@ -12,8 +12,9 @@
  *                  del mundo, así viaja en el respaldo, el paquete y la copia sin conexión.
  *                  `saved {id}` le confirma a la app qué ya está en el mundo.
  *   · `toScreen` → cualquier cosa a una pantalla de DM, como tarjeta `snap` con Markdown.
- *   · `toArticle` → un asentamiento se vuelve su artículo (plantilla `settlement`). Repetirlo
- *                  solo reemplaza el bloque del mercado (`:::nota 🛒 …`); la prosa no se toca.
+ *   · `toArticle` → un resultado se vuelve su artículo (un asentamiento → `settlement`, un PNJ →
+ *                  `character`…). Repetirlo solo reemplaza su bloque (`:::nota <marca> …`); la prosa
+ *                  no se toca.
  *
  * Aquí no hay reglas ni tablas: todo eso vive en la app. Este archivo solo traduce mensajes a
  * llamadas de `ctx`.
@@ -60,14 +61,17 @@ const enc = encodeURIComponent;
 // El mismo slug que usa Veil (lib/markdown.mjs), para encontrar un artículo por su título.
 const slugify = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-// El bloque del mercado dentro de un artículo: de `:::nota 🛒…` hasta su `:::`.
-const BLOCK_RE = /^:::nota 🛒[^\n]*\n[\s\S]*?^:::[ \t]*$/m;
-export const withBlock = (body, block) => (BLOCK_RE.test(body) ? body.replace(BLOCK_RE, () => block) : `${String(body || '').trimEnd()}\n\n${block}\n`);
-export function sectionsBody(sections, block) {
+// El bloque de la app dentro de un artículo: de `:::nota <marca>…` hasta su `:::`. La marca (un emoji)
+// la elige cada pestaña; por omisión 🛒, el del mercado.
+const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const blockRe = (marker = '🛒') => new RegExp(`^:::nota ${reEsc(marker)}[^\\n]*\\n[\\s\\S]*?^:::[ \\t]*$`, 'm');
+export const withBlock = (body, block, marker) => { const re = blockRe(marker); return re.test(body) ? body.replace(re, () => block) : `${String(body || '').trimEnd()}\n\n${block}\n`; };
+export function sectionsBody(sections, block, section = 'econom') {
   let placed = false;
+  const want = new RegExp(section, 'i');
   const parts = (sections || []).map((s) => {
     let x = `## ${s}\n\n`;
-    if (!placed && /econom/i.test(s)) { x += `${block}\n\n`; placed = true; }
+    if (!placed && want.test(s)) { x += `${block}\n\n`; placed = true; }
     return x;
   });
   if (!placed) parts.push(`${block}\n`);
@@ -157,10 +161,12 @@ export function mount(container, ctx) {
 
   async function toArticle(m) {
     const a = m.article || {};
-    if (!ctx.canEdit || !a.title || !a.block) return { slug: null };
+    const marker = String(a.marker || '🛒');
+    // El bloque tiene que empezar por su marca: si no, al repetir no se encontraría y se duplicaría.
+    if (!ctx.canEdit || !a.title || !String(a.block || '').startsWith(`:::nota ${marker}`)) return { slug: null };
     const addBlock = async (slug) => {
       const full = await ctx.api.get(`articles/${slug}`).then((r) => r.article);
-      await ctx.api.put(`articles/${slug}`, { ...full, body: withBlock(full.body || '', a.block) });
+      await ctx.api.put(`articles/${slug}`, { ...full, body: withBlock(full.body || '', a.block, marker) });
       return slug;
     };
     // Ya enlazado: se actualiza el mercado y nada más.
@@ -173,7 +179,7 @@ export function mount(container, ctx) {
     }
     const sections = ctx.templateOf?.(a.template || 'settlement')?.sections || [];
     const r = await ctx.api.post('articles', { slug: slugify(a.title), title: a.title, template: a.template || 'settlement',
-      fields: a.fields || {}, subtitle: a.subtitle || '', summary: a.summary || '', body: sectionsBody(sections, a.block) });
+      fields: a.fields || {}, subtitle: a.subtitle || '', summary: a.summary || '', body: sectionsBody(sections, a.block, a.section || 'econom') });
     return { slug: r.article?.slug || slugify(a.title), open: true };
   }
 

@@ -9,8 +9,14 @@ available at https://creativecommons.org/licenses/by/4.0/legalcode.
 Specifically, base item prices in the vendor catalog and in the special-piece
 tables are drawn from the SRD 5.1 equipment tables (and, for a few poisons and
 gems, from the SRD 5.1 poison and treasure lists) where such an item exists.
-Vendor concepts, settlement states, market events, shopkeeper and rumor tables,
-settlement generation logic, prose, and all other content are original work.
+Food, drink and lodging prices in the Tavern tab follow the SRD 5.1 tables.
+Creature names in the Travel Encounters tab and magic item names and rarities
+in the Loot tab are taken from the SRD 5.1. Rules effects mentioned in notes
+(extreme cold and heat, heavy precipitation, strong wind) are paraphrased.
+Vendor concepts, settlement states, market events, shopkeeper, NPC, tavern,
+job, encounter, weather and treasure tables (coin amounts, gem and art object
+lists, curiosities), generation logic, prose, and all other content are
+original work.
 
 # Fan Content disclaimer
 

@@ -21,35 +21,71 @@ Hay dos caminos.
 
 ## A · Pestaña declarativa (solo datos)
 
-Para generadores del tipo «tira en estas tablas y enséñame el resultado» (clima, nombres,
-complicaciones…). No hay que escribir interfaz: `DT.simpleTableTab` da botón «Tirar todo»,
-tarjetas con ↻ por tabla, guardado, biblioteca, exportar/importar, Markdown, la pantalla de DM
-de Veil y las tablas de referencia con sus rangos.
+Para generadores del tipo «tira en estas tablas y enséñame el resultado». No hay que escribir
+interfaz: `DT.simpleTableTab` da selectores de contexto, «Tirar todo», tarjetas con ↻ por tabla,
+guardado, biblioteca, exportar/importar, Markdown, la pantalla de DM y el artículo de Veil, y las
+tablas de referencia con sus rangos. Cinco de las siete pestañas son así (PNJ rápido, Taberna,
+Encuentros de viaje, Clima, Botín): úsalas de ejemplo.
 
 ```html
 <!-- ===================== PESTAÑA · CLIMA ===================== -->
 <script>
+(function(){
+"use strict";
+const R = DT.row;   // R("texto ES|English text", {id, w, only, weight, note})
 DT.simpleTableTab({
-  id: "weather", icon: "⛅", order: 20,
+  id: "weather", icon: "⛅", order: 60,
   title:   { en: "Weather", es: "Clima" },
-  tagline: { en: "Sky, temperature and wind for the day", es: "Cielo, temperatura y viento del día" },
+  tagline: { en: "…", es: "…" },
+  // Selectores. Lo elegido se guarda con el resultado (data.ctx) y condiciona las filas.
+  context: [
+    { id: "season", title: { en: "Season", es: "Estación" }, options: [
+      { id: "summer", text: { en: "Summer", es: "Verano" } },
+      { id: "winter", text: { en: "Winter", es: "Invierno" } } ] } ],
   tables: [
-    // Rangos fijos (como en un libro): lo/hi deben cubrir el dado entero, sin huecos.
-    { id: "sky", die: 6, title: { en: "Sky", es: "Cielo" }, rows: [
-      { lo: 1, hi: 3, text: { en: "Clear", es: "Despejado" } },
-      { lo: 4, hi: 5, text: { en: "Cloudy", es: "Nublado" } },
-      { lo: 6, hi: 6, text: { en: "Storm", es: "Tormenta" } } ] },
-    // Pesos (w): el núcleo reparte las caras. Más peso = rango más ancho.
-    { id: "wind", die: 20, title: { en: "Wind", es: "Viento" }, rows: [
-      { w: 6, text: { en: "Calm", es: "Calma" } },
-      { w: 3, text: { en: "Breeze", es: "Brisa" } },
-      { w: 1, text: { en: "Gale", es: "Vendaval" } } ] }
-  ]
+    // Filas con peso (w) que cambia según el contexto: más peso = rango más ancho en el dado.
+    { id: "temp", die: 20, title: { en: "Temperature", es: "Temperatura" }, rows: [
+      R("Frío|Cold", { id: "cold", weight: { season: { summer: .2, winter: 3 } } }),
+      R("Calor|Hot", { id: "hot", weight: { season: { summer: 3, winter: 0 } },
+        note: { en: "Drink twice the water.", es: "Beber el doble de agua." } }) ] },
+    // Filas que solo existen si una tabla ANTERIOR sacó cierto id.
+    { id: "sky", die: 20, title: { en: "Sky", es: "Cielo" }, rows: [
+      R("Despejado|Clear", { w: 6 }),
+      R("Nieve|Snow", { w: 3, only: { temp: ["cold"] } }) ] },
+    // Una tabla que solo se tira a veces, varias veces, y con dados dentro del texto.
+    { id: "birds", die: 6, title: { en: "Birds", es: "Pájaros" }, when: { temp: ["hot"] }, count: "1d3",
+      rows: DT.rowsFixed(["{1d6} cuervos|{1d6} crows", "Un halcón|A hawk", "Nada|Nothing", "Una bandada de {2d10} gorriones|A flock of {2d10} sparrows", "Buitres|Vultures", "Gaviotas|Gulls"]) }
+  ],
+  recordName: h => `${h.ctxText("season")} · ${h.text("temp")}`   // opcional
 });
+})();
 </script>
 ```
 
-Con dos o más pestañas aparece sola la barra de pestañas.
+| En la tabla | Qué hace |
+|---|---|
+| `die`, `rows` | El dado y sus filas: `lo`/`hi` (rangos fijos, «de libro») **o** `w` (pesos; el núcleo reparte las caras). |
+| `only: {clave: [ids]}` | La fila solo vale si el contexto —o el `id` que salió en una tabla **anterior**— coincide. |
+| `weight: {clave: {id: factor}}` | Multiplica el peso según lo mismo (0 la quita). Las filas condicionadas usan `w`, no `lo`/`hi`. |
+| `when: {clave: [ids]}` | La tabla entera solo se tira si coincide. |
+| `count` | `"1d4"`, `3` o `{clave: {id: "1d4", default: 1}}`: tira la tabla varias veces. |
+| `{2d6*10}` en el texto | Se tira al salir la fila y se guarda. EN y ES deben llevar **los mismos dados en el mismo orden** (hay prueba). |
+| `note` | Texto bajo el resultado (p. ej. el efecto en la mesa). |
+| `hidden` | No sale como tarjeta: sirve para componer el nombre (`recordName`), como en Taberna. |
+| `dm` | Sale en la tarjeta y en la pantalla de DM, pero no en el Markdown para jugadores ni en el artículo. |
+
+| En la pestaña | Qué hace |
+|---|---|
+| `context` | Selectores `[{id, title, options:[{id, text}], default?}]`. |
+| `recordName(h)` | Nombre del resultado. `h.text(tabla)`, `h.row(tabla)`, `h.ctxText(clave)`. Con él aparece el botón 🎲 que vuelve a tirar solo las tablas ocultas. |
+| `article(rec, h)` | Artículo de Veil: `{title, template, fields, subtitle, summary, marker, section, block: h.block(marker, etiqueta)}`. `marker` es un emoji que identifica su bloque (`:::nota 🧑 …`); `section`, la sección de la plantilla donde va la primera vez. Repetir solo reemplaza ese bloque. |
+
+Al volver a tirar una tabla con ↻, se vuelven a tirar también las que dependen de ella.
+
+**Datos compartidos**: lo que usan varias pestañas vive en el bloque `DATOS COMPARTIDOS` como
+`DT.lib.*` (p. ej. `DT.lib.npc`: ascendencias con sus nombres, personalidad, manías, actitud,
+rumores y veracidad, que usan Vendedores, PNJ rápido y Taberna; `DT.lib.npc.nameRows("tabla")`
+da los nombres que dependen de la ascendencia que salió en esa tabla).
 
 ## B · Pestaña completa (`DT.registerTab`)
 
@@ -144,17 +180,21 @@ Todo resultado guardado de cualquier pestaña **viaja solo a Veil** (documento `
 mundo). La pantalla de DM funciona con cualquier `toMarkdown`. El artículo de Veil hoy solo lo
 hace Vendedores (`articlePayload`); otra pestaña puede hacer el suyo con `DT.bridge.toArticle`.
 
-## Ideas de pestañas
+## Pestañas que hay
 
-En orden de valor por esfuerzo:
+| Pestaña | Tipo | Nota |
+|---|---|---|
+| ⚖️ Vendedores | completa | La original: estado, evento semanal, tenderos, existencias, regateo. |
+| 📜 Tablón de encargos | completa | Lee las ciudades guardadas en Vendedores: sus tenderos pagan y sus rumores se vuelven encargos. |
+| 🧑 PNJ rápido | declarativa | Usa `DT.lib.npc`. Artículo de personaje en Veil. |
+| 🍺 Taberna | declarativa | Nombre compuesto con tablas ocultas y concordancia de género. Artículo de edificio en Veil. |
+| 🐺 Encuentros de viaje | declarativa | 9 biomas × 3 niveles × día/noche × amenaza. Criaturas del SRD 5.1. |
+| ⛅ Clima | declarativa | Región × estación; efectos de frío y calor extremos, lluvia, niebla, viento. |
+| 💰 Botín | declarativa | Tablas propias (las del DMG no están en el SRD 5.1); objetos mágicos con nombre y rareza del SRD 5.1. |
 
-1. **PNJ rápido**: reutiliza las tablas del tendero (ascendencia, rasgo, manía, actitud,
-   rumor) + oficio, motivación y secreto. Casi todo el contenido ya existe.
-2. **Tablón de encargos**: patrón, trabajo, complicación y paga escalada al tamaño del
-   asentamiento; se engancha con los rumores.
-3. **Clima** por clima y estación: pestaña declarativa pura, sirve para estrenar el patrón A.
-4. **Encuentros de viaje por bioma**, con el estado «amenaza de monstruos» subiendo la
-   probabilidad.
-5. **Taberna a fondo**: nombre, plato y bebida de la casa, parroquianos, lo que pasa esta noche.
-6. **Botín por nivel**: cuidado con la licencia — las tablas de tesoro del DMG no están en el
-   SRD 5.1; hay que escribir tablas propias.
+## Ideas para después
+
+- **Facciones y gremios**: qué quieren, a quién odian, qué ofrecen.
+- **Complicaciones de tiempo libre** (entre sesiones).
+- **Nombres de lugares** (pueblos, ríos, montañas) con la misma técnica que el nombre de la taberna.
+- **Rumores por asentamiento**: una tabla que lea los rumores de una ciudad guardada, como el Tablón.

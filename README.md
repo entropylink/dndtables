@@ -1,8 +1,23 @@
 # D&D Tables / Tablas D&D
 
-*Single-file, dependency-free, offline HTML tool with table generators for a 5e tabletop campaign. Its first tab generates the vendors of a settlement — weighted d100 tables, settlement state and weekly market events, shopkeepers with rumors, stock of the day, realistic variable pricing, Persuasion-based haggling, and persistent, exportable cities. Fully bilingual EN/ES. Built to grow by tabs, and it plugs into [Veil](https://github.com/entropylink/dnd-veil) as a DM tool. Open `index.html` in any browser, or try it live at [entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/).*
+*Single-file, dependency-free, offline HTML tool with table generators for a 5e tabletop campaign. Seven tabs: settlement vendors (weighted d100 tables, settlement state and weekly market events, shopkeepers with rumors, stock of the day, variable pricing, Persuasion haggling), a job board fed by your saved cities, quick NPCs, taverns, travel encounters, weather and loot. Fully bilingual EN/ES. Built to grow by tabs, and it plugs into [Veil](https://github.com/entropylink/dnd-veil) as a DM tool. Open `index.html` in any browser, or try it live at [entropy.com.mx/vendor-gen/](https://entropy.com.mx/vendor-gen/).*
 
 Herramienta HTML autónoma (un solo archivo, sin dependencias ni conexión) con generadores de tablas para el DM. Abre `index.html` en cualquier navegador.
+
+## Pestañas
+
+| | Pestaña | Qué genera |
+|---|---|---|
+| ⚖️ | **Vendedores** | Los vendedores de un asentamiento (abajo, en detalle). |
+| 📜 | **Tablón de encargos** | Quién paga, qué, dónde, plazo, complicación y recompensa según el asentamiento y el nivel. Con una ciudad guardada, sus tenderos pagan y sus rumores se vuelven encargos. Copia para el DM o para los jugadores. |
+| 🧑 | **PNJ rápido** | Nombre según ascendencia, edad, oficio según el entorno, aspecto, personalidad, manía, actitud (mueve la CD social), qué quiere, su secreto y un rumor con su veracidad. |
+| 🍺 | **Taberna** | Nombre («La Jarra Dorada», «El Grifo y la Llave»), posadero, plato y bebida con precio, habitaciones según categoría, parroquianos, lo que pasa esta noche y lo que se oye en la barra. |
+| 🐺 | **Encuentros de viaje** | ¿Hay encuentro?, tipo, criatura (SRD 5.1) y qué hace, gente, peligros naturales con su efecto, hallazgos, reacción y distancia — por bioma, nivel, hora y amenaza. |
+| ⛅ | **Clima** | Temperatura, cielo, viento y algo fuera de lo común, por región y estación, con lo que significa en la mesa. |
+| 💰 | **Botín** | Monedas, gemas u objetos de arte, objeto mágico (nombres y rarezas del SRD 5.1) y una curiosidad — para un bolsillo o un alijo, por desafío. |
+
+Cada pestaña guarda sus resultados, los exporta e importa, copia como Markdown y enseña sus
+tablas de referencia con los rangos del dado, para tirar a mano.
 
 ## Pestaña ⚖️ Vendedores
 
@@ -50,8 +65,8 @@ Y en cada ficha:
 
 `node veil/install.mjs ../dnd-veil` la instala como extensión de Veil (**⚅ Tablas D&D** en cada
 mundo). Ahí los resultados se guardan **con el mundo**, cualquier cosa va a la **pantalla de DM**,
-y un asentamiento se vuelve su **artículo** (plantilla de asentamiento, mercado en «Economía»,
-actualizable sin tocar tu prosa). Detalles: [`veil/README.md`](veil/README.md) y
+y un asentamiento, un PNJ o una taberna se vuelven su **artículo** (asentamiento, personaje o
+edificio), actualizable sin tocar tu prosa. Detalles: [`veil/README.md`](veil/README.md) y
 [`docs/VEIL.md`](docs/VEIL.md).
 
 ## Agregar pestañas
