@@ -808,7 +808,7 @@ DT.onLang(()=>{ for(const t of DT.tabs.values()) if(t._mounted){ try{ t.onLang &
 // def = {id, icon, title, tagline, order?, strings?,
 //   context?: [{id, title, options:[{id, text}], default?}],      → selectores; se guardan en data.ctx
 //   tables:   [{id, title, die, hidden?, dm?, when?, count?, rows:[{id?, text, note?, w? | lo,hi, only?, weight?}]}],
-//   recordName?(h), article?(rec, h)}
+//   recordName?(h), nameTables?:[ids], article?(rec, h)}
 //  · only:{clave:[ids]}             la fila solo vale si el contexto —o el resultado de una tabla ANTERIOR— coincide
 //  · weight:{clave:{id:factor}}     cambia su peso según lo mismo (las filas condicionadas usan pesos, no lo/hi)
 //  · when:{clave:[ids]}             la tabla entera solo se tira si coincide
@@ -923,9 +923,14 @@ DT.simpleTableTab = function(def){
       d.rolls[t.id] = rs.filter(r=> r && Number.isInteger(r.i) && r.i>=0 && r.i<t.rows.length)
         .map(r=> ({roll:parseInt(r.roll,10)||null, i:r.i, vals:Array.isArray(r.vals)?r.vals.map(Number):undefined}));
     }
+    if(d.autoName!=null) d.autoName = !!d.autoName;
     d.v = 2; return rec;
   }
   let cur = null, refs = null;
+  // Tablas que forman el nombre (🎲): las que se digan, o las ocultas.
+  const nameTables = def.nameTables || tables.filter(t=> t.hidden).map(t=> t.id);
+  // Mientras nadie lo renombre a mano, el nombre sigue a las tablas de las que sale.
+  const autoName = ()=>{ if(cur && def.recordName && cur.data.autoName!==false) cur.name = def.recordName(helpers(cur)) || cur.name; };
   const selCtx = ()=>{ const c = defaultCtx(); if(refs) refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ c[s.dataset.ctx]=s.value; }); return c; };
   function persist(){ if(cur){ DT.records.setActive(def.id, cur.id); DT.records.upsert(cur); } }
   function newName(){ return `${DT.tx(def.title)} ${DT.records.list(def.id).length+1}`; }
@@ -939,7 +944,7 @@ DT.simpleTableTab = function(def){
     if(!refs) return;
     refs.screen.hidden = !DT.host.caps.toScreen;
     refs.article.hidden = !(def.article && DT.host.caps.toArticle && cur);
-    refs.nameDice.hidden = !def.recordName;
+    refs.nameDice.hidden = !(def.recordName && nameTables.length);
     const d = cur ? cur.data : null;
     refs.results.innerHTML = !d ? `<div class="empty">${DT.esc(DT.t("noResults"))}</div>` : tables.filter(t=> !t.hidden && d.rolls[t.id]).map(t=>{
       const rs = d.rolls[t.id];
@@ -950,7 +955,7 @@ DT.simpleTableTab = function(def){
         ${items}<button class="small" data-act="roll">${DT.esc(DT.t("reroll"))}</button></div>`;
     }).join("");
     refs.results.querySelectorAll(".rcard").forEach(card=>{
-      card.querySelector('[data-act="roll"]').onclick = ()=>{ if(!cur) return; rerollFrom(card.dataset.t, cur.data); persist(); render(); };
+      card.querySelector('[data-act="roll"]').onclick = ()=>{ if(!cur) return; rerollFrom(card.dataset.t, cur.data); autoName(); persist(); render(); };
     });
     if(document.activeElement!==refs.name) refs.name.value = cur ? cur.name : "";
     renderRefs();
@@ -1001,11 +1006,12 @@ DT.simpleTableTab = function(def){
       refs = DT.refs(panel);
       refs.rollAll.onclick = ()=>{
         cur = {id:DT.uid(), tab:def.id, name:"", data:rollAll(selCtx())};
+        if(def.recordName) cur.data.autoName = true;
         cur.name = def.recordName ? (def.recordName(helpers(cur)) || newName()) : newName();
         persist(); render();
       };
-      refs.nameDice.onclick = ()=>{ if(!cur || !def.recordName) return; tables.filter(t=> t.hidden).forEach(t=> rerollFrom(t.id, cur.data)); cur.name = def.recordName(helpers(cur)) || cur.name; persist(); render(); };
-      const rename = ()=>{ const v=refs.name.value.trim(); if(cur && v){ cur.name=v; persist(); } };
+      refs.nameDice.onclick = ()=>{ if(!cur || !def.recordName) return; nameTables.forEach(id=> rerollFrom(id, cur.data)); cur.data.autoName = true; autoName(); persist(); render(); };
+      const rename = ()=>{ const v=refs.name.value.trim(); if(cur && v && v!==cur.name){ cur.name=v; cur.data.autoName = false; persist(); } };
       refs.rename.onclick = rename;
       refs.name.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
       refs.copy.onclick = ()=>{ if(cur) DT.copyText(markdown(cur, {dm:true})); };
@@ -2761,11 +2767,11 @@ DT.simpleTableTab({
     {id:"city", text:{en:"City", es:"Ciudad"}}, {id:"village", text:{en:"Village", es:"Pueblo"}}, {id:"road", text:{en:"Road / wilds", es:"Camino / tierras salvajes"}}]}],
   tables:[
     {id:"ancestry", title:{en:"Ancestry", es:"Ascendencia"}, die:20, rows:N.ancestry.rows},
-    {id:"name", title:{en:"Name", es:"Nombre"}, die:20, rows:DT.lib.npc.nameRows("ancestry")},
+    {id:"name", title:{en:"Name", es:"Nombre"}, die:100, rows:DT.lib.npc.nameRows("ancestry")},
     {id:"age", title:{en:"Age", es:"Edad"}, die:6, rows:[
       {id:"young", lo:1, hi:1, text:{en:"Young", es:"Joven"}}, {id:"adult", lo:2, hi:4, text:{en:"Adult", es:"Adulto"}},
       {id:"mature", lo:5, hi:5, text:{en:"Middle-aged", es:"Maduro"}}, {id:"old", lo:6, hi:6, text:{en:"Old", es:"Anciano"}}]},
-    {id:"job", title:{en:"Trade", es:"Oficio"}, die:20, rows:[
+    {id:"job", title:{en:"Trade", es:"Oficio"}, die:100, rows:[
       R("Campesino|Farmer", {weight:{where:{city:.3, village:3, road:.8}}}),
       R("Guardia|Guard", {weight:{where:{city:2}}}),
       R("Mercader|Merchant", {weight:{where:{city:2, road:1.5}}}),
@@ -2811,6 +2817,7 @@ DT.simpleTableTab({
     {id:"truth", title:{en:"Is the rumor true?", es:"¿Es cierto el rumor?"}, die:6, dm:true, rows:N.truth.rows}
   ],
   recordName: h=> h.text("name"),
+  nameTables:["name"],
   article:(rec, h)=>({
     title:rec.name, template:"character", fields:{age:h.text("age")},
     subtitle:`${h.text("ancestry")} · ${h.text("job")}`, summary:h.text("trait"),
@@ -2856,16 +2863,16 @@ DT.simpleTableTab({
     {id:"pattern", title:{en:"Name · pattern", es:"Nombre · forma"}, die:6, hidden:true, rows:[
       {id:"pair", lo:1, hi:3, text:{es:"El A y el B", en:"The A & B"}}, {id:"adj", lo:4, hi:6, text:{es:"El A Adjetivo", en:"The Adjective A"}}]},
     {id:"keeperAncestry", title:{en:"Innkeeper · ancestry", es:"Posadero · ascendencia"}, die:20, rows:N.ancestry.rows},
-    {id:"keeper", title:{en:"Innkeeper", es:"Posadero"}, die:20, rows:DT.lib.npc.nameRows("keeperAncestry")},
+    {id:"keeper", title:{en:"Innkeeper", es:"Posadero"}, die:100, rows:DT.lib.npc.nameRows("keeperAncestry")},
     {id:"keeperTrait", title:{en:"Innkeeper · temper", es:"Posadero · carácter"}, die:20, rows:N.trait.rows},
-    {id:"dish", title:{en:"Dish of the day", es:"Plato del día"}, die:12, rows:[
+    {id:"dish", title:{en:"Dish of the day", es:"Plato del día"}, die:20, rows:[
       R("Gachas con miel (3 pc)|Porridge with honey (3 cp)", Q("humble")), R("Sopa de nabo y pan duro (3 pc)|Turnip soup and stale bread (3 cp)", Q("humble")),
       R("Guiso de lo que haya (6 pc)|Whatever-there-is stew (6 cp)", Q("humble")), R("Pan, queso y cebolla (6 pc)|Bread, cheese and onion (6 cp)", Q("humble","common")),
       R("Estofado de cordero (3 pp)|Lamb stew (3 sp)", Q("common")), R("Pastel de carne (3 pp)|Meat pie (3 sp)", Q("common")),
       R("Trucha asada con hierbas (5 pp)|Herb-roasted trout (5 sp)", Q("common")), R("Salchichas con col (3 pp)|Sausages and cabbage (3 sp)", Q("common")),
       R("Faisán en salsa de vino (8 pp)|Pheasant in wine sauce (8 sp)", Q("fine")), R("Pato con cerezas (8 pp)|Duck with cherries (8 sp)", Q("fine")),
       R("Tabla de quesos curados y fruta (8 pp)|Aged cheese and fruit board (8 sp)", Q("fine")), R("Venado con castañas (2 po)|Venison with chestnuts (2 gp)", Q("fine"))]},
-    {id:"drink", title:{en:"House drink", es:"Bebida de la casa"}, die:12, rows:[
+    {id:"drink", title:{en:"House drink", es:"Bebida de la casa"}, die:20, rows:[
       R("Cerveza aguada (4 pc la jarra)|Watered ale (4 cp a mug)", Q("humble")), R("Sidra agria (3 pc)|Sour cider (3 cp)", Q("humble")),
       R("Aguardiente casero (1 pp el vaso)|Homemade spirits (1 sp a glass)", Q("humble","common")), R("Leche de cabra (1 pc)|Goat's milk (1 cp)", Q("humble")),
       R("Cerveza de la casa (4 pc la jarra)|House ale (4 cp a mug)", Q("common")), R("Hidromiel (5 pc)|Mead (5 cp)", Q("common")),
@@ -2999,10 +3006,10 @@ DT.simpleTableTab({
     {id:"check", title:{en:"Encounter?", es:"¿Hay encuentro?"}, die:20, rows:[
       R("Nada: el camino sigue tranquilo|Nothing: the way stays quiet", {id:"none", w:14, weight:{time:{night:.8}, threat:{high:.6}}}),
       R("¡Encuentro!|Encounter!", {id:"yes", w:6, weight:{time:{night:1.5}, threat:{high:2}}})]},
-    {id:"kind", title:{en:"Kind", es:"Tipo"}, die:6, when:{check:["yes"]}, rows:[
+    {id:"kind", title:{en:"Kind", es:"Tipo"}, die:20, when:{check:["yes"]}, rows:[
       R("Combate|Combat", {id:"combat", w:2, weight:{threat:{high:1.5}}}), R("Social|Social", {id:"social", w:1, weight:{time:{night:.5}}}),
       R("Rastros de una criatura|Signs of a creature", {id:"sign", w:1}), R("Peligro natural|Natural hazard", {id:"hazard", w:1}), R("Hallazgo|Discovery", {id:"discovery", w:1})]},
-    {id:"creature", title:{en:"Creature", es:"Criatura"}, die:20, when:{kind:["combat","sign"]}, rows:creatures},
+    {id:"creature", title:{en:"Creature", es:"Criatura"}, die:100, when:{kind:["combat","sign"]}, rows:creatures},
     {id:"activity", title:{en:"Doing what", es:"Haciendo qué"}, die:8, when:{kind:["combat","sign"]}, rows:DT.rowsFixed([
       "Cazando|Hunting", "Durmiendo|Sleeping", "Comiendo una presa|Eating a kill", "Peleando con otra cosa|Fighting something else",
       "Vigilando su territorio|Guarding its territory", "De paso|Passing through", "Preparando una emboscada|Setting an ambush", "Huyendo de algo más grande|Fleeing something bigger"])},
@@ -3011,7 +3018,7 @@ DT.simpleTableTab({
       "Un ermitaño que sabe demasiado|A hermit who knows too much", "Un niño perdido|A lost child", "Bandidos que cobran «peaje»|Bandits demanding a \"toll\"",
       "Refugiados de una aldea quemada|Refugees from a burned village", "Un bardo en busca de historias|A bard looking for stories", "Aventureros rivales de vuelta de algo|Rival adventurers on their way back",
       "Un druida que protege el lugar|A druid guarding this place", "Un mensajero herido|A wounded messenger", "Un cazarrecompensas tras alguien|A bounty hunter after someone"])},
-    {id:"hazard", title:{en:"Hazard", es:"Peligro"}, die:12, when:{kind:["hazard"]}, rows:[
+    {id:"hazard", title:{en:"Hazard", es:"Peligro"}, die:20, when:{kind:["hazard"]}, rows:[
       R("Tormenta repentina|Sudden storm", {note:{es:"Visibilidad reducida: desventaja en Percepción que dependa de la vista.", en:"Poor visibility: disadvantage on sight-based Perception."}, only:{biome:["forest","grassland","hills","swamp","desert","arctic","coast","road"]}}),
       R("Niebla espesa|Thick fog", {note:{es:"Más allá de 9 m (30 ft), todo muy oscurecido.", en:"Beyond 30 ft, everything is heavily obscured."}}),
       R("Puente caído: rodear cuesta {1d4} horas|Collapsed bridge: going around takes {1d4} hours", B("forest","grassland","hills","swamp","road")),
@@ -3027,7 +3034,7 @@ DT.simpleTableTab({
       R("Enjambre de insectos|Insect swarm", B("swamp","forest","grassland","desert")),
       R("Una carreta volcada bloquea el paso|An overturned wagon blocks the way", B("road")),
       R("Socavón (DES CD 12 o caída de {1d4*5} pies)|Sinkhole (DC 12 DEX or a {1d4*5}-ft fall)", B("grassland","road","hills"))]},
-    {id:"discovery", title:{en:"Discovery", es:"Hallazgo"}, die:12, when:{kind:["discovery"]}, rows:[
+    {id:"discovery", title:{en:"Discovery", es:"Hallazgo"}, die:100, when:{kind:["discovery"]}, rows:[
       R("Un campamento abandonado a toda prisa|A hastily abandoned camp"), R("Un cadáver con un mapa en la mano|A corpse clutching a map"),
       R("Un santuario olvidado|A forgotten shrine"), R("Un alijo escondido ({2d10} po)|A hidden cache ({2d10} gp)"),
       R("Las ruinas de una torre|The ruins of a tower"), R("Un monolito con runas|A rune-carved monolith"), R("Un animal herido|A wounded animal"),
@@ -3066,7 +3073,7 @@ DT.simpleTableTab({
     {id:"season", title:{en:"Season", es:"Estación"}, options:[
       {id:"spring", text:{en:"Spring", es:"Primavera"}}, {id:"summer", text:{en:"Summer", es:"Verano"}}, {id:"autumn", text:{en:"Autumn", es:"Otoño"}}, {id:"winter", text:{en:"Winter", es:"Invierno"}}]}],
   tables:[
-    {id:"temp", title:{en:"Temperature", es:"Temperatura"}, die:20, rows:[
+    {id:"temp", title:{en:"Temperature", es:"Temperatura"}, die:100, rows:[
       R("Helada (−10 °C o menos)|Freezing (14 °F or lower)", {id:"freezing",
         note:{es:"Frío extremo: sin ropa de abrigo, salvación de CON CD 10 cada hora o un nivel de cansancio.", en:"Extreme cold: without cold-weather gear, DC 10 CON save each hour or gain a level of exhaustion."},
         weight:{climate:{temperate:1, cold:6, arid:.3, tropical:0, mountain:4}, season:{spring:.3, summer:0, autumn:.5, winter:4}}}),
@@ -3080,7 +3087,7 @@ DT.simpleTableTab({
       R("Calor extremo (40 °C o más)|Extreme heat (104 °F or more)", {id:"scorching",
         note:{es:"Calor extremo: sin agua suficiente, salvación de CON cada hora (CD 5, +1 por hora) o un nivel de cansancio; desventaja con armadura media o pesada.", en:"Extreme heat: without enough water, CON save each hour (DC 5, +1 per hour) or gain a level of exhaustion; disadvantage in medium or heavy armor."},
         weight:{climate:{temperate:.05, cold:0, arid:3, tropical:.8, mountain:0}, season:{spring:.1, summer:2, autumn:.1, winter:0}}})]},
-    {id:"sky", title:{en:"Sky", es:"Cielo"}, die:20, rows:[
+    {id:"sky", title:{en:"Sky", es:"Cielo"}, die:100, rows:[
       R("Despejado|Clear", {id:"clear", w:6, weight:{climate:{arid:2, tropical:.7}}}),
       R("Algunas nubes|Partly cloudy", {id:"partly", w:4}),
       R("Nublado|Overcast", {id:"overcast", w:3, weight:{climate:{arid:.4}}}),
@@ -3103,7 +3110,7 @@ DT.simpleTableTab({
         note:{es:"Desventaja en ataques con armas a distancia y en Percepción que dependa del oído; apaga las llamas al aire libre; dispersa la niebla.", en:"Disadvantage on ranged weapon attacks and hearing-based Perception; puts out open flames; disperses fog."}}),
       R("Vendaval|Gale", {w:.5, weight:{climate:{mountain:2}},
         note:{es:"Como viento fuerte, y volar sin magia es imposible.", en:"As strong wind, and nonmagical flight is impossible."}})]},
-    {id:"omen", title:{en:"Anything unusual?", es:"¿Algo fuera de lo común?"}, die:20, rows:[
+    {id:"omen", title:{en:"Anything unusual?", es:"¿Algo fuera de lo común?"}, die:100, rows:[
       R("Nada especial|Nothing special", {w:13}),
       R("Un arcoíris doble|A double rainbow", {w:2, only:{sky:["rain","storm"]}}),
       R("Una aurora en el cielo nocturno|An aurora in the night sky", {w:1.5, only:{climate:["cold","mountain"]}}),
@@ -3178,7 +3185,7 @@ DT.simpleTableTab({
       R("{4d6*500} po|{4d6*500} gp", W("high","hoard")), R("{2d6*1000} po|{2d6*1000} gp", W("high","hoard")), R("{3d6*100} ppt|{3d6*100} pp", W("high","hoard")),
       R("{2d6*100} po|{2d6*100} gp", W("epic","pocket")), R("{4d6*10} ppt|{4d6*10} pp", W("epic","pocket")), R("{1d6*500} po|{1d6*500} gp", W("epic","pocket")),
       R("{6d6*1000} po|{6d6*1000} gp", W("epic","hoard")), R("{4d6*1000} po y {2d6*100} ppt|{4d6*1000} gp and {2d6*100} pp", W("epic","hoard")), R("{3d6*500} ppt|{3d6*500} pp", W("epic","hoard"))]},
-    {id:"val", title:{en:"Valuables", es:"Objetos de valor"}, die:6, rows:[
+    {id:"val", title:{en:"Valuables", es:"Objetos de valor"}, die:12, rows:[
       V("Nada|Nothing", "none", "low","pocket", 4), V("{1d2} gema(s) de 10 po cada una|{1d2} gem(s) worth 10 gp each", "g10", "low","pocket", 2),
       V("Nada|Nothing", "none", "low","hoard"), V("{2d4} gemas de 10 po|{2d4} gems worth 10 gp", "g10", "low","hoard"), V("{1d4} gemas de 50 po|{1d4} gems worth 50 gp", "g50", "low","hoard"), V("{1d4} objetos de arte de 25 po|{1d4} art objects worth 25 gp", "a25", "low","hoard"),
       V("Nada|Nothing", "none", "mid","pocket", 3), V("{1d2} gema(s) de 50 po|{1d2} gem(s) worth 50 gp", "g50", "mid","pocket"), V("{1d2} objeto(s) de arte de 25 po|{1d2} art object(s) worth 25 gp", "a25", "mid","pocket"),
@@ -3196,7 +3203,7 @@ DT.simpleTableTab({
       R("Raro|Rare", {id:"rare", weight:{tier:{low:0, mid:1.5, high:3, epic:3}, kind:{pocket:.3}}}),
       R("Muy raro|Very rare", {id:"veryrare", weight:{tier:{low:0, mid:.2, high:1.5, epic:3}, kind:{pocket:.2}}}),
       R("Legendario|Legendary", {id:"legendary", weight:{tier:{low:0, mid:0, high:.2, epic:1.5}, kind:{pocket:0}}})]},
-    {id:"item", title:{en:"Which item", es:"Qué objeto"}, die:20, when:{magic:["common","uncommon","rare","veryrare","legendary"]},
+    {id:"item", title:{en:"Which item", es:"Qué objeto"}, die:100, when:{magic:["common","uncommon","rare","veryrare","legendary"]},
       rows:Object.entries(items).flatMap(([rar, list])=> list.map(x=> R(x, {only:{magic:[rar]}})))},
     {id:"curio", title:{en:"Curiosity", es:"Curiosidad"}, die:20, rows:DT.rowsFixed([
       "Un mechón de pelo atado con un lazo|A lock of hair tied with a ribbon", "Un mapa al que le falta una esquina|A map missing one corner", "Un ojo de cristal|A glass eye",

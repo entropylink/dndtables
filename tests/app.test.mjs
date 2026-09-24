@@ -285,7 +285,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
 {
   const { ctx, page, errors } = await fresh();
   const r = await page.evaluate(() => {
-    const out = { tabs: [], problems: [] };
+    const out = { tabs: [], problems: [], worstTV: 0 };
     const bad = (m) => { if (out.problems.length < 12) out.problems.push(m); };
     const product = (ctxDefs) => ctxDefs.reduce((acc, c) => acc.flatMap((o) => c.options.map((opt) => ({ ...o, [c.id]: opt.id }))), [{}]);
     const TOKEN = /\{(\d*)d(\d+)(?:([+-])(\d+))?(?:[*x×](\d+))?\}/g;
@@ -327,6 +327,24 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
             catch (e) { bad(`${tab.id}/${t.id}: ${e.message} en ${JSON.stringify(env)}`); }
           }
         });
+        // 2b) Los pesos se notan: lo que da el dado no se aleja de lo que dicen los pesos
+        //     (con muchas filas en un dado chico, «al menos una cara» los aplana).
+        tables.forEach((t, idx) => {
+          if (!t.conds && !t.rows.some((row) => row.w != null && row.w !== 1)) return;
+          if (t.fixed) return;
+          const depKeys = [...t.deps].filter((k) => tables.slice(0, idx).some((x) => x.id === k));
+          const envs = depKeys.length ? depKeys.reduce((acc, k) => { const dep = tables.find((x) => x.id === k);
+            return acc.flatMap((e) => dep.rows.filter((row) => row.id != null).map((row) => ({ ...e, [k]: row.id }))); }, [{}]) : [{}];
+          for (const dv of envs) {
+            const env = { ...combo, ...dv }, wf = A.weightFn(env);
+            const ws = t.rows.map((row) => { const w = t.conds ? wf(row) : (row.w == null ? 1 : row.w); return w > 0 ? w : 0; });
+            const W = ws.reduce((a, b) => a + b, 0); if (!W) continue;
+            let faces; try { faces = DT.faces(ws, t.die); } catch { continue; }
+            const tv = ws.reduce((acc, w, i) => acc + Math.abs(w / W - (faces[i] ? (faces[i].hi - faces[i].lo + 1) / t.die : 0)), 0) / 2;
+            out.worstTV = Math.max(out.worstTV || 0, tv);
+            if (tv > 0.12) bad(`${tab.id}/${t.id}: el d${t.die} aplana los pesos (distancia ${tv.toFixed(2)}) en ${JSON.stringify(env)}`);
+          }
+        });
         // 3) Tiradas reales con semillas: nada revienta, nada queda con dados sin tirar.
         for (let seed = 1; seed <= 6; seed++) {
           DT.seed(seed * 131 + combos.indexOf(combo));
@@ -346,7 +364,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     }
     return out;
   });
-  ok(r.tabs.length === 5, `pestañas declarativas revisadas: ${r.tabs.join(', ')}`);
+  ok(r.tabs.length === 5, `pestañas declarativas revisadas: ${r.tabs.join(', ')} (peor distancia pesos/dado: ${(r.worstTV || 0).toFixed(3)})`);
   ok(!r.problems.length, 'datos: EN/ES con los mismos dados, condiciones que apuntan a algo que existe, ninguna tabla vacía en ninguna combinación, sin dados sin tirar, lo del DM fuera del Markdown de jugadores', r.problems.join(' | '));
   // Taberna: el adjetivo concuerda en español
   const tav = await page.evaluate(() => {
@@ -379,6 +397,24 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(Object.values(counts).every((n) => n === 1), 'cada pestaña guarda su resultado', JSON.stringify(counts));
   const names = await page.evaluate(() => ({ npc: DT.records.active('npc').name, tavern: DT.records.active('tavern').name }));
   ok(names.npc.length > 1 && !/Quick NPC/.test(names.npc) && /^The /.test(names.tavern), `nombres compuestos: PNJ «${names.npc}», taberna «${names.tavern}»`);
+  // PNJ: 🎲 cambia el nombre (misma ascendencia); ↻ en Ascendencia arrastra el nombre; renombrar a mano manda
+  await page.click('#tabBar [data-tab="npc"]');
+  const nm = await page.evaluate(async () => {
+    const out = {}, get = () => DT.records.active('npc');
+    const anc0 = get().data.rolls.ancestry[0].i; const names = new Set([get().name]);
+    for (let k = 0; k < 8; k++) { document.querySelector('#panel-npc [data-ref="nameDice"]').click(); names.add(get().name); }
+    out.diceChanges = names.size > 1; out.sameAncestry = get().data.rolls.ancestry[0].i === anc0;
+    out.nameMatches = get().name === DT.tabs.get('npc').api.helpers(get()).text('name');
+    document.querySelector('#panel-npc .rcard[data-t="ancestry"] [data-act="roll"]').click();
+    out.followsAncestry = get().name === DT.tabs.get('npc').api.helpers(get()).text('name');
+    const inp = document.querySelector('#panel-npc [data-ref="name"]'); inp.value = 'Doña Mía'; document.querySelector('#panel-npc [data-ref="rename"]').click();
+    document.querySelector('#panel-npc .rcard[data-t="ancestry"] [data-act="roll"]').click();
+    out.manualKept = get().name === 'Doña Mía';
+    return out;
+  });
+  ok(nm.diceChanges && nm.sameAncestry && nm.nameMatches, 'PNJ: 🎲 da otro nombre de la misma ascendencia', JSON.stringify(nm));
+  ok(nm.followsAncestry, 'PNJ: ↻ en Ascendencia actualiza también el nombre guardado');
+  ok(nm.manualKept, 'PNJ: un nombre puesto a mano no se pisa al volver a tirar');
   // Clima: cambiar el contexto cambia la tabla de referencia
   await page.click('#tabBar [data-tab="weather"]');
   await page.selectOption('#panel-weather select[data-ctx="climate"]', 'tropical');

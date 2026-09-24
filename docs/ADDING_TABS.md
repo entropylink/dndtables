@@ -64,7 +64,7 @@ DT.simpleTableTab({
 
 | En la tabla | Qué hace |
 |---|---|
-| `die`, `rows` | El dado y sus filas: `lo`/`hi` (rangos fijos, «de libro») **o** `w` (pesos; el núcleo reparte las caras). |
+| `die`, `rows` | El dado y sus filas: `lo`/`hi` (rangos fijos, «de libro») **o** `w` (pesos; el núcleo reparte las caras). Cada fila posible recibe al menos una cara: con muchas filas en un dado chico los pesos dejan de notarse, así que para tablas con pesos y más de ~8 filas usa **d100** (hay una prueba que lo mide). |
 | `only: {clave: [ids]}` | La fila solo vale si el contexto —o el `id` que salió en una tabla **anterior**— coincide. |
 | `weight: {clave: {id: factor}}` | Multiplica el peso según lo mismo (0 la quita). Las filas condicionadas usan `w`, no `lo`/`hi`. |
 | `when: {clave: [ids]}` | La tabla entera solo se tira si coincide. |
@@ -77,7 +77,8 @@ DT.simpleTableTab({
 | En la pestaña | Qué hace |
 |---|---|
 | `context` | Selectores `[{id, title, options:[{id, text}], default?}]`. |
-| `recordName(h)` | Nombre del resultado. `h.text(tabla)`, `h.row(tabla)`, `h.ctxText(clave)`. Con él aparece el botón 🎲 que vuelve a tirar solo las tablas ocultas. |
+| `recordName(h)` | Nombre del resultado. `h.text(tabla)`, `h.row(tabla)`, `h.ctxText(clave)`. Mientras nadie lo renombre a mano, sigue a las tablas de las que sale. El botón 🎲 vuelve a tirar `nameTables` (por omisión, las ocultas). |
+| `nameTables` | Qué tablas vuelve a tirar 🎲 (p. ej. `["name"]` en PNJ rápido: otro nombre, misma ascendencia). |
 | `article(rec, h)` | Artículo de Veil: `{title, template, fields, subtitle, summary, marker, section, block: h.block(marker, etiqueta)}`. `marker` es un emoji que identifica su bloque (`:::nota 🧑 …`); `section`, la sección de la plantilla donde va la primera vez. Repetir solo reemplaza ese bloque. |
 
 Al volver a tirar una tabla con ↻, se vuelven a tirar también las que dependen de ella.
