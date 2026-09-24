@@ -29,7 +29,7 @@ nadie.
 | Dirección | `type` | Campos | Qué pasa |
 |---|---|---|---|
 | app → Veil | `ready` | `app:{name, version, schema, tabs}` | La app arrancó. |
-| Veil → app | `init` | `world:{id,name}`, `lang`, `canEdit`, `caps:{toScreen,toArticle}`, `records:[…]` | Documentos del mundo (solo los visibles para quien mira). La app mezcla. |
+| Veil → app | `init` | `world:{id,name}`, `lang`, `canEdit`, `caps:{toScreen,toArticle}`, `ok`, `records:[…]`, `ids:[…]` | `records`: los documentos que quien mira puede ver; `ids`: los de **todos** (lo privado existe aunque no llegue). `ok:false` = Veil no pudo leer el mundo. La app mezcla. |
 | app → Veil | `upsert` | `record`, `title`, `summary` | Crear o actualizar el documento de ese resultado. Veil agrupa (~0.7 s). |
 | Veil → app | `saved` | `id` | Ese resultado ya está en el mundo. |
 | app → Veil | `remove` | `id` | Borrar su documento. |
@@ -48,7 +48,9 @@ Documento del mundo (`multiverse/worlds/<mundo>/tablas-dnd/<docId>.json`):
 ## Mezcla
 
 Al recibir `init`, la app compara lo del mundo con lo suyo usando `dndtables.v3.synced` (los
-ids que ya sabe que están en el mundo):
+ids que ya sabe que están en el mundo). Si `ok` es `false`, **no mezcla ni escribe** en toda la
+sesión (una lista vacía no significa «todo se borró»); lo que hagas queda en local y se sube la
+próxima vez. Un id que está en `ids` pero no en `records` (privado) no se toca.
 
 | Situación | Resultado |
 |---|---|
@@ -58,7 +60,8 @@ ids que ya sabe que están en el mundo):
 | Solo aquí, nunca subido | se sube |
 | Solo aquí, pero estaba sincronizado | se borró en el mundo → se borra aquí |
 
-Mientras está abierta, cada cambio se manda al momento. Si otra pestaña del mismo mundo
+Mientras está abierta, cada cambio se manda al momento. Si se borra un resultado mientras su
+primer guardado va en camino, Veil lo borra en cuanto ese guardado termina. Si otra pestaña del mismo mundo
 («Abrir aparte») escribe, el evento `storage` avisa a la de Veil, que sube lo nuevo y borra lo
 borrado. El almacén lee-cambia-escribe en cada guardado, así que dos pestañas no se pisan.
 

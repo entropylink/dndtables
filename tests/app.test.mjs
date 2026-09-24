@@ -167,6 +167,9 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(cards >= 9, `Villa: ≥ 9 fichas (${cards})`);
   ok(await page.locator('#panel-vendors .scard').count() === 2, 'estado del asentamiento y evento semanal visibles');
   ok(await page.locator('#panel-vendors .vendor .npc .who').count() === cards, 'cada ficha tiene su tendero');
+  await page.click('[data-ref="genBtn"]');
+  const curMark = await page.evaluate(() => ({ active: DT.records.active('vendors').id, marked: document.querySelector('#panel-vendors .saved-item.current').dataset.id }));
+  ok(curMark.active === curMark.marked, 'tras generar otra ciudad, la biblioteca marca como «actual» la nueva', JSON.stringify(curMark));
   const first = page.locator('#panel-vendors .vendor').first();
   const before = await first.locator('.note').textContent();
   await first.locator('.hagInput').fill('30');
@@ -184,7 +187,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
   ok(await page.inputValue('[data-ref="saveName"]') === name, 'al recargar vuelve la ciudad activa', name);
   ok((await page.textContent('#appTitle')).includes('Tablas de Vendedores'), 'al recargar recuerda el idioma');
-  ok(await page.locator('#panel-vendors .saved-item').count() === 1, 'la ciudad aparece en «Ciudades guardadas»');
+  ok(await page.locator('#panel-vendors .saved-item').count() === 2, 'las ciudades aparecen en «Ciudades guardadas»');
   // copiar como Markdown
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
   const md = await page.evaluate(() => { const t = DT.tabs.get('vendors'); return t.toMarkdown(DT.records.active('vendors'), { dm: true }); });
@@ -196,8 +199,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const exported = JSON.parse(readFileSync(await dl.path(), 'utf8'));
   ok(exported.type === 'dndtables-record' && exported.record.name === name && exported.record.data.v === 3, 'exportar actual → dndtables-record v3');
   // borrar la actual limpia la vista
-  await page.locator('#panel-vendors .saved-item [data-act="delete"]').click();
-  ok(await page.locator('#panel-vendors .vendor').count() === 0 && await page.locator('#panel-vendors .saved-item').count() === 0, 'borrar la ciudad actual la quita de la lista y de la vista');
+  await page.locator('#panel-vendors .saved-item.current [data-act="delete"]').click();
+  ok(await page.locator('#panel-vendors .vendor').count() === 0 && await page.locator('#panel-vendors .saved-item').count() === 1, 'borrar la ciudad actual la quita de la lista y de la vista');
   ok(!errors.length, 'sin errores de consola en la interfaz', errors.join(' | '));
   await ctx.close();
 }
@@ -313,6 +316,79 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const s = await v.page.evaluate(() => { DT.tabs.get('vendors').api.generateAll(); return { keys: Object.keys(localStorage).filter((k) => k.startsWith('velo:mundo-x:')).length, plain: localStorage.getItem('dndtables.v3.records') }; });
   ok(s.keys >= 1 && s.plain === null, 'con ?velo=<mundo> los datos se guardan con prefijo de mundo');
   await v.ctx.close();
+}
+
+/* ── 9. Protocolo con un anfitrión falso (mismo origen, sin Veil) ─────── */
+{
+  const { createServer } = await import('node:http');
+  const html = readFileSync(join(HERE, '..', 'index.html'));
+  // El anfitrión contesta a "ready" con lo que la prueba le pida (window.__init) y apunta lo que recibe.
+  const harness = `<!doctype html><body><script>
+    window.__got = [];
+    addEventListener('message', (e) => { const m = e.data; if (!m || m.ns !== 'dndtables') return; window.__got.push(m);
+      if (m.type !== 'ready') return;
+      const reply = () => e.source.postMessage(Object.assign({ ns: 'dndtables', v: 1, type: 'init' }, window.__init), location.origin);
+      if (window.__hold) window.__release = reply; else reply(); });
+  </script></body>`;
+  const srv = createServer((req, res) => {
+    if (req.url.startsWith('/index.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(html); }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(harness);
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${srv.address().port}`;
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const rec = (id, savedAt) => ({ id, tab: 'vendors', name: id, savedAt, data: { sizeKey: 'town', permanent: [], traveling: [] } });
+  // Estado local: 'a' y 'b' ya sincronizados con el mundo w1.
+  const seed = async () => {
+    await page.goto(`${base}/index.html?velo=w1`);
+    await page.evaluate((recs) => { localStorage.setItem('velo:w1:dndtables.v3.records', JSON.stringify(recs)); localStorage.setItem('velo:w1:dndtables.v3.synced', JSON.stringify(['a', 'b'])); localStorage.setItem('velo:w1:dndtables.v3.active', JSON.stringify({ vendors: 'a' })); }, [rec('a', 10), rec('b', 10)]);
+  };
+  const embed = async (init) => {
+    await page.goto(`${base}/harness.html`);
+    await page.evaluate((i) => { window.__init = i; const f = document.createElement('iframe'); f.src = '/index.html?velo=w1'; document.body.appendChild(f); }, init);
+    const frame = await (await page.waitForSelector('iframe')).contentFrame();
+    await frame.waitForFunction(() => window.DT && DT.host.connected);
+    await page.waitForTimeout(200);
+    return frame;
+  };
+  await seed();
+  let fr = await embed({ ok: false, canEdit: true, caps: { toScreen: true }, records: [], ids: [], world: { id: 'w1', name: 'W1' } });
+  let st = await fr.evaluate(() => ({ ids: DT.records.all().map((r) => r.id), canEdit: DT.host.canEdit, bar: document.getElementById('hostBar').textContent }));
+  let got = await page.evaluate(() => window.__got.map((m) => m.type));
+  ok(st.ids.join() === 'a,b', 'si Veil no puede leer el mundo (ok:false), no se borra nada local', st.ids.join());
+  ok(!st.canEdit && /(couldn't|no pudo)/.test(st.bar) && !got.includes('remove') && !got.includes('upsert'), 'y no se escribe en el mundo en esa sesión; la barra lo dice', JSON.stringify(got));
+  const ready = await page.evaluate(() => window.__got.find((m) => m.type === 'ready'));
+  ok(ready && !('records' in ready) && ready.app.name === 'dndtables', '"ready" no manda los resultados locales al anfitrión');
+  await seed();
+  fr = await embed({ ok: true, canEdit: true, caps: {}, records: [rec('b', 10)], ids: ['a', 'b'], world: { id: 'w1', name: 'W1' } });
+  st = await fr.evaluate(() => DT.records.all().map((r) => r.id));
+  got = await page.evaluate(() => window.__got.map((m) => m.type));
+  ok(st.join() === 'a,b' && !got.includes('remove'), 'un documento que existe pero no es visible (ids) no se toma por borrado', `${st.join()} / ${got.join()}`);
+  await seed();
+  fr = await embed({ ok: true, canEdit: true, caps: {}, records: [rec('b', 10)], ids: ['b'], world: { id: 'w1', name: 'W1' } });
+  st = await fr.evaluate(() => DT.records.all().map((r) => r.id));
+  ok(st.join() === 'b', 'lo que de verdad ya no está en el mundo sí se borra aquí', st.join());
+  // Pestaña declarativa con resultado activo: el botón de pantalla de DM aparece al conectar.
+  await page.goto(`${base}/index.html?velo=w2`);
+  await page.evaluate(() => { localStorage.setItem('velo:w2:dndtables.v3.records', JSON.stringify([{ id: 's1', tab: 'test-sky', name: 'S1', savedAt: 5, data: { v: 1, rolls: {} } }])); localStorage.setItem('velo:w2:dndtables.v3.active', JSON.stringify({ 'test-sky': 's1' })); localStorage.setItem('dndtables.tab', 'test-sky'); });
+  await page.goto(`${base}/harness.html`);
+  await page.evaluate(() => { window.__hold = true; window.__init = { ok: true, canEdit: true, caps: { toScreen: true }, records: [], ids: ['s1'], world: { id: 'w2', name: 'W2' } };
+    const f = document.createElement('iframe'); f.src = '/index.html?velo=w2'; document.body.appendChild(f); });
+  const f2 = await (await page.waitForSelector('iframe')).contentFrame();
+  await f2.waitForFunction(() => window.DT && DT.started);
+  // La pestaña ya está abierta (con su resultado activo) cuando llega el init: antes no hay botón.
+  await f2.evaluate(() => { DT.simpleTableTab({ id: 'test-sky', title: { en: 'Sky', es: 'Cielo' }, tables: [{ id: 't', die: 2, title: { en: 'T', es: 'T' }, rows: [{ lo: 1, hi: 1, text: { en: 'a', es: 'a' } }, { lo: 2, hi: 2, text: { en: 'b', es: 'b' } }] }] }); DT.showTab('test-sky'); });
+  ok(await f2.evaluate(() => document.querySelector('#panel-test-sky [data-ref="screen"]').hidden), 'sin Veil conectado todavía, no hay botón ▤');
+  await page.waitForFunction(() => typeof window.__release === 'function');
+  await page.evaluate(() => window.__release());
+  await f2.waitForFunction(() => DT.host.connected);
+  await page.waitForTimeout(200);
+  ok(await f2.evaluate(() => !document.querySelector('#panel-test-sky [data-ref="screen"]').hidden), 'pestaña declarativa: el botón ▤ aparece en cuanto Veil conecta');
+  ok(!errors.length, 'sin errores en el protocolo', errors.join(' | '));
+  await ctx.close(); srv.close();
 }
 
 await browser.close();

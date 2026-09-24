@@ -416,6 +416,7 @@ DT.addStrings({
     hostConnected:"Connected to Veil · world “{world}”. Results are saved with the world.",
     hostReader:"Veil reader view: what you change here is not saved to the world.",
     hostSent:"Sent to Veil.", hostOffline:"Veil didn't answer; working locally.",
+    hostReadFailed:"Veil couldn't read this world's results: working locally. Nothing is saved to the world until you reopen this tool.",
     rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result"
   },
   es:{
@@ -432,6 +433,7 @@ DT.addStrings({
     hostConnected:"Conectado a Veil · mundo «{world}». Los resultados se guardan con el mundo.",
     hostReader:"Vista lector de Veil: lo que cambies aquí no se guarda en el mundo.",
     hostSent:"Enviado a Veil.", hostOffline:"Veil no respondió; se trabaja en local.",
+    hostReadFailed:"Veil no pudo leer los resultados del mundo: se trabaja en local. No se guarda nada en el mundo hasta que vuelvas a abrir la herramienta.",
     rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado"
   }
 });
@@ -797,9 +799,10 @@ DT.simpleTableTab = function(def){
   let cur = null, refs = null, lib = null;
   const text = (tbl, idx)=> { const row = tbl.rows[idx]; return row ? DT.tx(row.text) : "?"; };
   function rollOne(tbl){ const r = tbl.roll(); DT.log("d"+tbl.die, r.roll, `${DT.tx(tbl.title)}: ${DT.tx(r.row.text)}`); return {roll:r.roll, i:tbl.rows.indexOf(r.row)}; }
-  function persist(){ if(cur){ DT.records.upsert(cur); DT.records.setActive(def.id, cur.id); } }
+  function persist(){ if(cur){ DT.records.setActive(def.id, cur.id); DT.records.upsert(cur); } }
   function render(){
     if(!refs) return;
+    refs.screen.hidden = !DT.host.caps.toScreen;
     const rolls = cur ? cur.data.rolls : {};
     refs.results.innerHTML = tables.map(tbl=>{
       const r = rolls[tbl.id];
@@ -862,7 +865,7 @@ DT.simpleTableTab = function(def){
 // Protocolo (postMessage, mismo origen). Todos los mensajes llevan {ns:"dndtables", v:1, type}.
 //   app → Veil   ready {app}   ·   upsert {record, title, summary}   ·   remove {id}
 //                toScreen {card:{label, md, w, h}}   ·   toArticle {requestId, recordId, link, article}
-//   Veil → app   init {world:{id,name}, lang, canEdit, caps, records}   ·   saved {id}
+//   Veil → app   init {world:{id,name}, lang, canEdit, caps, ok, records, ids}   ·   saved {id}
 //                articleDone {requestId, recordId, slug}   ·   error {message}
 DT.bridge = (function(){
   const NSP = "dndtables", V = 1;
@@ -897,9 +900,12 @@ DT.bridge = (function(){
   }
   // Mezcla lo del mundo con lo local. Gana el más reciente; "synced" dice si algo que falta de un
   // lado fue borrado (estaba sincronizado) o es nuevo (nunca llegó al otro lado).
-  function merge(worldRecs){
+  // allIds: los ids de TODOS los documentos del mundo, también los que quien mira no puede ver
+  // (esos no llegan en worldRecs, pero existen: no son un borrado).
+  function merge(worldRecs, allIds){
     synced = new Set(DT.storage.getJSON(SYNC_KEY, []));   // otra pestaña del mismo mundo pudo cambiarlo
     const world = new Map(); (worldRecs||[]).forEach(r=>{ if(r && r.id && r.tab && r.data) world.set(r.id, r); });
+    const exists = new Set((Array.isArray(allIds)?allIds:[]).map(String)); world.forEach((_,id)=> exists.add(id));
     const local = new Map(DT.records.all().map(r=>[r.id, r]));
     const upload=[], removeWorld=[];
     for(const [id, w] of world){
@@ -908,8 +914,11 @@ DT.bridge = (function(){
       else if((w.savedAt||0) > (l.savedAt||0)) DT.records.upsert(w, {keepTime:true, fromHost:true});
       else if((l.savedAt||0) > (w.savedAt||0)) upload.push(l);
     }
-    for(const [id, l] of local){ if(!world.has(id)){ if(synced.has(id)) DT.records.remove(id, {fromHost:true}); else upload.push(l); } }
-    synced = new Set([...world.keys()].filter(id=> !removeWorld.includes(id)));
+    for(const [id, l] of local){
+      if(exists.has(id)) continue;   // está en el mundo (visible o no): ya se trató arriba o no se toca
+      if(synced.has(id)) DT.records.remove(id, {fromHost:true}); else upload.push(l);
+    }
+    synced = new Set([...exists].filter(id=> !removeWorld.includes(id)));
     saveSynced();
     return {upload, removeWorld};
   }
@@ -922,9 +931,17 @@ DT.bridge = (function(){
       DT.host.caps = Object.assign({}, m.caps||{});
       DT.host.worldName = (m.world && m.world.name) || DT.host.world;
       if(DT.storage.pref("lang")==null && (m.lang==="en"||m.lang==="es") && m.lang!==DT.lang) DT.setLang(m.lang);
-      const {upload, removeWorld} = merge(Array.isArray(m.records)?m.records:[]);
-      DT.records.all().forEach(r=> pushed.set(r.id, r.savedAt||0));
-      if(DT.host.canEdit){ upload.forEach(pushUpsert); removeWorld.forEach(id=> send("remove",{id})); }
+      DT.host.readFailed = m.ok===false;
+      if(DT.host.readFailed){
+        // Veil no pudo leer el mundo: una lista vacía NO significa «todo se borró». Nada de mezclar
+        // ni de escribir; lo de esta sesión queda en local y se sube la próxima vez que se abra.
+        DT.host.canEdit = false;
+        DT.toast(DT.t("hostReadFailed"), 5000);
+      } else {
+        const {upload, removeWorld} = merge(Array.isArray(m.records)?m.records:[], m.ids);
+        DT.records.all().forEach(r=> pushed.set(r.id, r.savedAt||0));
+        if(DT.host.canEdit){ upload.forEach(pushUpsert); removeWorld.forEach(id=> send("remove",{id})); }
+      }
       DT.reloadActive();
       renderChrome();
     } else if(m.type==="saved" && m.id){ synced.add(m.id); saveSynced(); }
@@ -958,7 +975,7 @@ function renderHostBar(){
   const hb = document.getElementById("hostBar");
   if(!DT.host.embedded || !DT.host.connected){ hb.hidden = true; return; }
   hb.hidden = false;
-  hb.textContent = DT.host.canEdit ? DT.t("hostConnected",{world:DT.host.worldName||DT.host.world}) : DT.t("hostReader");
+  hb.textContent = DT.host.readFailed ? DT.t("hostReadFailed") : DT.host.canEdit ? DT.t("hostConnected",{world:DT.host.worldName||DT.host.world}) : DT.t("hostReader");
 }
 // La pestaña visible vuelve a leer su resultado activo (tras sincronizar con Veil o importar).
 DT.reloadActive = function(){
@@ -1908,8 +1925,8 @@ function normalize(rec){
 }
 function persist(){
   if(!cur) return;
+  DT.records.setActive("vendors", cur.id);   // antes de guardar: la biblioteca se redibuja al guardar y marca la actual
   DT.records.upsert(cur);
-  DT.records.setActive("vendors", cur.id);
 }
 function loadRecord(rec){
   cur = normalize(rec);

@@ -95,22 +95,26 @@ export function mount(container, ctx) {
   const setCount = () => { const n = byRec.size; count.textContent = n ? `· ${n} ${t(n === 1 ? 'dtvCount1' : 'dtvCountN')}` : ''; };
   const post = (type, payload) => { try { frame.contentWindow?.postMessage({ ns: NS, v: V, type, ...payload }, location.origin); } catch { /* el marco ya no está */ } };
 
+  // ok:false si no se pudo leer: la app NO debe tomar una lista vacía por «todo borrado».
+  // ids lleva también lo que quien mira no puede ver, para que tampoco lo tome por borrado.
   async function worldRecords() {
-    let docs = [];
-    try { docs = (await api.list()).docs || []; } catch (e) { status.textContent = t('dtvNoWorld'); }
+    let docs;
+    try { docs = (await api.list()).docs || []; } catch (e) { status.textContent = t('dtvNoWorld'); return { ok: false, records: [], ids: [] }; }
     byRec.clear();
-    const out = [];
+    const records = [], ids = [];
     for (const d of docs) {
       if (!d || !d.record || !d.record.id) continue;
-      byRec.set(d.recordId || d.record.id, d.id);
-      if (ctx.visible(d)) out.push({ ...d.record, savedAt: d.savedAt || d.record.savedAt || 0 });
+      const rid = d.recordId || d.record.id;
+      byRec.set(rid, d.id); ids.push(rid);
+      if (ctx.visible(d)) records.push({ ...d.record, savedAt: d.savedAt || d.record.savedAt || 0 });
     }
     setCount();
-    return out;
+    return { ok: true, records, ids };
   }
 
   // Guardar: la app avisa en cada cambio (hasta en cada tirada de regateo); aquí se agrupa.
   const queue = new Map();
+  const tomb = new Set();       // borrados mientras su primer guardado iba en camino
   let timer = null, busy = false, again = false;
   const schedule = (ms = 700) => { clearTimeout(timer); timer = setTimeout(flush, ms); };
   async function flush() {
@@ -128,6 +132,7 @@ export function mount(container, ctx) {
       try {
         const res = docId ? await api.put(docId, body) : await api.post({ ...body, id: rid });
         byRec.set(rid, res.doc.id);
+        if (tomb.has(rid)) { tomb.delete(rid); await remove(rid); continue; }   // lo borraron mientras se guardaba
         post('saved', { id: rid });
       } catch (e) {
         // Borrado desde otra pestaña: se vuelve a crear en la siguiente vuelta.
@@ -142,8 +147,10 @@ export function mount(container, ctx) {
   }
   async function remove(rid) {
     queue.delete(rid);
+    if (!ctx.canEdit) return;
     const docId = byRec.get(rid);
-    if (!ctx.canEdit || !docId) return;
+    // Sin documento todavía: o nunca se guardó, o su primer guardado va en camino (flush lo borra al terminar).
+    if (!docId) { if (busy) tomb.add(rid); return; }
     try { await api.del(docId); } catch (e) { if (e.status !== 404) { status.textContent = '⚠ ' + e.message; return; } }
     byRec.delete(rid); setCount();
   }
@@ -176,12 +183,13 @@ export function mount(container, ctx) {
     if (!m || m.ns !== NS || m.v !== V) return;
     try {
       if (m.type === 'ready') {
-        const records = await worldRecords();
+        const w = await worldRecords();
         const canScreen = ctx.canEdit && typeof ctx.toScreen === 'function';
         post('init', { world: { id: ctx.world.id, name: ctx.world.name }, lang: ctx.lang, canEdit: ctx.canEdit,
-          caps: { toScreen: canScreen, toArticle: !!ctx.canEdit }, records });
+          caps: { toScreen: canScreen, toArticle: !!ctx.canEdit }, ok: w.ok, records: w.records, ids: w.ids });
       } else if (m.type === 'upsert' && m.record && m.record.id) {
         if (!ctx.canEdit) return;
+        tomb.delete(m.record.id);
         queue.set(m.record.id, { record: m.record, title: m.title, summary: m.summary });
         schedule();
       } else if (m.type === 'remove' && m.id) {

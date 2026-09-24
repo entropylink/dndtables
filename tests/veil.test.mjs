@@ -56,7 +56,8 @@ const docs = async () => ((await api('GET', `worlds/${W}/tablas-dnd`)).docs || [
 
 // 3. La extensión dentro del mundo
 const browser = await chromium.launch();
-const ctx = await browser.newContext({ viewport: { width: 1400, height: 950 } });
+// Sin service worker: así page.route ve las peticiones a la API (para simular un guardado lento).
+const ctx = await browser.newContext({ viewport: { width: 1400, height: 950 }, serviceWorkers: 'block' });
 await ctx.addInitScript("try{localStorage.setItem('velo.lang','es')}catch{}");
 const page = await ctx.newPage();
 const errors = [];
@@ -169,6 +170,18 @@ f = await open(); await sleep(1500);
 d = await docs();
 ok(d.some((x) => x.record.id === looseId2), 'lo creado «aparte» con la extensión cerrada se sube al volver a abrirla');
 ok(await fw().evaluate(() => DT.records.list('vendors').length) === d.length, 'la app y el mundo quedan con los mismos resultados', `${d.length}`);
+
+// Borrar mientras su primer guardado va en camino (POST lento) → no queda copia en el mundo
+const before = (await docs()).length;
+let slowed = 0;
+await page.route('**/api/worlds/*/tablas-dnd', async (route) => { if (route.request().method() === 'POST') { slowed++; await sleep(1500); } await route.continue(); });
+await f.locator('[data-ref="genBtn"]').click();
+await sleep(1000);   // ya pasó la espera de 0.7 s: el POST va en camino
+await f.locator('#panel-vendors .saved-item.current [data-act="delete"]').click();
+await sleep(2500);
+await page.unroute('**/api/worlds/*/tablas-dnd');
+ok(slowed >= 1, `el guardado lento se simuló de verdad (${slowed} POST retenidos)`);
+ok((await docs()).length === before, 'borrar mientras se guarda por primera vez no deja copia en el mundo', `${before} → ${(await docs()).length}`);
 
 // Borrar desde la app → se borra el documento
 const n0 = (await docs()).length;
