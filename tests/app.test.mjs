@@ -165,12 +165,23 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.click('[data-ref="genBtn"]');
   const cards = await page.locator('#panel-vendors .vendor').count();
   ok(cards >= 9, `Villa: ≥ 9 fichas (${cards})`);
-  ok(await page.locator('#panel-vendors .scard').count() === 2, 'estado del asentamiento y evento semanal visibles');
+  ok(await page.locator('#panel-vendors .scard').count() === 2, 'estado y evento con su d20, en las tiradas');
   ok(await page.locator('#panel-vendors .vendor .npc .who').count() === cards, 'cada ficha tiene su tendero');
+  // Primero el asentamiento en limpio: estado, evento, una línea por tienda (cerrada) y los rumores; las tiradas, plegadas.
+  const vs = await page.evaluate(() => {
+    const P = document.querySelector('#panel-vendors'), sheet = P.querySelector('[data-ref="sheet"]'), rolls = P.querySelector('[data-ref="rollsBox"]');
+    return { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(rolls) & Node.DOCUMENT_POSITION_FOLLOWING), rollsClosed: !rolls.open,
+      status: sheet.querySelectorAll('[data-ref="shStatus"] dt').length, closed: sheet.querySelectorAll('details.vrow:not([open])').length,
+      rows: sheet.querySelectorAll('details.vrow').length, who: [...sheet.querySelectorAll('details.vrow > summary')].every((x) => /🧑/.test(x.textContent)),
+      rumors: sheet.querySelectorAll('ul.rumors li').length, name: sheet.querySelector('.sh').textContent === DT.records.active('vendors').name };
+  });
+  ok(vs.visible && vs.first && vs.rollsClosed && vs.status === 2 && vs.name, 'Vendedores: la ficha del asentamiento va primero y las tiradas plegadas', JSON.stringify(vs));
+  ok(vs.rows === cards && vs.closed === cards && vs.who && vs.rumors === cards, 'Vendedores: una línea por tienda con su tendero, cerrada; todos los rumores juntos', JSON.stringify(vs));
   await page.click('[data-ref="genBtn"]');
   const curMark = await page.evaluate(() => ({ active: DT.records.active('vendors').id, marked: document.querySelector('#panel-vendors .saved-item.current').dataset.id }));
   ok(curMark.active === curMark.marked, 'tras generar otra ciudad, la biblioteca marca como «actual» la nueva', JSON.stringify(curMark));
   const first = page.locator('#panel-vendors .vendor').first();
+  await first.locator(':scope > summary').click();
   const before = await first.locator('.note').textContent();
   await first.locator('.hagInput').fill('30');
   await first.locator('.hagApply').click();
@@ -178,6 +189,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(before !== after && /(Deal|Trato)/.test(after), 'la calculadora de regateo aplica el descuento', after);
   await page.locator('#panel-vendors .vendor').first().locator('.rerollNpc').click();
   ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, '↻ Tendero vuelve a tirar el PNJ');
+  ok(await page.locator('#panel-vendors .vendor').first().evaluate((el) => el.open), 'la tienda abierta sigue abierta al volver a tirar algo suyo');
   const name = await page.inputValue('[data-ref="saveName"]');
   await page.click('#langToggle');
   ok((await page.textContent('#appTitle')).includes('Tablas D&D') && (await page.textContent('#tabBar')).includes('Vendedores'), 'EN → ES cambia la cabecera y las pestañas');
@@ -224,6 +236,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   // precio igual al de la v2: factor 1.1, sin competencia, existencias normales → antorcha 1 pc × 1.1
   const price = await page.locator('#panel-vendors .vendor').first().locator('tr', { hasText: 'Saco de dormir' }).locator('td.price').textContent();
   ok(price.trim() === '1 po 1 pp', `los precios de una ciudad v2 no cambian (saco de dormir 1 po × 1.1 = ${price.trim()})`);
+  await page.locator('#panel-vendors .vendor > summary').first().click();
   await page.locator('#panel-vendors [data-act="rollNpc"]').first().click();
   ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, 'se le puede tirar tendero a una ciudad vieja');
   // importar un JSON de la v2 (una ciudad) por el selector de archivos
@@ -432,7 +445,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     const sheet = P.querySelector('[data-ref="sheet"]'), grid = P.querySelector('[data-ref="results"]');
     const out = { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING) };
     out.head = sheet.querySelector('.sh').textContent === rec.name;
-    out.sub = sheet.querySelector('.ss').textContent.toLowerCase() === [h.text('ancestry'), h.text('age'), h.text('job')].join(' · ').toLowerCase();
+    const ss = sheet.querySelector('.ss').textContent.toLowerCase();
+    out.sub = ss === T.api.sheetOf(rec).sub.join(' · ').toLowerCase() && [h.text('ancestryX') || h.text('ancestryW') || h.text('ancestry'), h.text('age'), h.text('job')].every((x) => ss.includes(x.toLowerCase()));
     out.body = ['looks', 'trait', 'quirk', 'wants', 'rumor', 'secret'].every((t) => sheet.textContent.toLowerCase().includes(h.text(t).toLowerCase()));
     out.dmTags = sheet.querySelectorAll('dt .vtag.bad').length === 2;
     out.attCls = sheet.querySelectorAll('dd.good, dd.bad').length >= 1 || /indifferent|indiferente/i.test(h.text('attitude'));
@@ -447,7 +461,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     while (T.api.helpers(DT.records.active('npc')).text('wants') === before && k++ < 30) P.querySelector('.rcard[data-t="wants"] [data-act="roll"]').click();
     out.reroll = sheet.textContent.includes(T.api.helpers(DT.records.active('npc')).text('wants'));
     DT.setLang(DT.lang === 'en' ? 'es' : 'en');
-    out.lang = P.querySelector('[data-ref="rollsHead"]').textContent === DT.t('rollsTitle') && sheet.querySelector('dt').textContent === T.api.helpers(DT.records.active('npc')).title('looks');
+    out.lang = P.querySelector('[data-ref="rollsSum"]').textContent === DT.t('rollsTitle') && sheet.querySelector('dt').textContent === T.api.helpers(DT.records.active('npc')).title('looks');
     DT.setLang(DT.lang === 'en' ? 'es' : 'en');
     return out;
   });
@@ -455,6 +469,118 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(sh.dmTags && sh.attCls, 'PNJ: la ficha marca lo del DM y colorea la actitud', JSON.stringify(sh));
   ok(sh.mdPlayers && sh.mdDM && sh.mdNoDice && sh.mdNoNameLine, 'PNJ: el Markdown es la ficha (secreto y veracidad solo para el DM)', JSON.stringify(sh));
   ok(sh.renamed && sh.reroll && sh.lang, 'PNJ: la ficha sigue al nombre a mano, a ↻ y al idioma', JSON.stringify(sh));
+  // Todas las pestañas declarativas: primero la ficha, las tiradas plegadas, y ↻ en una línea cambia solo lo suyo.
+  const decl = await page.evaluate(() => {
+    const out = {};
+    for (const id of ['npc', 'tavern', 'encounters', 'weather', 'loot']) {
+      DT.showTab(id);
+      const P = document.querySelector(`#panel-${id}`), T = DT.tabs.get(id);
+      P.querySelector('[data-ref="rollAll"]').click();
+      const sheet = P.querySelector('[data-ref="sheet"]'), box = P.querySelector('[data-ref="rollsBox"]');
+      const o = out[id] = { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING), closed: !box.open,
+        noEmpty: [...sheet.querySelectorAll('dd')].every((x) => x.textContent.trim()), cards: box.querySelectorAll('.rcard').length > 0 };
+      // ↻ de la primera línea que se pueda volver a tirar: cambia esa tabla (en ≤ 40 intentos) y deja igual las que no dependen de ella.
+      const btn = sheet.querySelector('[data-rr]'), tids = btn.dataset.rr.split(',');
+      const snap = () => JSON.stringify(DT.records.active(id).data.rolls);
+      const moved = new Set(); T.tables.forEach((t) => { if (tids.includes(t.id) || [...t.deps].some((k) => moved.has(k))) moved.add(t.id); });
+      const indep = T.tables.filter((t) => !moved.has(t.id));
+      const keep = JSON.stringify(indep.map((t) => DT.records.active(id).data.rolls[t.id]));
+      const before = snap(); let k = 0;
+      while (snap() === before && k++ < 40) sheet.querySelector(`[data-rr="${btn.dataset.rr}"]`).click();
+      o.rerolled = snap() !== before;
+      o.othersKept = JSON.stringify(indep.map((t) => DT.records.active(id).data.rolls[t.id])) === keep;
+    }
+    return out;
+  });
+  const bad = Object.entries(decl).filter(([, o]) => !Object.values(o).every(Boolean));
+  ok(!bad.length, 'cada pestaña declarativa: ficha primero, tiradas plegadas, sin líneas vacías, ↻ por línea vuelve a tirar solo lo suyo', JSON.stringify(bad));
+  // Pueblos: Clásicos nunca saca otros; «Todos los de D&D» sí, pero nunca otros mundos; «Todo», también otros mundos.
+  // Los índices de siempre no se mueven (los resultados guardados siguen diciendo lo mismo).
+  const pp = await page.evaluate(() => {
+    const T = DT.tabs.get('npc'), A = T.api, out = {};
+    const core = ['human', 'dwarf', 'elf', 'halfling', 'gnome', 'halfelf', 'halforc', 'tiefling', 'dragonborn'];
+    const anc = T.tables.find((t) => t.id === 'ancestry'), nm = T.tables.find((t) => t.id === 'name');
+    out.coreOrder = core.every((id, i) => anc.rows[i].id === id);
+    const coreNames = DT.lib.npc.defs.ancestry.rows.slice(0, 9).flatMap((a) => a.names.map((n) => a.id + ':' + n));
+    out.nameIdx = coreNames.every((id, i) => nm.rows[i].id === id);
+    out.count = DT.lib.npc.PEOPLES.length;
+    for (const peoples of ['classic', 'dnd', 'all']) {
+      const seen = { X: 0, W: 0, core: 0, badName: 0 };
+      for (let k = 0; k < 400; k++) {
+        const d = A.rollAll({ peoples }), rec = { name: 'x', data: d }, h = A.helpers(rec);
+        const x = h.row('ancestryX'), w = h.row('ancestryW'), n = h.row('name');
+        if (x) seen.X++; else if (w) seen.W++; else seen.core++;
+        const who = x || w || h.row('ancestry');
+        if (!n || !n.id.startsWith(who.id + ':')) seen.badName++;
+      }
+      out[peoples] = seen;
+    }
+    // Un PNJ guardado antes de los pueblos: se abre como Clásicos y ↻ Ascendencia sigue dando alguien.
+    const old = A.normalize({ name: 'Viejo', data: { v: 2, ctx: { where: 'city' }, rolls: { ancestry: [{ roll: 9, i: 1 }], name: [{ roll: 20, i: 16 }] } } });
+    out.oldCtx = old.data.ctx.peoples === 'classic' && A.helpers(old).text('name') === 'Thora' && A.helpers(old).text('ancestry') === 'dwarf';
+    A.rerollFrom('ancestry', old.data);
+    out.oldReroll = core.includes(A.helpers(old).row('ancestry').id) && !!A.helpers(old).text('name');
+    return out;
+  });
+  ok(pp.coreOrder && pp.nameIdx && pp.oldCtx && pp.oldReroll, 'pueblos: las ascendencias y los nombres de siempre no cambian de índice; un PNJ viejo sigue igual', JSON.stringify(pp));
+  ok(pp.count === 80 && pp.classic.X + pp.classic.W === 0 && pp.dnd.X > 50 && pp.dnd.W === 0 && pp.all.W > 20 && pp.all.X > 50,
+    `pueblos: ${pp.count}; Clásicos solo los del Manual; D&D añade ${pp.dnd.X}/400; Todo, ${pp.all.W}/400 de otros mundos`, JSON.stringify(pp));
+  ok(!pp.classic.badName && !pp.dnd.badName && !pp.all.badName, 'pueblos: el nombre siempre es del estilo de su pueblo', JSON.stringify(pp));
+  // Clases: el aventurero retirado siempre tiene; el ladrón suele ser pícaro; sin clase no sale en la ficha.
+  const cl = await page.evaluate(() => {
+    const T = DT.tabs.get('npc'), A = T.api, job = T.tables.find((t) => t.id === 'job'), out = { adv: 0, thiefRogue: 0, farmerNone: 0, subOk: true };
+    const force = (id) => { const d = A.rollAll({}); d.rolls.job = [{ roll: 1, i: job.rows.findIndex((r) => r.id === id) }]; A.rerollMany(['class'], d); return d; };
+    for (let k = 0; k < 300; k++) {
+      const a = force('adventurer'), t = force('thief'), f = force('farmer');
+      const cls = (d) => A.helpers({ data: d }).row('class').id;
+      if (cls(a) !== 'none') out.adv++;
+      if (cls(t) === 'rogue') out.thiefRogue++;
+      if (cls(f) === 'none') out.farmerNone++;
+      for (const d of [a, f]) {
+        const rec = { name: 'x', data: d }, sub = A.sheetOf(rec).sub.join(' · ').toLowerCase(), c = A.helpers(rec).row('class');
+        if ((c.id !== 'none') !== sub.includes(A.helpers(rec).text('class').toLowerCase())) out.subOk = false;
+      }
+    }
+    out.classes = DT.lib.npc.CLASSES.length;
+    return out;
+  });
+  ok(cl.classes === 13 && cl.adv === 300 && cl.thiefRogue > 120 && cl.farmerNone > 220 && cl.subOk, 'clases: 13; dependen del oficio; «ninguna» no sale en la ficha', JSON.stringify(cl));
+  // Botín: el total suma monedas y objetos de valor; Taberna: la clientela no se repite.
+  const misc = await page.evaluate(() => {
+    const L = DT.tabs.get('loot'), A = L.api, t = (id) => L.tables.find((x) => x.id === id), out = {};
+    const coins = t('coins').rows.findIndex((r) => r.text.en === '{2d6*100} gp'), val = t('val').rows.findIndex((r) => r.id === 'g100' && r.only.kind[0] === 'hoard');
+    const rec = { name: 'x', data: { v: 2, ctx: { tier: 'mid', kind: 'hoard' }, rolls: { coins: [{ roll: 1, i: coins, vals: [700] }], val: [{ roll: 1, i: val, vals: [4] }], magic: [{ roll: 1, i: 0 }] } } };
+    DT.lang = 'en';
+    const worth = A.sheetOf(A.normalize(rec)).lines.find((l) => l.label === DT.t('loot.total'));
+    out.total = worth && worth.text;
+    const V = DT.tabs.get('tavern').api; let dup = 0;
+    for (let k = 0; k < 300; k++) { const rs = V.rollAll({}).rolls.patrons; if (new Set(rs.map((r) => r.i)).size !== rs.length) dup++; }
+    out.dup = dup;
+    return out;
+  });
+  ok(misc.total === '≈ 1,100 gp', `botín: vale = monedas + gemas (700 + 4 × 100 → ${misc.total})`);
+  ok(misc.dup === 0, 'taberna: la clientela no se repite', JSON.stringify(misc));
+  // Vendedores con pueblos: la ciudad guarda los suyos y sus tenderos salen de ahí.
+  const vp = await page.evaluate(() => {
+    DT.showTab('vendors');
+    const P = document.querySelector('#panel-vendors'), V = DT.tabs.get('vendors').api, core = new Set(DT.lib.npc.defs.ancestry.rows.map((r) => r.id));
+    const run = (peoples) => { P.querySelector('[data-ref="peoples"]').value = peoples; P.querySelector('[data-ref="peoples"]').dispatchEvent(new Event('change'));
+      let exotic = 0, n = 0, saved = true, names = true;
+      for (let k = 0; k < 12; k++) { V.generateAll(); const d = DT.records.active('vendors').data; if (d.peoples !== peoples) saved = false;
+        for (const v of [...d.permanent, ...d.traveling]) { n++; if (!core.has(v.npc.anc)) exotic++; if (!v.npc.name || typeof v.npc.name !== 'string') names = false; } }
+      return { exotic, n, saved, names }; };
+    return { classic: run('classic'), all: run('all') };
+  });
+  ok(vp.classic.saved && vp.all.saved && vp.classic.exotic === 0 && vp.all.exotic > 10 && vp.classic.names && vp.all.names, 'vendedores: los pueblos se guardan con la ciudad y sus tenderos salen de ahí', JSON.stringify(vp));
+  // Tablón: la ficha primero, las tiradas plegadas con una fila por encargo.
+  const jb = await page.evaluate(() => {
+    DT.showTab('jobs');
+    const P = document.querySelector('#panel-jobs'); P.querySelector('[data-ref="roll"]').click();
+    const sheet = P.querySelector('[data-ref="sheet"]'), box = P.querySelector('[data-ref="rollsBox"]'), n = DT.records.active('jobs').data.jobs.length;
+    return { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING), closed: !box.open,
+      jobs: sheet.querySelectorAll('.job').length === n, rows: box.querySelectorAll('tr').length === n + 1 };
+  });
+  ok(Object.values(jb).every(Boolean), 'tablón: la ficha primero; las tiradas plegadas, una fila por encargo', JSON.stringify(jb));
   // Clima: cambiar el contexto cambia la tabla de referencia
   await page.click('#tabBar [data-tab="weather"]');
   await page.selectOption('#panel-weather select[data-ctx="climate"]', 'tropical');
@@ -473,11 +599,11 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(/\(DM\)/.test(board.dm) && !/\(DM\)/.test(board.pl), 'Markdown del tablón: complicaciones solo en la versión del DM');
   ok(/(Is the rumor true\?|¿Es cierto el rumor\?) \(DM\): (false|half-true|true|falso|medio cierto|cierto)/.test(board.dm), 'el encargo del rumor dice si el rumor es cierto (DM)', board.dm.split('\n').filter((l) => /DM/.test(l)).join(' / '));
   ok(!/: \?(\n|$)|: $/m.test(board.dm), 'ningún campo del tablón sale vacío o con «?»');
-  ok(await page.locator('#panel-jobs .rcard').count() === board.b.data.jobs.length, 'una tarjeta por encargo');
-  await page.locator('#panel-jobs .rcard').first().locator('[data-act="reroll"]').click();
+  ok(await page.locator('#panel-jobs .job').count() === board.b.data.jobs.length, 'una tarjeta por encargo');
+  await page.locator('#panel-jobs .job').first().locator('[data-act="reroll"]').click();
   ok(await page.evaluate(() => DT.records.active('jobs').data.jobs[0].rumorJob), '↻ en el encargo del rumor saca otro rumor');
   await page.click('#langToggle');
-  ok((await page.textContent('#panel-jobs')).includes('Encargo 1'), 'el tablón cambia de idioma');
+  ok((await page.textContent('#panel-jobs [data-ref="sheet"]')).includes('Quién paga'), 'el tablón cambia de idioma');
   await shot(page, 'app-jobs');
   ok(!errors.length, 'sin errores de consola en las pestañas nuevas', errors.slice(0, 3).join(' | '));
   await ctx.close();

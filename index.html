@@ -137,12 +137,36 @@
   .sheet{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:12px; padding:14px 16px; margin-top:14px; box-shadow:0 2px 0 #0006}
   .sheet .sh{font-size:1.3rem; font-weight:700; color:var(--gold); overflow-wrap:anywhere}
   .sheet .ss{color:var(--ink); margin-top:2px; font-weight:700}
-  .sheet dl{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:5px 14px; margin:12px 0 0}
-  .sheet dt{color:var(--muted); font-size:.86rem; padding-top:1px}
+  .sheet dl{display:grid; grid-template-columns:max-content minmax(0,1fr) auto; gap:6px 12px; margin:12px 0 0; align-items:start}
+  .sheet dt{color:var(--muted); font-size:.86rem; padding-top:2px}
   .sheet dd{margin:0}
   .sheet dd.good{color:var(--green)} .sheet dd.bad{color:var(--red)}
-  .sheet dd .sub{color:var(--muted)}
-  .rollshead{margin:18px 0 0; color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em}
+  .sheet dd .sub{color:var(--muted); font-size:.84rem; margin-top:1px}
+  .sheet .rr{padding:0 8px; font-size:.8rem; line-height:1.6; opacity:.55}
+  .sheet .rr:hover,.sheet .rr:focus-visible{opacity:1}
+  .sheet .rrx{grid-column:3}
+  .sheet .shx{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+  .sheet .sgroup{margin-top:14px; color:var(--gold); font-weight:700; font-size:.92rem}
+  .rollsbox{margin-top:14px}
+  .rollsbox > summary .sub, .sgroup .sub{font-weight:400}
+  /* Vendedores: una línea por tienda; se abre para ver artículos, precios y regateo */
+  details.vrow{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:10px; margin:6px 0; padding:0 12px; box-shadow:none}
+  details.vrow.travel{border-left:3px solid var(--cyan)}
+  details.vrow > summary{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:8px 0; font-weight:400; color:var(--ink)}
+  details.vrow > summary::before{content:"▸"; color:var(--muted); width:.8em}
+  details.vrow[open] > summary::before{content:"▾"}
+  details.vrow[open]{padding-bottom:12px}
+  details.vrow .vicon{font-size:1.15rem}
+  details.vrow .vname{font-size:1rem}
+  details.vrow .vtag{margin:0}
+  .vwho{font-size:.9rem}
+  ul.rumors{margin:6px 0 0; padding-left:18px}
+  ul.rumors li{margin:4px 0}
+  /* Tablón: un encargo por bloque, dentro de la ficha */
+  .sheet .job{border-top:1px solid var(--line); padding:10px 0 4px; margin-top:10px}
+  .sheet .job .jt{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+  .sheet .job .jt b{font-size:1.02rem}
+  .rollsbox > .grid{margin-top:4px}
   /* reference tables */
   details{background:var(--bg2); border:1px solid var(--line); border-radius:10px; margin:10px 0; padding:0 14px}
   details[open]{padding-bottom:14px}
@@ -214,7 +238,7 @@
       <button class="primary" data-ref="genBtn" data-i18n="genBtn">🎲 Generate settlement</button>
       <button class="small" data-ref="regenPerm" data-i18n="regenPerm">↻ Permanent only</button>
       <button class="small" data-ref="newWeek" data-i18n="newWeek">↻ New week</button>
-      <span class="sub" data-ref="genInfo"></span>
+      <label class="sub"><span data-ref="peoplesLbl"></span> <select data-ref="peoples"></select></label>
     </div>
     <div class="row" style="margin-top:10px" data-ref="shareRow" hidden>
       <button class="small" data-ref="copyMd" data-i18n="copyMd">📋 Copy as Markdown</button>
@@ -223,13 +247,23 @@
     </div>
   </div>
 
-  <div class="statusgrid" data-ref="statusGrid" hidden></div>
-
-  <h2 data-i18n-html="permHead">Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span></h2>
-  <div class="grid" data-ref="permGrid"><div class="empty" data-i18n="permEmpty">Pick a size and press "Generate settlement".</div></div>
-
-  <h2 data-i18n-html="travHead">Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span></h2>
-  <div class="grid" data-ref="travelGrid"><div class="empty">—</div></div>
+  <div class="empty" data-ref="emptyMsg" data-i18n="permEmpty" style="margin-top:14px">Pick a size and press "Generate settlement".</div>
+  <!-- Primero el asentamiento en limpio; cada tienda se abre para ver artículos, precios y regateo -->
+  <div class="sheet" data-ref="sheet" hidden>
+    <div class="sh" data-ref="shName"></div>
+    <div class="ss" data-ref="shSub"></div>
+    <dl data-ref="shStatus"></dl>
+    <div class="sgroup"><span data-i18n="permGroup">🏪 Permanent</span> <span class="sub" data-i18n="openHint">— open a shop for its goods, prices and haggling</span></div>
+    <div data-ref="permGrid"></div>
+    <div class="sgroup" data-i18n="travGroup">🐎 Traveling, this week</div>
+    <div data-ref="travelGrid"></div>
+    <div class="sgroup" data-i18n="rumorsGroup">🗣 What the shopkeepers say</div>
+    <ul class="rumors" data-ref="shRumors"></ul>
+  </div>
+  <details class="rollsbox" data-ref="rollsBox" hidden>
+    <summary><span data-i18n="rollsTitle">🎲 Rolls</span> <span class="sub" data-i18n="vRollsHint">— the state and this week's event, with their d20</span></summary>
+    <div class="statusgrid" data-ref="statusGrid"></div>
+  </details>
 
   <h2 data-i18n="saveTitle">💾 Saved cities</h2>
   <div class="controls">
@@ -324,7 +358,7 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.2.0";
+DT.VERSION = "3.3.0";
 DT.SCHEMA = 3;
 DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
@@ -429,7 +463,7 @@ DT.addStrings({
     hostSent:"Sent to Veil.", hostOffline:"Veil didn't answer; working locally.",
     hostReadFailed:"Veil couldn't read this world's results: working locally. Nothing is saved to the world until you reopen this tool.",
     rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result",
-    noneThisTime:"Nothing this time.", rollsTitle:"Rolls", dependsOn:"Shown for: {what}", rollName:"Roll another name",
+    noneThisTime:"Nothing this time.", rollsTitle:"🎲 Rolls", rollsHint:"— what each die rolled; ↻ to reroll one", rerollThis:"Reroll", dependsOn:"Shown for: {what}", rollName:"Roll another name",
     copyMdShort:"📋 Copy as Markdown", toScreenShort:"▤ To the DM screen", toArticleShort:"¶ Veil article",
     savedTitle:"💾 Saved", refTitle:"📖 Reference tables", articleReady:"Veil article ready.", articleNotMade:"Article not created."
   },
@@ -449,7 +483,7 @@ DT.addStrings({
     hostSent:"Enviado a Veil.", hostOffline:"Veil no respondió; se trabaja en local.",
     hostReadFailed:"Veil no pudo leer los resultados del mundo: se trabaja en local. No se guarda nada en el mundo hasta que vuelvas a abrir la herramienta.",
     rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado",
-    noneThisTime:"Nada esta vez.", rollsTitle:"Tiradas", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
+    noneThisTime:"Nada esta vez.", rollsTitle:"🎲 Tiradas", rollsHint:"— qué salió en cada dado; ↻ para volver a tirar una", rerollThis:"Volver a tirar", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
     copyMdShort:"📋 Copiar como Markdown", toScreenShort:"▤ A la pantalla de DM", toArticleShort:"¶ Artículo en Veil",
     savedTitle:"💾 Guardados", refTitle:"📖 Tablas de referencia", articleReady:"Artículo listo en Veil.", articleNotMade:"No se creó el artículo."
   }
@@ -516,6 +550,15 @@ DT.rangeLabel = r => r.lo===r.hi ? String(r.lo) : `${r.lo}–${r.hi}`;
 //   DT.rowsFixed(["Uno|One", "Dos|Two"])      → filas 1, 2, 3… (una cara cada una)
 DT.row = (x, extra)=>{ const [es,en] = String(x).split("|"); return Object.assign({text:{es, en:en==null?es:en}}, extra||{}); };
 DT.rowsFixed = list=> list.map((x,i)=> Object.assign(DT.row(x), {lo:i+1, hi:i+1}));
+// Peso de una fila con condiciones (only / weight) para un entorno {clave: id}: lo que usa DT.simpleTableTab,
+// y lo que puede pasarle a table.roll() una pestaña completa que use las mismas tablas.
+DT.condMatches = (cond, env)=> !cond || Object.entries(cond).every(([k,ids])=> env[k]!=null && ids.includes(env[k]));
+DT.condWeight = env=> row=>{
+  if(!DT.condMatches(row.only, env)) return 0;
+  let w = row.w==null ? 1 : row.w;
+  for(const [k,m] of Object.entries(row.weight||{})){ const f = m[env[k]]; if(f!=null) w *= f; }
+  return w;
+};
 
 // Reparte las caras de un dado entre filas con peso (resto mayor; toda fila con peso > 0 recibe ≥ 1 cara).
 // Devuelve un rango {lo,hi} por fila (null si su peso es 0). Así un d100 con pesos significa algo
@@ -847,7 +890,7 @@ DT.simpleTableTab = function(def){
     const t = DT.table({id:td.id, die:td.die, rows:td.rows});
     const conds = td.rows.some(r=> r.only || r.weight);
     if(t.fixed && conds) throw new Error(`[dndtables] ${def.id}/${td.id}: rows with only/weight must use weights (w), not lo/hi`);
-    return Object.assign(t, {title:td.title, hidden:!!td.hidden, dm:!!td.dm, when:td.when||null, count:td.count==null?1:td.count, conds});
+    return Object.assign(t, {title:td.title, hidden:!!td.hidden, dm:!!td.dm, when:td.when||null, count:td.count==null?1:td.count, unique:!!td.unique, conds});
   });
   const byId = new Map(tables.map(t=>[t.id, t]));
   const keysOf = t=>{ const ks=new Set(Object.keys(t.when||{})); t.rows.forEach(r=>{ Object.keys(r.only||{}).forEach(k=>ks.add(k)); Object.keys(r.weight||{}).forEach(k=>ks.add(k)); }); if(t.count && typeof t.count==="object") Object.keys(t.count).forEach(k=>ks.add(k)); return ks; };
@@ -855,13 +898,7 @@ DT.simpleTableTab = function(def){
     t.deps = keysOf(t);
     for(const k of t.deps) if(!ctxDefs.some(c=>c.id===k) && !tables.slice(0,idx).some(x=>x.id===k)) console.warn(`[dndtables] ${def.id}/${t.id}: condition key "${k}" is neither a context nor an earlier table`);
   });
-  const matches = (cond, env)=> !cond || Object.entries(cond).every(([k,ids])=> env[k]!=null && ids.includes(env[k]));
-  const weightFn = env=> row=>{
-    if(!matches(row.only, env)) return 0;
-    let w = row.w==null ? 1 : row.w;
-    for(const [k,m] of Object.entries(row.weight||{})){ const f = m[env[k]]; if(f!=null) w *= f; }
-    return w;
-  };
+  const matches = DT.condMatches, weightFn = DT.condWeight;
   const defaultCtx = ()=> Object.fromEntries(ctxDefs.map(c=> [c.id, c.default || (c.options[0]||{}).id]));
   // Lo que ve una tabla: el contexto + la fila (id) que salió en cada tabla anterior.
   function envFor(data, uptoId){
@@ -887,20 +924,22 @@ DT.simpleTableTab = function(def){
     if(t.when && !matches(t.when, env)){ delete data.rolls[t.id]; return; }
     const n = countFor(t, env), wf = t.conds ? weightFn(env) : undefined, out = [];
     for(let k=0;k<n;k++){
-      const r = t.roll(wf); if(!r) break;
+      let r = t.roll(wf), tries = 0;
+      // unique: como en la mesa, si repite, se vuelve a tirar.
+      while(r && t.unique && out.some(x=> x.i===t.rows.indexOf(r.row)) && tries++ < 40) r = t.roll(wf);
+      if(!r) break;
       const vals = DT.inlineDice.roll(srcText(r.row));
       out.push(vals.length ? {roll:r.roll, i:t.rows.indexOf(r.row), vals} : {roll:r.roll, i:t.rows.indexOf(r.row)});
       DT.log("d"+t.die, r.roll, `${DT.tx(t.title)}: ${DT.inlineDice.fill(DT.tx(rowText(r.row)), vals)}`);
     }
     data.rolls[t.id] = out;
   }
-  // Volver a tirar una tabla arrastra a las que dependen de ella (y a las que dependen de esas).
-  function rerollFrom(tid, data){
-    const idx = tables.findIndex(t=> t.id===tid); if(idx<0) return;
-    const changed = new Set([tid]);
-    rollTable(tables[idx], data);
-    for(let j=idx+1;j<tables.length;j++){ const t=tables[j]; if([...t.deps].some(k=> changed.has(k))){ rollTable(t, data); changed.add(t.id); } }
+  // Volver a tirar unas tablas arrastra a las que dependen de ellas (y a las que dependen de esas).
+  function rerollMany(tids, data){
+    const want = new Set(tids), changed = new Set();
+    for(const t of tables) if(want.has(t.id) || [...t.deps].some(k=> changed.has(k))){ rollTable(t, data); changed.add(t.id); }
   }
+  const rerollFrom = (tid, data)=> rerollMany([tid], data);
   function rollAll(ctx){ const data = {v:2, ctx:Object.assign(defaultCtx(), ctx||{}), rolls:{}}; tables.forEach(t=> rollTable(t, data)); return data; }
   const resText = (t, r)=> r && t.rows[r.i] ? DT.inlineDice.fill(DT.tx(rowText(t.rows[r.i])), r.vals) : "";
   const ctxText = (data, key)=>{ const c=ctxDefs.find(x=>x.id===key); const o=c && c.options.find(o=> o.id===(data.ctx||{})[key]); return o ? DT.tx(o.text) : ""; };
@@ -930,12 +969,16 @@ DT.simpleTableTab = function(def){
     texts:(tid)=> (rec.data.rolls[tid]||[]).map(r=> resText(use(tid), r)),
     row:(tid,k=0)=>{ const t=use(tid), r=(rec.data.rolls[tid]||[])[k]; return r ? t.rows[r.i] : null; },
     title:(tid)=> DT.tx(byId.get(tid).title),
+    vals:(tid,k=0)=>{ use(tid); const r=(rec.data.rolls[tid]||[])[k]; return r && r.vals ? r.vals.slice() : []; },
     // Una línea de la ficha: etiqueta (`label` o el título de la tabla), lo que salió (o `text`), la nota y el color de su fila.
+    // `also`: otras tablas que la línea junta (se marcan como leídas y su ↻ las vuelve a tirar todas).
     line:(tid, o={})=>{
       const t = use(tid), rs = rec.data.rolls[tid]||[], row = rs[0] && t.rows[rs[0].i];
       if(!row) return null;
+      const also = (o.also||[]).filter(x=> byId.has(x)); also.forEach(use);
       return {label:DT.tx(o.label||t.title), text:o.text!=null ? String(o.text) : rs.map(r=> resText(t, r)).join("; "),
-        note:row.note ? DT.tx(row.note) : "", cls:row.cls||"", dm:t.dm};
+        note:o.note!=null ? DT.tx(o.note) : (row.note ? DT.tx(row.note) : ""), cls:o.cls!=null ? o.cls : (row.cls||""),
+        dm:!!(t.dm || o.dm), tids:[tid, ...also]};
     },
     ctx:(key)=> (rec.data.ctx||{})[key], ctxText:(key)=> ctxText(rec.data, key),
     markdown:(opts)=> markdown(rec, opts),
@@ -950,7 +993,8 @@ DT.simpleTableTab = function(def){
     try{ s = def.sheet(helpers(rec, used)); }catch(e){ console.error(e); return null; }
     if(!s) return null;
     return {used, sub:(s.sub||[]).filter(Boolean).map(cap),
-      lines:(s.lines||[]).filter(l=> l && l.text).map(l=> Object.assign({}, l, {text:cap(l.text), cls:l.cls==="good"||l.cls==="bad" ? l.cls : ""}))};
+      lines:(s.lines||[]).filter(l=> l && l.text).map(l=> Object.assign({}, l, {text:cap(l.text), cls:l.cls==="good"||l.cls==="bad" ? l.cls : "",
+        tids:(l.tids||[]).filter(x=> byId.has(x))}))};
   }
   function normalize(rec){
     const d = rec.data; d.ctx = Object.assign(defaultCtx(), d.ctx||{}); d.rolls = d.rolls || {};
@@ -978,10 +1022,15 @@ DT.simpleTableTab = function(def){
     refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(c[s.dataset.ctx]!=null) s.value = c[s.dataset.ctx]; s.onchange = renderRefs; });
   }
   function renderSheet(){
+    if(!def.sheet) return;
     const s = cur && sheetOf(cur);
-    refs.sheet.hidden = !s; refs.rollsHead.hidden = !s;
-    refs.sheet.innerHTML = !s ? "" : `<div class="sh">${DT.esc(cur.name)}</div>${s.sub.length?`<div class="ss">${DT.esc(s.sub.join(" · "))}</div>`:""}<dl>${
-      s.lines.map(l=>`<dt>${DT.esc(l.label)}${l.dm?` <span class="vtag bad">DM</span>`:""}</dt><dd${l.cls?` class="${l.cls}"`:""}>${DT.esc(l.text)}${l.note?` <span class="sub">— ${DT.esc(l.note)}</span>`:""}</dd>`).join("")}</dl>`;
+    refs.sheet.hidden = !s;
+    if(!s){ refs.sheet.innerHTML = ""; return; }
+    const rr = DT.esc(DT.t("rerollThis"));
+    refs.sheet.innerHTML = `<div class="sh">${DT.esc(cur.name)}</div>${s.sub.length?`<div class="ss">${DT.esc(s.sub.join(" · "))}</div>`:""}<dl>${
+      s.lines.map(l=>`<dt>${DT.esc(l.label)}${l.dm?` <span class="vtag bad">DM</span>`:""}</dt><dd${l.cls?` class="${l.cls}"`:""}>${DT.esc(l.text)}${l.note?`<div class="sub">${DT.esc(l.note)}</div>`:""}</dd>${
+        l.tids.length?`<button class="small ghost rr" data-rr="${DT.esc(l.tids.join(","))}" title="${rr}" aria-label="${rr}: ${DT.esc(l.label)}">↻</button>`:`<span class="rrx"></span>`}`).join("")}</dl>`;
+    refs.sheet.querySelectorAll("[data-rr]").forEach(b=>{ b.onclick = ()=>{ if(!cur) return; rerollMany(b.dataset.rr.split(","), cur.data); autoName(); persist(); render(); }; });
   }
   function render(){
     if(!refs) return;
@@ -1042,9 +1091,10 @@ DT.simpleTableTab = function(def){
             <button class="small host" data-ref="screen" hidden>${DT.esc(DT.t("toScreenShort"))}</button>
             <button class="small host" data-ref="article" hidden>${DT.esc(DT.t("toArticleShort"))}</button>
           </div></div>
-        <div class="sheet" data-ref="sheet" hidden></div>
-        <div class="rollshead" data-ref="rollsHead" hidden>${DT.esc(DT.t("rollsTitle"))}</div>
-        <div class="grid" style="margin-top:14px" data-ref="results"></div>
+        ${def.sheet ? `<div class="sheet" data-ref="sheet" hidden></div>
+        <details class="rollsbox" data-ref="rollsBox"><summary><span data-ref="rollsSum">${DT.esc(DT.t("rollsTitle"))}</span> <span class="sub" data-ref="rollsHint">${DT.esc(DT.t("rollsHint"))}</span></summary>
+          <div class="grid" data-ref="results"></div></details>`
+        : `<div class="grid" style="margin-top:14px" data-ref="results"></div>`}
         <h2>${DT.esc(DT.t("savedTitle"))}</h2><div class="controls"><div class="savebar">
           <button data-ref="exportAll">${DT.esc(DT.t("exportAll"))}</button><button data-ref="import">${DT.esc(DT.t("importBtn"))}</button></div>
           <div data-ref="lib" style="margin-top:10px"></div></div>
@@ -1076,7 +1126,7 @@ DT.simpleTableTab = function(def){
       renderCtx(); render();
     },
     onShow(){ if(refs) render(); },
-    onLang(){ if(refs){ const keep = selCtx(); refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); refs.copy.textContent=DT.t("copyMdShort"); refs.rollsHead.textContent=DT.t("rollsTitle");
+    onLang(){ if(refs){ const keep = selCtx(); refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); refs.copy.textContent=DT.t("copyMdShort"); if(refs.rollsSum){ refs.rollsSum.textContent=DT.t("rollsTitle"); refs.rollsHint.textContent=DT.t("rollsHint"); }
       refs.screen.textContent=DT.t("toScreenShort"); refs.article.textContent=DT.t("toArticleShort"); renderCtx();
       refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(keep[s.dataset.ctx]!=null) s.value=keep[s.dataset.ctx]; }); render(); } },
     validate: data=> !!(data && data.rolls && typeof data.rolls==="object"),
@@ -1092,7 +1142,7 @@ DT.simpleTableTab = function(def){
   });
   // Para las pruebas y para quien extienda.
   tab.tables = tables; tab.context = ctxDefs;
-  tab.api = {rollAll, rerollFrom, normalize, markdown, helpers, sheetOf, resText, weightFn, envFor, defaultCtx, current:()=>cur};
+  tab.api = {rollAll, rerollFrom, rerollMany, normalize, markdown, helpers, sheetOf, resText, weightFn, envFor, defaultCtx, current:()=>cur};
   return tab;
 };
 
@@ -1251,8 +1301,73 @@ const ancestry = {id:"ancestry", die:20, rows:[
   {id:"halfelf",   w:1, name:{en:"half-elf",es:"semielfo"},   names:["Aerin","Talia","Corwin","Lyra","Evander","Siri"]},
   {id:"halforc",   w:1, name:{en:"half-orc",es:"semiorco"},   names:["Grusha","Dorn","Ketta","Brakk","Ovra","Rurk"]},
   {id:"tiefling",  w:1, name:{en:"tiefling",es:"tiflin"},     names:["Nyx","Damaris","Vex","Lethe","Morrow","Sable"]},
-  {id:"dragonborn",w:1, name:{en:"dragonborn",es:"dracónido"},names:["Vorrak","Sethra","Kaldrix","Nyrra","Tharex","Uzra"]}
+  {id:"dragonborn",w:1, name:{en:"dragonborn",es:"dracónido"},names:["Vorrak","Sethra","Kaldrix","Nyrra","Tharex","Uzra"]},
+  // Al final para no mover los índices guardados. Con «Clásicos» no salen nunca; si salen, mandan a su tabla
+  // (80 pueblos no caben en un d100 sin aplanar los pesos: D&D va en un d100 y los otros mundos en un d20).
+  {id:"other",     w:12, name:{en:"another people (D&D)",es:"otro pueblo (D&D)"}, weight:{peoples:{classic:0, dnd:1, all:1}}},
+  {id:"worlds",    w:5,  name:{en:"from other worlds",es:"de otros mundos"}, weight:{peoples:{classic:0, dnd:0, all:1}}}
 ]};
+// Qué pueblos pueden salir. Lo usan como contexto PNJ rápido y Taberna, y Vendedores en su selector.
+const peoplesCtx = {id:"peoples", title:{en:"Peoples", es:"Pueblos"}, default:"classic", options:[
+  {id:"classic", text:{en:"Classic (Player's Handbook)", es:"Clásicos (Manual del Jugador)"}},
+  {id:"dnd", text:{en:"All of D&D", es:"Todos los de D&D"}},
+  {id:"all", text:{en:"Everything (also Magic & Zelda)", es:"Todo (también Magic y Zelda)"}}]};
+// Otros pueblos: solo el nombre del pueblo (sin rasgos ni reglas). Los nombres de persona son inventados, por estilo.
+// "Remache|Rivet" = nombre que se traduce (es|en).
+const STYLE = {
+  human:ancestry.rows[0].names, dwarf:ancestry.rows[1].names, elf:ancestry.rows[2].names, halfling:ancestry.rows[3].names, gnome:ancestry.rows[4].names,
+  halfelf:ancestry.rows[5].names, orc:ancestry.rows[6].names,
+  goblinoid:["Snikk","Grubnar","Zagra","Murrek","Vrella","Kikka","Drazz","Nibbet"],
+  giant:["Taruk","Venna","Olmakh","Seithi","Brannok","Kuvara","Deshu","Ammoth"],
+  feline:["Rrisha","Tamaru","Suvi","Oshen","Kesh","Mirrow","Pahli","Zhaan"],
+  avian:["Kriiah","Tsekka","Aurrik","Piili","Skrell","Wheeo","Kaaro","Treel"],
+  reptilian:["Ssaketh","Iskra","Oshaak","Vhass","Tazzik","Nessla","Ghura","Seshet"],
+  aquatic:["Nerio","Coralind","Maelis","Oroth","Thessa","Undar","Pelagia","Iriel"],
+  fey:["Pipkin","Cardo|Thistle","Fennick","Acedera|Sorrel","Tanaceto|Tansy","Brambleby","Larkin","Fuego Fatuo|Wisp"],
+  construct:["Remache|Rivet","Faro|Beacon","Yunque|Anvil","Centinela|Sentinel","Vigía|Watch","Engranaje|Cog","Baluarte|Bulwark","Libro Mayor|Ledger"],
+  gith:["Zhaar","Vlith","Kaelzith","Irrith","Zerath","Mhenn","Tsarro","Dazzith"],
+  elemental:["Ignar","Pyrra","Cendra","Hielmar","Soleth","Nimbra","Teyla","Orvek"],
+  changeling:["Aux","Jin","Nim","Sev","Tavi","Olo","Quen","Rhis"],
+  beast:["Garrow","Hesk","Rukka","Fenna","Brisk","Yarro","Tovah","Kurr"],
+  insect:["Tk'ikka","Chak-ta","Zzirr","Kli-kesh","Trrak","Ssik","Ka'thik","Vrrt"],
+  desert:["Amsa","Kheti","Neferu","Rashta","Tahmet","Sekhu","Idra","Menkha"]
+};
+// [id, en, es, grupo, estilo] — grupo: dnd (libros de D&D), monster (monstruos jugables del DMG y no muertos), worlds (Magic: Plane Shift y Lorwyn; Zelda).
+const PEOPLES = [
+  ["aarakocra","aarakocra","aarakocra","dnd","avian"], ["aasimar","aasimar","aasimar","dnd","human"], ["astralelf","astral elf","elfo astral","dnd","elf"],
+  ["autognome","autognome","autognomo","dnd","construct"], ["bugbear","bugbear","osgo","dnd","goblinoid"], ["centaur","centaur","centauro","dnd","giant"],
+  ["changeling","changeling","cambiante","dnd","changeling"], ["deepgnome","deep gnome","gnomo de las profundidades","dnd","gnome"], ["dhampir","dhampir","dhampiro","dnd","human"],
+  ["duergar","duergar","duergar","dnd","dwarf"], ["eladrin","eladrin","eladrin","dnd","elf"], ["fairy","fairy","hada","dnd","fey"],
+  ["firbolg","firbolg","firbolg","dnd","giant"], ["genasi","genasi","genasí","dnd","elemental"], ["giff","giff","giff","dnd","giant"],
+  ["githyanki","githyanki","githyanki","dnd","gith"], ["githzerai","githzerai","githzerai","dnd","gith"], ["goblin","goblin","goblin","dnd","goblinoid"],
+  ["goliath","goliath","goliat","dnd","giant"], ["grung","grung","grung","dnd","reptilian"], ["hadozee","hadozee","hadozee","dnd","beast"],
+  ["harengon","harengon","harengon","dnd","fey"], ["hexblood","hexblood","sangre de bruja","dnd","human"], ["hobgoblin","hobgoblin","hobgoblin","dnd","goblinoid"],
+  ["kalashtar","kalashtar","kalashtar","dnd","human"], ["kender","kender","kender","dnd","halfling"], ["kenku","kenku","kenku","dnd","avian"],
+  ["khoravar","khoravar","khoravar","dnd","halfelf"], ["kobold","kobold","kobold","dnd","reptilian"], ["leonin","leonin","leonino","dnd","feline"],
+  ["lizardfolk","lizardfolk","hombre lagarto","dnd","reptilian"], ["locathah","locathah","locathah","dnd","aquatic"], ["loxodon","loxodon","loxodonte","dnd","giant"],
+  ["lupin","lupin","lupino","dnd","beast"], ["merfolk","merfolk","sirénido","dnd","aquatic"], ["minotaur","minotaur","minotauro","dnd","giant"],
+  ["orc","orc","orco","dnd","orc"], ["owlin","owlin","owlin","dnd","avian"], ["plasmoid","plasmoid","plasmoide","dnd","changeling"],
+  ["reborn","reborn","renacido","dnd","human"], ["satyr","satyr","sátiro","dnd","fey"], ["seaelf","sea elf","elfo marino","dnd","aquatic"],
+  ["shadarkai","shadar-kai","shadar-kai","dnd","elf"], ["shifter","shifter","cambiaformas","dnd","beast"], ["simichybrid","Simic hybrid","híbrido simic","dnd","human"],
+  ["tabaxi","tabaxi","tabaxi","dnd","feline"], ["thrikreen","thri-kreen","thri-kreen","dnd","insect"], ["tortle","tortle","tortle","dnd","reptilian"],
+  ["triton","triton","tritón","dnd","aquatic"], ["vedalken","vedalken","vedalken","dnd","elf"], ["verdan","verdan","verdan","dnd","goblinoid"],
+  ["warforged","warforged","forjado","dnd","construct"], ["yuanti","yuan-ti","yuan-ti","dnd","reptilian"],
+  ["bullywug","bullywug","bullywug","monster","reptilian"], ["gnoll","gnoll","gnoll","monster","beast"], ["grimlock","grimlock","grimlock","monster","goblinoid"],
+  ["kuotoa","kuo-toa","kuo-toa","monster","aquatic"], ["troglodyte","troglodyte","troglodita","monster","reptilian"], ["skeleton","skeleton","esqueleto","monster","human"],
+  ["zombie","zombie","zombi","monster","human"], ["vampire","vampire","vampiro","monster","human"],
+  ["aetherborn","aetherborn","nacido del éter","worlds","human"], ["aven","aven","aven","worlds","avian"], ["khenra","khenra","khenra","worlds","desert"],
+  ["kor","kor","kor","worlds","human"], ["naga","naga","naga","worlds","reptilian"], ["siren","siren","sirena","worlds","aquatic"],
+  ["boggart","boggart","boggart","worlds","goblinoid"], ["faerie","faerie (Lorwyn)","hada de Lorwyn","worlds","fey"], ["flamekin","flamekin","llamígero","worlds","elemental"],
+  ["lorwynchangeling","changeling (Lorwyn)","cambiante de Lorwyn","worlds","changeling"], ["rimekin","rimekin","escarchígero","worlds","elemental"],
+  ["hylian","Hylian","hyliano","worlds","human"], ["gerudo","Gerudo","gerudo","worlds","desert"], ["sheikah","Sheikah","sheikah","worlds","human"],
+  ["goron","Goron","goron","worlds","giant"], ["zora","Zora","zora","worlds","aquatic"], ["rito","Rito","rito","worlds","avian"],
+  ["kokiri","Kokiri","kokiri","worlds","fey"], ["twili","Twili","twili","worlds","elf"]
+];
+// D&D (d100): los de los libros pesan igual; los monstruosos, un tercio. Otros mundos (d20): todos igual.
+const people = ([id,en,es,group,style])=> ({id, w:group==="monster" ? .35 : 1, group, style, name:{en,es}, names:STYLE[style]});
+const ancestryX = {id:"ancestryX", die:100, rows:PEOPLES.filter(p=> p[3]!=="worlds").map(people)};
+const ancestryW = {id:"ancestryW", die:20, rows:PEOPLES.filter(p=> p[3]==="worlds").map(people)};
+const nameText = n=>{ const [es,en] = String(n).split("|"); return en==null ? n : {es, en}; };
 const listDef = (id, die, items)=> ({id, die, rows:items.map((x,i)=>({lo:i+1, hi:i+1, text:{es:x[0], en:x[1]}}))});
 const trait = listDef("trait", 20, [
   ["No para de hablar de su familia","Won't stop talking about their family"],
@@ -1328,11 +1443,35 @@ const truth = {id:"truth", die:6, rows:[
 
 // La actitud mueve la CD de las pruebas sociales (en Vendedores, la del regateo).
 attitude.rows.forEach(r=>{ r.note = r.dc ? {en:`Social checks against them: DC ${r.dc>0?"+":"−"}${Math.abs(r.dc)}`, es:`Pruebas sociales contra él: CD ${r.dc>0?"+":"−"}${Math.abs(r.dc)}`} : {en:"Social checks: normal DC", es:"Pruebas sociales: CD normal"}; });
+// Clases: las 12 del SRD 5.1 más el artífice. Solo el nombre.
+const CLASSES = [["artificer","artificer","artífice"],["barbarian","barbarian","bárbaro"],["bard","bard","bardo"],["cleric","cleric","clérigo"],
+  ["druid","druid","druida"],["fighter","fighter","guerrero"],["monk","monk","monje"],["paladin","paladin","paladín"],["ranger","ranger","explorador"],
+  ["rogue","rogue","pícaro"],["sorcerer","sorcerer","hechicero"],["warlock","warlock","brujo"],["wizard","wizard","mago"]]
+  .map(([id,en,es])=> ({id, name:{en,es}}));
+const ANCESTRY = DT.table(ancestry), ANCESTRY_X = DT.table(ancestryX), ANCESTRY_W = DT.table(ancestryW);
+const byId = new Map([...ancestry.rows, ...ancestryX.rows, ...ancestryW.rows].map(r=> [r.id, r]));
 DT.lib.npc = {
-  // Filas de nombre que dependen de la ascendencia que salió en la tabla `key` (para DT.simpleTableTab).
-  nameRows: key=> ancestry.rows.flatMap(a=> a.names.map(n=> ({id:a.id+":"+n, text:n, only:{[key]:[a.id]}}))),
-  defs:{ancestry, trait, quirk, attitude, rumor, truth},
-  ANCESTRY:DT.table(ancestry), TRAIT:DT.table(trait), QUIRK:DT.table(quirk),
+  // Filas de nombre que dependen de la ascendencia que salió en `key` (y en `keyX` / `keyW` si salió otro pueblo). Para DT.simpleTableTab.
+  // Primero las de siempre, en el mismo orden: así los índices que ya estaban guardados siguen valiendo.
+  nameRows:(key, keyX, keyW)=>{
+    const more = (def, k)=> k ? def.rows.flatMap(a=> a.names.map(n=> ({id:a.id+":"+n, text:nameText(n), only:{[k]:[a.id]}}))) : [];
+    return [...ancestry.rows.filter(a=> a.names).flatMap(a=> a.names.map(n=> ({id:a.id+":"+n, text:n, only:{[key]:[a.id]}}))),
+      ...more(ancestryX, keyX), ...more(ancestryW, keyW)];
+  },
+  // Pestañas completas: ascendencia para un conjunto de pueblos → {id, roll, rollX?}.
+  rollAncestry(peoples){
+    const env = {peoples:peoplesCtx.options.some(o=> o.id===peoples) ? peoples : "classic"};
+    const a = ANCESTRY.roll(DT.condWeight(env));
+    const more = a.row.id==="other" ? ANCESTRY_X : a.row.id==="worlds" ? ANCESTRY_W : null;
+    if(!more) return {id:a.row.id, roll:a.roll};
+    const x = more.roll();
+    return {id:x.row.id, roll:a.roll, rollX:x.roll};
+  },
+  ancestryById: id=> byId.get(id) || null,
+  namesOf: id=>{ const r = byId.get(id); return r && r.names ? r.names.map(nameText) : []; },
+  peoplesCtx, PEOPLES:[...ancestryX.rows, ...ancestryW.rows], CLASSES,
+  defs:{ancestry, ancestryX, ancestryW, trait, quirk, attitude, rumor, truth},
+  ANCESTRY, ANCESTRY_X, ANCESTRY_W, TRAIT:DT.table(trait), QUIRK:DT.table(quirk),
   ATTITUDE:DT.table(attitude), RUMOR:DT.table(rumor), TRUTH:DT.table(truth)
 };
 })();
@@ -1677,7 +1816,8 @@ const SPECIAL_T = {};
 for(const cat of Object.keys(SPECIALS)) SPECIAL_T[cat] = DT.table({id:"special-"+cat, die:6, rows:SPECIALS[cat].map((x,i)=> Object.assign({lo:i+1, hi:i+1}, x))});
 
 // El tendero: tablas compartidas con la pestaña de PNJ (bloque DATOS COMPARTIDOS).
-const {ANCESTRY, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH} = DT.lib.npc;
+const {ANCESTRY, ANCESTRY_X, ANCESTRY_W, TRAIT, QUIRK, ATTITUDE, RUMOR, TRUTH, ancestryById, peoplesCtx} = DT.lib.npc;
+const PEOPLES_IDS = peoplesCtx.options.map(o=> o.id);
 
 // Estado del asentamiento (1d20, una vez). price: {all|categoría: ±fracción} · stock: ±al 1d6 de existencias
 // travel: ±ambulantes por semana · weights: multiplica el peso de ambulantes · dc/max: regateo.
@@ -1757,8 +1897,9 @@ const STRINGS = {
     chooseSize:"1 · Choose the settlement size", chooseSizeSub:"From a wandering troupe to a megalopolis",
     genBtn:"🎲 Generate settlement", regenPerm:"↻ Permanent only", newWeek:"↻ New week",
     copyMd:"📋 Copy as Markdown", toScreen:"▤ To the DM screen", toArticle:"¶ Settlement article",
-    permHead:'Permanent vendors <span class="sub">— the basics to live, plus stalls that add variety</span>',
-    travHead:'Traveling vendors <span class="sub">— they change week to week; sometimes several, sometimes none</span>',
+    permGroup:"🏪 Permanent", travGroup:"🐎 Traveling, this week", rumorsGroup:"🗣 What the shopkeepers say",
+    openHint:"— open a shop for its goods, prices and haggling", vRollsHint:"— the state and this week's event, with their d20",
+    sheetState:"State", sheetEvent:"This week", shopsN:"{n} shops", priceSame:"normal prices", noRumors:"No shopkeepers.",
     saveTitle:"💾 Saved cities", saveNamePh:"City name",
     refHead:'📖 Reference tables <span class="sub">— with dice and distribution for rolling by hand</span>',
     sum1:"Settlement sizes & how many vendors",
@@ -1826,8 +1967,9 @@ const STRINGS = {
     chooseSize:"1 · Elige el tamaño del asentamiento", chooseSizeSub:"De troupe errante a megalópolis",
     genBtn:"🎲 Generar asentamiento", regenPerm:"↻ Solo permanentes", newWeek:"↻ Nueva semana",
     copyMd:"📋 Copiar como Markdown", toScreen:"▤ A la pantalla de DM", toArticle:"¶ Artículo del asentamiento",
-    permHead:'Vendedores permanentes <span class="sub">— lo básico para vivir, más puestos que dan variedad</span>',
-    travHead:'Vendedores ambulantes <span class="sub">— cambian según la semana; a veces varios, a veces ninguno</span>',
+    permGroup:"🏪 Permanentes", travGroup:"🐎 Ambulantes, esta semana", rumorsGroup:"🗣 Lo que cuentan los tenderos",
+    openHint:"— abre una tienda para ver artículos, precios y regateo", vRollsHint:"— el estado y el evento de la semana, con su d20",
+    sheetState:"Estado", sheetEvent:"Esta semana", shopsN:"{n} tiendas", priceSame:"precios normales", noRumors:"No hay tenderos.",
     saveTitle:"💾 Ciudades guardadas", saveNamePh:"Nombre de la ciudad",
     refHead:'📖 Tablas de referencia <span class="sub">— con dados y distribución para tirar a mano</span>',
     sum1:"Tamaños de asentamiento y cuántos vendedores",
@@ -1979,10 +2121,10 @@ function specialOf(v){
 }
 
 /* ===================== TIRADAS ===================== */
-function rollNpc(){
-  const a = ANCESTRY.roll();
-  const names = a.row.names;
-  return {anc:a.row.id, name:names[DT.rollDie(names.length)-1], trait:DT.rollDie(20), quirk:DT.rollDie(12), att:DT.rollDie(6), rumor:DT.rollDie(20), truth:DT.rollDie(6)};
+// El tendero: ascendencia según los pueblos elegidos para esta ciudad (Clásicos, si no se dijo).
+function rollNpc(d){
+  const a = DT.lib.npc.rollAncestry(d && d.peoples), names = DT.lib.npc.namesOf(a.id);
+  return {anc:a.id, name:tx(names[DT.rollDie(names.length)-1]), trait:DT.rollDie(20), quirk:DT.rollDie(12), att:DT.rollDie(6), rumor:DT.rollDie(20), truth:DT.rollDie(6)};
 }
 function stockMod(cat, d){
   const st=stateRow(d), ev=eventRow(d);
@@ -2014,13 +2156,13 @@ function logGoods(v){
 }
 function logNpc(v){
   if(!v.npc) return;
-  const a = ANCESTRY.byId(v.npc.anc), att = attitudeOf(v);
+  const a = ancestryById(v.npc.anc), att = attitudeOf(v);
   DT.log("NPC", "", `${vName(v.key)}: ${v.npc.name} (${tx(a.name)}) · ${att.emoji} ${tx(att.name)}`);
 }
 function makeVendor(key, tier, d, opts={}){
   const roll = DT.rollDie(12), t = priceTier(roll);
   DT.log("d12", roll, `${vName(key)}: ${priceLbl(t)}`);
-  const v = {key, tier, factor:t.f, priceLabel:t.label, comp:0, hagRoll:null, npc:rollNpc(), stock:rollStock(key, d), special:rollSpecial(key, !!opts.special)};
+  const v = {key, tier, factor:t.f, priceLabel:t.label, comp:0, hagRoll:null, npc:rollNpc(d), stock:rollStock(key, d), special:rollSpecial(key, !!opts.special)};
   logNpc(v); logGoods(v);
   return v;
 }
@@ -2037,7 +2179,8 @@ function rollEvent(week){
 
 /* ===================== GENERACIÓN ===================== */
 function newRecord(){
-  return {id:DT.uid("c"), tab:"vendors", name:randomName(), data:{v:3, sizeKey:selectedSize.key, week:1, state:null, event:null, permanent:[], traveling:[]}};
+  const peoples = refs && PEOPLES_IDS.includes(refs.peoples.value) ? refs.peoples.value : "classic";
+  return {id:DT.uid("c"), tab:"vendors", name:randomName(), data:{v:3, sizeKey:selectedSize.key, peoples, week:1, state:null, event:null, permanent:[], traveling:[]}};
 }
 function genPermanent(d){
   const sz = sizeOf(d.sizeKey) || selectedSize;
@@ -2150,7 +2293,7 @@ function randomName(){
 const int = (n, lo, hi, fb)=>{ n = parseInt(n,10); return (isNaN(n) || n<lo || n>hi) ? fb : n; };
 function normNpc(n){
   if(!n || typeof n!=="object") return null;
-  return {anc: ANCESTRY.byId(n.anc) ? n.anc : "human", name: String(n.name==null?"?":n.name).slice(0,60),
+  return {anc: ancestryById(n.anc) && n.anc!=="other" && n.anc!=="worlds" ? n.anc : "human", name: String(n.name==null?"?":n.name).slice(0,60),
     trait:int(n.trait,1,20,1), quirk:int(n.quirk,1,12,1), att:int(n.att,1,6,3), rumor:int(n.rumor,1,20,1), truth:int(n.truth,1,6,3)};
 }
 function normVendor(v, tier){
@@ -2176,6 +2319,7 @@ function normalize(rec){
       target:(e.target && CATALOG[e.target.key])?{key:e.target.key, tier:String(e.target.tier||"")}:undefined};
   } else d.event = null;
   d.week = int(d.week,1,9999,1);
+  d.peoples = PEOPLES_IDS.includes(d.peoples) ? d.peoples : "classic";
   d.v = 3;
   applyCompetition(d);
   return rec;
@@ -2235,10 +2379,18 @@ function eventResolved(d){
 
 function renderStatus(){
   const d = D();
-  refs.statusGrid.hidden = !d;
-  if(!d) return;
+  refs.rollsBox.hidden = !d;
+  if(!d){ refs.shStatus.innerHTML = ""; return; }
   const st = stateRow(d), ev = eventRow(d);
   const stOther = fxChips(st, "state"), evFx = fxChips(ev, "event"), evRes = eventResolved(d);
+  // En la ficha: qué está pasando y qué efecto tiene; la descripción y el d20, en las tiradas.
+  refs.shStatus.innerHTML = `
+    <dt>${esc(L("sheetState"))}</dt><dd>${st.icon} ${esc(tx(st.name))}<div class="fx">${chipsHTML(stOther)}</div></dd>
+    <button class="small ghost rr" data-act="rerollState" title="${esc(L("rerollState"))}" aria-label="${esc(L("rerollState"))}">↻</button>
+    <dt>${esc(L("sheetEvent"))}</dt><dd>${ev.icon} ${esc(tx(ev.name))}<div class="fx">${evRes.length ? chipsHTML(evRes) : chipsHTML(evFx)}</div></dd>
+    <button class="small ghost rr" data-act="newWeek" title="${esc(L("newWeek"))}" aria-label="${esc(L("newWeek"))}">↻</button>`;
+  refs.shStatus.querySelector('[data-act="rerollState"]').onclick = rerollState;
+  refs.shStatus.querySelector('[data-act="newWeek"]').onclick = newWeek;
   refs.statusGrid.innerHTML = `
     <div class="scard">
       <div class="shead"><div><div class="sub">🏙️ ${esc(L("stateTitle"))} · d20 ${d.state && d.state.roll ? "= "+esc(d.state.roll) : "("+esc(L("notRolled"))+")"}</div>
@@ -2260,7 +2412,7 @@ function renderStatus(){
 
 function npcHTML(v){
   if(!v.npc) return `<div class="npc"><button class="small" data-act="rollNpc">${esc(L("rollNpc"))}</button></div>`;
-  const n = v.npc, a = ANCESTRY.byId(n.anc), att = attitudeOf(v), truth = TRUTH.lookup(n.truth).row;
+  const n = v.npc, a = ancestryById(n.anc), att = attitudeOf(v), truth = TRUTH.lookup(n.truth).row;
   return `<div class="npc">
     <div><span class="who">🧑 ${esc(n.name)}</span> <span class="sub">· ${esc(tx(a.name))}</span>
       <span class="vtag ${att.cls}">${att.emoji} ${esc(tx(att.name))}${att.dc?` (${esc(en()?"DC":"CD")} ${signed(att.dc)})`:""}</span></div>
@@ -2294,17 +2446,18 @@ function vendorCard(v, id){
   const compTag = v.comp>1 ? `<span class="vtag comp">⚔ ${esc(L("comp"))} ×${v.comp} (−10%)</span>` : "";
   const modTag = Math.abs(cm-1)>0.001 ? `<span class="vtag mod">${stateRow(d).icon} ${pct(cm-1)}</span>` : "";
   const dcw = en() ? "DC" : "CD";
-  return `<div class="vendor ${v.tier==="travel"?"travel":""}" data-id="${id}">
-    <div class="vhead">
-      <div class="vicon">${c.icon}</div>
-      <div style="flex:1">
-        <div class="vname">${esc(vName(v.key))}</div>
-        <div style="margin-top:3px">
-          <span class="vtag ${tierClass}">${esc(tierLabel)}</span>
-          <span class="vtag">${esc(priceLbl(tierByFactor(v.factor)))}</span>
-          ${compTag}${modTag}
-        </div>
-      </div>
+  // Cerrada: quién es, quién atiende, cómo están los precios, la CD y si tiene pieza especial. Abierta: todo lo demás.
+  const n = v.npc, a = n && ancestryById(n.anc), att = attitudeOf(v);
+  const same = Math.abs(mult-1)<0.005;
+  return `<details class="vendor vrow ${v.tier==="travel"?"travel":""}" data-id="${id}">
+    <summary><span class="vicon">${c.icon}</span><span class="vname">${esc(vName(v.key))}</span>
+      ${n?`<span class="vwho">🧑 ${esc(n.name)} <span class="sub">(${esc(tx(a.name))})</span> ${att.emoji}</span>`:""}
+      <span class="vtag ${same?"":(mult>1?"bad":"good")}">${esc(same ? L("priceSame") : pct(mult-1))}</span>
+      <span class="vtag">${dcw} ${h.dc}</span>${sp?`<span class="vtag good">★ ${esc(tx(sp))}</span>`:""}</summary>
+    <div style="margin:2px 0 4px">
+      <span class="vtag ${tierClass}">${esc(tierLabel)}</span>
+      <span class="vtag">${esc(priceLbl(tierByFactor(v.factor)))}</span>
+      ${compTag}${modTag}
     </div>
     ${npcHTML(v)}
     <table class="goods">
@@ -2328,7 +2481,7 @@ function vendorCard(v, id){
       <button class="small rerollVendor">${esc(L("rerollVendor"))}</button>
       ${DT.host.caps.toScreen?`<button class="small host vScreen" title="${esc(L("toScreen"))}">▤</button>`:""}
     </div>
-  </div>`;
+  </details>`;
 }
 function vendorById(id){
   const d = D(); if(!d) return null;
@@ -2338,11 +2491,22 @@ function vendorById(id){
 function renderVendors(){
   const d = D();
   const pg = refs.permGrid, tg = refs.travelGrid;
-  if(!d){ pg.innerHTML=`<div class="empty">${esc(L("permEmpty"))}</div>`; tg.innerHTML=`<div class="empty">—</div>`; return; }
+  refs.sheet.hidden = !d; refs.emptyMsg.hidden = !!d;
+  if(!d){ pg.innerHTML = tg.innerHTML = refs.shRumors.innerHTML = ""; return; }
+  // Lo que estaba abierto sigue abierto (por ejemplo, al volver a tirar un estado).
+  const open = new Set([...refs.sheet.querySelectorAll("details.vrow[open]")].map(x=> x.dataset.id));
   pg.innerHTML = d.permanent.map((v,i)=> vendorCard(v, "p"+i)).join("");
-  tg.innerHTML = d.traveling.length ? d.traveling.map((v,i)=> vendorCard(v, "t"+i)).join("") : `<div class="empty">${esc(L("travNone"))}</div>`;
-  refs.permGrid.querySelectorAll(".vendor").forEach(wireCard);
-  refs.travelGrid.querySelectorAll(".vendor").forEach(wireCard);
+  tg.innerHTML = d.traveling.length ? d.traveling.map((v,i)=> vendorCard(v, "t"+i)).join("") : `<div class="sub">${esc(L("travNone"))}</div>`;
+  refs.sheet.querySelectorAll("details.vrow").forEach(el=>{ if(open.has(el.dataset.id)) el.open = true; wireCard(el); });
+  renderRumors();
+}
+// Los rumores de todos los tenderos, juntos: lo primero que un DM busca para sembrar ganchos.
+function renderRumors(){
+  const d = D(); if(!d || !refs) return;
+  const all = [...d.permanent, ...d.traveling].filter(v=> v.npc);
+  refs.shRumors.innerHTML = all.length ? all.map(v=>{ const t = TRUTH.lookup(v.npc.truth).row;
+    return `<li><b>${esc(v.npc.name)}</b> <span class="sub">(${esc(vName(v.key))})</span>: «${esc(tx(RUMOR.lookup(v.npc.rumor).row.text))}» <span class="vtag ${t.cls}">${esc(L("dmOnly"))}: ${esc(tx(t.name))}</span></li>`; }).join("")
+    : `<li class="sub">${esc(L("noRumors"))}</li>`;
 }
 function wireCard(el){
   const id = el.dataset.id, v = vendorById(id); if(!v) return;
@@ -2353,14 +2517,14 @@ function wireCard(el){
   q(".rerollPrice").onclick = ()=>{ const roll=DT.rollDie(12), t=priceTier(roll); v.factor=t.f; v.priceLabel=t.label; DT.log("d12", roll, `${vName(v.key)}: ${priceLbl(t)}`); refreshCard(id); };
   q(".rerollStock").onclick = ()=>{ v.stock = rollStock(v.key, D()); v.special = rollSpecial(v.key); logGoods(v); refreshCard(id); };
   const npcBtn = q(".rerollNpc") || q('[data-act="rollNpc"]');
-  if(npcBtn) npcBtn.onclick = ()=>{ v.npc = rollNpc(); logNpc(v); refreshCard(id); };
+  if(npcBtn) npcBtn.onclick = ()=>{ v.npc = rollNpc(D()); logNpc(v); refreshCard(id); renderRumors(); };
   q(".rerollVendor").onclick = ()=> rerollVendor(v);
   const sc = q(".vScreen"); if(sc) sc.onclick = ()=> DT.bridge.toScreen({label:`${vName(v.key)} — ${cur.name}`, w:380, h:520, md:vendorMarkdown(v, D(), true)});
 }
 function refreshCard(id){
   const el = document.querySelector(`#panel-vendors .vendor[data-id="${id}"]`); if(!el) return;
   const tmp = document.createElement("div"); tmp.innerHTML = vendorCard(vendorById(id), id);
-  const nu = tmp.firstElementChild; el.replaceWith(nu); wireCard(nu); nu.classList.add("flash");
+  const nu = tmp.firstElementChild; nu.open = el.open; el.replaceWith(nu); wireCard(nu); nu.classList.add("flash");
   persist(); renderInfo();
 }
 function rerollVendor(v){
@@ -2387,10 +2551,14 @@ function renderInfo(){
   refs.shareRow.hidden = !d;
   refs.toScreen.hidden = !(d && DT.host.caps.toScreen);
   refs.toArticle.hidden = !(d && DT.host.caps.toArticle);
-  if(!d){ refs.genInfo.textContent = ""; return; }
+  refs.peoplesLbl.textContent = tx(peoplesCtx.title);
+  refs.peoples.innerHTML = peoplesCtx.options.map(o=>`<option value="${esc(o.id)}">${esc(tx(o.text))}</option>`).join("");
+  refs.peoples.value = d ? d.peoples : (refs.peoples.dataset.keep || "classic");
+  if(!d) return;
   const s = sizeOf(d.sizeKey);
-  refs.genInfo.textContent = [cur.name, s?sizeName(s):d.sizeKey, `${L("weekWord")} ${d.week||1}`,
-    `${d.permanent.length} ${L("permWord")}`, `${d.traveling.length} ${L("travWord")}`].join(" · ");
+  refs.shName.textContent = cur.name;
+  refs.shSub.textContent = [s?sizeName(s):d.sizeKey, s?`👥 ${fmtPop(s.pop)}`:"", `${L("weekWord")} ${d.week||1}`.replace(/^./, c=> c.toUpperCase()),
+    L("shopsN",{n:d.permanent.length+d.traveling.length})].filter(Boolean).join(" · ");
 }
 function renderAll(){ renderSizePicker(); renderStatus(); renderVendors(); renderInfo(); renderRefTables(); }
 
@@ -2398,7 +2566,7 @@ function renderAll(){ renderSizePicker(); renderStatus(); renderVendors(); rende
 const md = DT.mdEsc;
 function npcLine(v){
   if(!v.npc) return "—";
-  const a = ANCESTRY.byId(v.npc.anc), att = attitudeOf(v);
+  const a = ancestryById(v.npc.anc), att = attitudeOf(v);
   return `${md(v.npc.name)} (${md(tx(a.name))}) · ${att.emoji} ${md(tx(att.name))}`;
 }
 function vendorRowMd(v, d){
@@ -2509,7 +2677,8 @@ function renderRefTables(){
     {h:esc(L("colItemSpecial")), f:r=> esc(tx(r.row))}, {h:esc(L("colPrice")), f:r=> DT.money(r.row.cp)}]);
 
   refs.npcRefGrid.innerHTML = [
-    `<div class="tscroll"><table class="ref">${DT.refTableHTML(ANCESTRY, [{h:esc(L("colAncestry")), f:r=> `<b>${esc(tx(r.row.name))}</b><br><span class="sub">${esc(r.row.names.join(", "))}</span>`}])}</table></div>`,
+    `<div class="tscroll"><table class="ref">${DT.refTableHTML(ANCESTRY, [{h:esc(L("colAncestry")), f:r=> `<b>${esc(tx(r.row.name))}</b>${r.row.names?`<br><span class="sub">${esc(r.row.names.join(", "))}</span>`:""}`}], DT.condWeight({peoples:peoplesOf()}))}</table>${
+      peoplesOf()==="classic" ? "" : [ANCESTRY_X, ...(peoplesOf()==="all" ? [ANCESTRY_W] : [])].map(T=> `<table class="ref">${DT.refTableHTML(T, [{h:esc(tx(ANCESTRY.byId(T===ANCESTRY_X?"other":"worlds").name)), f:r=> `<b>${esc(tx(r.row.name))}</b>`}])}</table>`).join("")}</div>`,
     `<div class="tscroll"><table class="ref">${DT.refTableHTML(ATTITUDE, [{h:esc(L("colAttitude")), f:r=> `${r.row.emoji} ${esc(tx(r.row.name))}`}, {h:dcw, f:r=> r.row.dc?signed(r.row.dc):"±0"}])}</table>
      <table class="ref">${DT.refTableHTML(TRUTH, [{h:esc(L("colTruth")), f:r=> esc(tx(r.row.name))}])}</table></div>`,
     `<div class="tscroll"><table class="ref">${DT.refTableHTML(TRAIT, [{h:esc(L("colTrait")), f:r=> esc(tx(r.row.text))}])}</table></div>`,
@@ -2519,6 +2688,7 @@ function renderRefTables(){
 }
 
 /* ===================== REGISTRO DE LA PESTAÑA ===================== */
+const peoplesOf = ()=> (D() && D().peoples) || (refs && refs.peoples.value) || "classic";
 function citySummary(rec){
   const d = rec.data || {}, perm = d.permanent||[], trav = d.traveling||[];
   let goods=0; const shops=[];
@@ -2553,6 +2723,8 @@ const tab = DT.registerTab({
       else DT.toast(L("articleCanceled"));
     };
     refs.specialCat.onchange = renderRefTables;
+    // Los pueblos valen para esta ciudad desde ya: los próximos tenderos que se tiren saldrán de ahí.
+    refs.peoples.onchange = ()=>{ refs.peoples.dataset.keep = refs.peoples.value; if(cur){ cur.data.peoples = refs.peoples.value; persist(); } renderRefTables(); };
     lib = DT.library(refs.savedList, "vendors");
     selectedSize = SIZES[3]; // Villa / Town por defecto
     const act = DT.records.active("vendors");
@@ -2701,17 +2873,24 @@ function render(){
   refs.shareRow.hidden = !cur;
   refs.screen.hidden = !(cur && DT.host.caps.toScreen);
   if(document.activeElement!==refs.name) refs.name.value = cur ? cur.name : "";
-  refs.cards.innerHTML = !cur ? `<div class="empty">${esc(L("jobs.empty"))}</div>` : cur.data.jobs.map((j,i)=>`
-    <div class="rcard" data-i="${i}">
-      <div class="row" style="justify-content:space-between"><span class="rt">📜 ${esc(L("jobs.job"))} ${i+1}</span><span class="vtag mod">${esc(gp(reward(j)))}</span></div>
-      <div class="rv"><b>${esc(taskText(j))}</b></div>
-      <div class="sub">${esc(L("jobs.patron"))}: ${esc(patronText(j))}${j.rumorJob?` <span class="vtag var">🗣 ${esc(L("jobs.fromRumor"))}</span>`:""}</div>
-      <div class="sub">${esc(L("jobs.where"))}: ${esc(T(WHERE, j.where))} · ${esc(L("jobs.deadline"))}: ${esc(T(DEADLINE, j.deadline))}</div>
-      <div class="sub">${esc(L("jobs.reward"))}: ${esc(T(PAY, j.pay))}</div>
-      <div class="note bad">${esc(L("jobs.comp"))} (DM): ${esc(T(COMP, j.comp))}${j.rumorJob?` · ${esc(L("jobs.truth"))}: ${esc(T(DT.lib.npc.TRUTH, j.shop.truth))}`:""}</div>
-      <div class="vactions"><button class="small" data-act="reroll">${esc(L("jobs.rerollJob"))}</button></div>
+  refs.empty.hidden = !!cur; refs.sheet.hidden = !cur; refs.rollsBox.hidden = !cur;
+  if(!cur){ refs.cards.innerHTML = refs.rolls.innerHTML = ""; renderRefs(); return; }
+  const d = cur.data, rr = esc(L("jobs.rerollJob"));
+  // Primero el tablón tal cual se lee: qué hay que hacer, cuánto pagan, quién, dónde y para cuándo; lo del DM, marcado.
+  refs.shName.textContent = cur.name;
+  refs.shSub.textContent = [d.city ? d.city.name : "", sizeText(d.size), tx(tierOf(d.tier).text), `${d.jobs.length} ${L("jobs.jobsWord").toLowerCase()}`].filter(Boolean).join(" · ");
+  refs.cards.innerHTML = d.jobs.map((j,i)=>`
+    <div class="job" data-i="${i}">
+      <div class="jt"><div><b>${i+1}. ${esc(taskText(j))}</b> <span class="vtag mod">💰 ${esc(gp(reward(j)))}</span>${j.rumorJob?` <span class="vtag var">🗣 ${esc(L("jobs.fromRumor"))}</span>`:""}</div>
+        <button class="small ghost rr" data-act="reroll" title="${rr}" aria-label="${rr}">↻</button></div>
+      <div class="sub">${esc(L("jobs.patron"))}: <b>${esc(patronText(j))}</b> · ${esc(L("jobs.where"))}: ${esc(T(WHERE, j.where))} · ${esc(L("jobs.deadline"))}: ${esc(T(DEADLINE, j.deadline))} · ${esc(L("jobs.payWord"))}: ${esc(T(PAY, j.pay))}</div>
+      <div class="note bad"><span class="vtag bad">DM</span> ${esc(L("jobs.comp"))}: ${esc(T(COMP, j.comp))}${j.rumorJob?` · ${esc(L("jobs.truth"))} ${esc(T(DT.lib.npc.TRUTH, j.shop.truth))}`:""}</div>
     </div>`).join("");
-  refs.cards.querySelectorAll(".rcard").forEach(card=>{
+  // Las tiradas de cada encargo, para quien quiera verlas o tirar a mano.
+  const th = (k, t)=> `<th>${esc(L(k))} <span class="die">d${t.die}</span></th>`, t = tierOf(d.tier);
+  refs.rolls.innerHTML = `<div class="tscroll"><table class="ref"><tr><th>#</th>${th("jobs.patron", PATRON)}${th("jobs.task", TASK)}${th("jobs.where", WHERE)}${th("jobs.comp", COMP)}${th("jobs.deadline", DEADLINE)}${th("jobs.payWord", PAY)}<th>${esc(L("jobs.base"))} <span class="die">${t.dice[0]}d${t.dice[1]}×${t.dice[2]}</span></th></tr>${
+    d.jobs.map((j,i)=>`<tr><td>${i+1}</td><td>${j.shop ? "—" : j.patron}</td><td>${j.rumorJob ? "—" : j.task}</td><td>${j.where}</td><td>${j.comp}</td><td>${j.deadline}</td><td>${j.pay}</td><td>${esc(gp(j.base))}</td></tr>`).join("")}</table></div>`;
+  refs.cards.querySelectorAll(".job").forEach(card=>{
     card.querySelector('[data-act="reroll"]').onclick = ()=>{
       const i = +card.dataset.i, old = cur.data.jobs[i];
       const shops = cur.data.city ? shopkeepers(cur.data.city.id) : [];
@@ -2741,12 +2920,12 @@ const tab = DT.registerTab({
       "jobs.where":"Where", "jobs.deadline":"Deadline", "jobs.reward":"Reward", "jobs.payWord":"Pay", "jobs.comp":"Complication", "jobs.truth":"Is the rumor true?",
       "jobs.rumorTask":"Look into the rumor", "jobs.fromRumor":"from a rumor", "jobs.rerollJob":"↻ Another job", "jobs.savedCities":"Saved cities (Vendors tab)",
       "jobs.anySize":"Any settlement", "jobs.empty":"Pick a settlement and the party level, then press \"New board\".", "jobs.countLog":"jobs on the board",
-      "jobs.howMany":"How many jobs", "jobs.jobsWord":"Jobs", "jobs.base":"Base reward", "jobs.handout":"📋 Handout for players", "jobs.saved":"💾 Saved boards"},
+      "jobs.howMany":"How many jobs", "jobs.rollsHint":"— the dice behind each job (— = it came from a shopkeeper or a rumor)", "jobs.jobsWord":"Jobs", "jobs.base":"Base reward", "jobs.handout":"📋 Handout for players", "jobs.saved":"💾 Saved boards"},
     es:{"jobs.settlement":"Asentamiento", "jobs.level":"Nivel del grupo", "jobs.new":"🎲 Tablón nuevo", "jobs.board":"Tablón", "jobs.job":"Encargo", "jobs.patron":"Quién paga", "jobs.task":"Encargo",
       "jobs.where":"Dónde", "jobs.deadline":"Plazo", "jobs.reward":"Recompensa", "jobs.payWord":"Paga", "jobs.comp":"Complicación", "jobs.truth":"¿Es cierto el rumor?",
       "jobs.rumorTask":"Averiguar qué hay detrás del rumor", "jobs.fromRumor":"sale de un rumor", "jobs.rerollJob":"↻ Otro encargo", "jobs.savedCities":"Ciudades guardadas (pestaña Vendedores)",
       "jobs.anySize":"Cualquier asentamiento", "jobs.empty":"Elige asentamiento y nivel del grupo, y pulsa «Tablón nuevo».", "jobs.countLog":"encargos en el tablón",
-      "jobs.howMany":"Cuántos encargos", "jobs.jobsWord":"Encargos", "jobs.base":"Recompensa base", "jobs.handout":"📋 Para los jugadores", "jobs.saved":"💾 Tablones guardados"}
+      "jobs.howMany":"Cuántos encargos", "jobs.rollsHint":"— los dados de cada encargo (— = salió de un tendero o de un rumor)", "jobs.jobsWord":"Encargos", "jobs.base":"Recompensa base", "jobs.handout":"📋 Para los jugadores", "jobs.saved":"💾 Tablones guardados"}
   },
   emptyLibraryKey:"noResults",
   mount(panel){
@@ -2764,7 +2943,9 @@ const tab = DT.registerTab({
           <button class="small" data-ref="handout" data-i18n="jobs.handout"></button>
           <button class="small host" data-ref="screen" data-i18n="toScreenShort" hidden></button>
         </div></div>
-      <div class="grid" style="margin-top:14px" data-ref="cards"></div>
+      <div class="empty" data-ref="empty" data-i18n="jobs.empty" style="margin-top:14px"></div>
+      <div class="sheet" data-ref="sheet" hidden><div class="sh" data-ref="shName"></div><div class="ss" data-ref="shSub"></div><div data-ref="cards"></div></div>
+      <details class="rollsbox" data-ref="rollsBox" hidden><summary><span data-i18n="rollsTitle"></span> <span class="sub" data-i18n="jobs.rollsHint"></span></summary><div data-ref="rolls"></div></details>
       <h2 data-i18n="jobs.saved"></h2>
       <div class="controls"><div class="savebar"><button data-ref="exportAll" data-i18n="exportAll"></button><button data-ref="import" data-i18n="importBtn"></button></div>
         <div data-ref="lib" style="margin-top:10px"></div></div>
@@ -2772,7 +2953,7 @@ const tab = DT.registerTab({
     DT.applyI18n(panel);
     refs = DT.refs(panel);
     refs.roll.onclick = newBoard;
-    const rename = ()=>{ const v = refs.name.value.trim(); if(cur && v){ cur.name = v; persist(); } };
+    const rename = ()=>{ const v = refs.name.value.trim(); if(cur && v){ cur.name = v; persist(); refs.shName.textContent = v; } };
     refs.rename.onclick = rename;
     refs.name.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
     refs.copy.onclick = ()=>{ if(cur) DT.copyText(boardMarkdown(cur, {dm:true})); };
@@ -2804,40 +2985,56 @@ tab.api = {PATRON, TASK, WHERE, COMP, DEADLINE, PAY, TIERS, COUNT, reward, rollJ
 (function(){
 "use strict";
 const N = DT.lib.npc.defs, R = DT.row;
+// Por oficio, cuánto más probable es cada clase (sobre un peso base muy bajo).
+const CLASS_BY_JOB = {
+  artificer:{smith:12, scholar:5, miner:4, merchant:3}, barbarian:{hunter:5, veteran:5, miner:3, guard:2, farmer:1.5},
+  bard:{bard:40, merchant:3, innkeeper:3, beggar:3, courier:2}, cleric:{acolyte:40, healer:15, veteran:2},
+  druid:{healer:10, hunter:6, farmer:3, fisher:2}, fighter:{guard:25, veteran:30, sailor:6, miner:3, servant:2},
+  monk:{acolyte:6, courier:8, beggar:5}, paladin:{acolyte:8, guard:5, veteran:5}, ranger:{hunter:25, courier:6, fisher:4, sailor:3},
+  rogue:{thief:40, beggar:10, merchant:4, servant:6, sailor:4, clerk:3}, sorcerer:{beggar:3, bard:3, scholar:2, fisher:2},
+  warlock:{scholar:3, clerk:4, beggar:3, thief:2}, wizard:{scholar:30, clerk:5}};
 DT.simpleTableTab({
   id:"npc", icon:"🧑", order:30,
   title:{en:"Quick NPC", es:"PNJ rápido"},
   tagline:{en:"Name, trade, looks, personality, what they want, what they hide and what they've heard — in one roll", es:"Nombre, oficio, aspecto, personalidad, qué quiere, qué esconde y qué ha oído — de una tirada"},
   strings:{en:{"npc.label":"NPC — D&D Tables"}, es:{"npc.label":"PNJ — Tablas D&D"}},
   context:[{id:"where", title:{en:"Setting", es:"Entorno"}, options:[
-    {id:"city", text:{en:"City", es:"Ciudad"}}, {id:"village", text:{en:"Village", es:"Pueblo"}}, {id:"road", text:{en:"Road / wilds", es:"Camino / tierras salvajes"}}]}],
+    {id:"city", text:{en:"City", es:"Ciudad"}}, {id:"village", text:{en:"Village", es:"Pueblo"}}, {id:"road", text:{en:"Road / wilds", es:"Camino / tierras salvajes"}}]},
+    DT.lib.npc.peoplesCtx],
   tables:[
     {id:"ancestry", title:{en:"Ancestry", es:"Ascendencia"}, die:20, rows:N.ancestry.rows},
-    {id:"name", title:{en:"Name", es:"Nombre"}, die:100, rows:DT.lib.npc.nameRows("ancestry")},
+    {id:"ancestryX", title:{en:"Ancestry · other D&D peoples", es:"Ascendencia · otros pueblos de D&D"}, die:100, when:{ancestry:["other"]}, rows:N.ancestryX.rows},
+    {id:"ancestryW", title:{en:"Ancestry · other worlds", es:"Ascendencia · otros mundos"}, die:20, when:{ancestry:["worlds"]}, rows:N.ancestryW.rows},
+    {id:"name", title:{en:"Name", es:"Nombre"}, die:100, rows:DT.lib.npc.nameRows("ancestry", "ancestryX", "ancestryW")},
     {id:"age", title:{en:"Age", es:"Edad"}, die:6, rows:[
       {id:"young", lo:1, hi:1, text:{en:"Young", es:"Joven"}}, {id:"adult", lo:2, hi:4, text:{en:"Adult", es:"Adulto"}},
       {id:"mature", lo:5, hi:5, text:{en:"Middle-aged", es:"Maduro"}}, {id:"old", lo:6, hi:6, text:{en:"Old", es:"Anciano"}}]},
     {id:"job", title:{en:"Trade", es:"Oficio"}, die:100, rows:[
-      R("Campesino|Farmer", {weight:{where:{city:.3, village:3, road:.8}}}),
-      R("Guardia|Guard", {weight:{where:{city:2}}}),
-      R("Mercader|Merchant", {weight:{where:{city:2, road:1.5}}}),
-      R("Marinero|Sailor", {weight:{where:{village:.5}}}),
-      R("Acólito de un templo|Temple acolyte"),
-      R("Erudito|Scholar", {weight:{where:{city:2, village:.3, road:.5}}}),
-      R("Ladrón|Thief", {weight:{where:{city:2}}}),
-      R("Cazador|Hunter", {weight:{where:{city:.2, village:2, road:2}}}),
-      R("Minero|Miner", {weight:{where:{city:.5, village:1.5}}}),
-      R("Criado de una casa noble|Servant of a noble house", {weight:{where:{city:2, village:.3, road:.2}}}),
-      R("Posadero|Innkeeper"),
-      R("Aprendiz de herrero|Blacksmith's apprentice", {weight:{where:{village:1.5}}}),
-      R("Soldado veterano|Veteran soldier", {weight:{where:{road:1.5}}}),
-      R("Curandero|Healer"),
-      R("Bardo|Bard", {weight:{where:{city:1.5, road:1.5}}}),
-      R("Mendigo|Beggar", {weight:{where:{city:2, village:.5, road:.3}}}),
-      R("Escribano|Clerk", {weight:{where:{city:2, village:.5, road:.2}}}),
-      R("Pescador|Fisher", {weight:{where:{city:.5, village:1.5}}}),
-      R("Mensajero|Courier", {weight:{where:{road:3}}}),
-      R("Aventurero retirado|Retired adventurer", {weight:{where:{road:2}}})]},
+      R("Campesino|Farmer", {id:"farmer", weight:{where:{city:.3, village:3, road:.8}}}),
+      R("Guardia|Guard", {id:"guard", weight:{where:{city:2}}}),
+      R("Mercader|Merchant", {id:"merchant", weight:{where:{city:2, road:1.5}}}),
+      R("Marinero|Sailor", {id:"sailor", weight:{where:{village:.5}}}),
+      R("Acólito de un templo|Temple acolyte", {id:"acolyte"}),
+      R("Erudito|Scholar", {id:"scholar", weight:{where:{city:2, village:.3, road:.5}}}),
+      R("Ladrón|Thief", {id:"thief", weight:{where:{city:2}}}),
+      R("Cazador|Hunter", {id:"hunter", weight:{where:{city:.2, village:2, road:2}}}),
+      R("Minero|Miner", {id:"miner", weight:{where:{city:.5, village:1.5}}}),
+      R("Criado de una casa noble|Servant of a noble house", {id:"servant", weight:{where:{city:2, village:.3, road:.2}}}),
+      R("Posadero|Innkeeper", {id:"innkeeper"}),
+      R("Aprendiz de herrero|Blacksmith's apprentice", {id:"smith", weight:{where:{village:1.5}}}),
+      R("Soldado veterano|Veteran soldier", {id:"veteran", weight:{where:{road:1.5}}}),
+      R("Curandero|Healer", {id:"healer"}),
+      R("Bardo|Bard", {id:"bard", weight:{where:{city:1.5, road:1.5}}}),
+      R("Mendigo|Beggar", {id:"beggar", weight:{where:{city:2, village:.5, road:.3}}}),
+      R("Escribano|Clerk", {id:"clerk", weight:{where:{city:2, village:.5, road:.2}}}),
+      R("Pescador|Fisher", {id:"fisher", weight:{where:{city:.5, village:1.5}}}),
+      R("Mensajero|Courier", {id:"courier", weight:{where:{road:3}}}),
+      R("Aventurero retirado|Retired adventurer", {id:"adventurer", weight:{where:{road:2}}})]},
+    // ¿Tiene clase? Casi nadie; depende del oficio (el ladrón, pícaro; el acólito, clérigo…). El aventurero retirado, siempre.
+    {id:"class", title:{en:"Class", es:"Clase"}, die:100, rows:[
+      {id:"none", w:10, name:{en:"none (no class levels)", es:"ninguna (sin niveles de clase)"},
+        weight:{job:{guard:.5, acolyte:.5, scholar:.6, thief:.4, hunter:.6, veteran:.3, healer:.6, bard:.4, courier:.8, adventurer:0}}},
+      ...DT.lib.npc.CLASSES.map(c=> ({id:c.id, w:.1, name:c.name, weight:{job:Object.assign({adventurer:30}, CLASS_BY_JOB[c.id])}}))]},
     {id:"looks", title:{en:"Looks", es:"Aspecto"}, die:20, rows:DT.rowsFixed([
       "Cicatriz que le cruza la cara|Scar across the face", "Muy alto y encorvado|Very tall and stooped", "Diente de oro|Gold tooth",
       "Tatuajes en los brazos|Tattooed arms", "Ropa remendada pero impecable|Patched but spotless clothes", "Pelo teñido de un color llamativo|Hair dyed a loud color",
@@ -2864,11 +3061,11 @@ DT.simpleTableTab({
   ],
   recordName: h=> h.text("name"),
   nameTables:["name"],
-  // Primero el PNJ, listo para interpretarlo; las tiradas, debajo.
+  // Primero el PNJ, listo para interpretarlo; las tiradas, debajo y plegadas.
   sheet: h=>{
-    const att = h.row("attitude");
+    const att = h.row("attitude"), cls = h.row("class");
     return {
-      sub:[h.text("ancestry"), h.text("age"), h.text("job")],
+      sub:[h.text("ancestryX") || h.text("ancestryW") || h.text("ancestry"), h.text("age"), h.text("job"), cls && cls.id!=="none" ? h.text("class") : ""],
       lines:[
         h.line("looks"), h.line("trait"), h.line("quirk"),
         h.line("attitude", {label:{en:"Attitude", es:"Actitud"}, text:att ? `${att.emoji} ${h.text("attitude")}` : ""}),
@@ -2880,7 +3077,7 @@ DT.simpleTableTab({
   },
   article:(rec, h)=>({
     title:rec.name, template:"character", fields:{age:h.text("age")},
-    subtitle:`${h.text("ancestry")} · ${h.text("job")}`, summary:h.text("trait"),
+    subtitle:`${h.text("ancestryX") || h.text("ancestryW") || h.text("ancestry")} · ${h.text("job")}`, summary:h.text("trait"),
     marker:"🧑", section:"personal", block:h.block("🧑", DT.t("npc.label"))
   })
 });
@@ -2915,7 +3112,8 @@ DT.simpleTableTab({
   tagline:{en:"Name, innkeeper, what's cooking, what's poured, the rooms, who's drinking and what happens tonight", es:"Nombre, posadero, qué se cocina, qué se sirve, las habitaciones, quién bebe y qué pasa esta noche"},
   strings:{en:{"tavern.label":"Tavern — D&D Tables", "tavern.kind":"Tavern"}, es:{"tavern.label":"Taberna — Tablas D&D", "tavern.kind":"Taberna"}},
   context:[{id:"quality", title:{en:"Class", es:"Categoría"}, default:"common", options:[
-    {id:"humble", text:{en:"Humble", es:"Humilde"}}, {id:"common", text:{en:"Common", es:"Común"}}, {id:"fine", text:{en:"Fine", es:"Refinada"}}]}],
+    {id:"humble", text:{en:"Humble", es:"Humilde"}}, {id:"common", text:{en:"Common", es:"Común"}}, {id:"fine", text:{en:"Fine", es:"Refinada"}}]},
+    DT.lib.npc.peoplesCtx],
   tables:[
     {id:"nameA", title:{en:"Name · first word", es:"Nombre · primera palabra"}, die:20, hidden:true, rows:nounA},
     {id:"nameB", title:{en:"Name · second word", es:"Nombre · segunda palabra"}, die:20, hidden:true, rows:nounB},
@@ -2923,7 +3121,9 @@ DT.simpleTableTab({
     {id:"pattern", title:{en:"Name · pattern", es:"Nombre · forma"}, die:6, hidden:true, rows:[
       {id:"pair", lo:1, hi:3, text:{es:"El A y el B", en:"The A & B"}}, {id:"adj", lo:4, hi:6, text:{es:"El A Adjetivo", en:"The Adjective A"}}]},
     {id:"keeperAncestry", title:{en:"Innkeeper · ancestry", es:"Posadero · ascendencia"}, die:20, rows:N.ancestry.rows},
-    {id:"keeper", title:{en:"Innkeeper", es:"Posadero"}, die:100, rows:DT.lib.npc.nameRows("keeperAncestry")},
+    {id:"keeperAncestryX", title:{en:"Innkeeper · other D&D peoples", es:"Posadero · otros pueblos de D&D"}, die:100, when:{keeperAncestry:["other"]}, rows:N.ancestryX.rows},
+    {id:"keeperAncestryW", title:{en:"Innkeeper · other worlds", es:"Posadero · otros mundos"}, die:20, when:{keeperAncestry:["worlds"]}, rows:N.ancestryW.rows},
+    {id:"keeper", title:{en:"Innkeeper", es:"Posadero"}, die:100, rows:DT.lib.npc.nameRows("keeperAncestry", "keeperAncestryX", "keeperAncestryW")},
     {id:"keeperTrait", title:{en:"Innkeeper · temper", es:"Posadero · carácter"}, die:20, rows:N.trait.rows},
     {id:"dish", title:{en:"Dish of the day", es:"Plato del día"}, die:20, rows:[
       R("Gachas con miel (3 pc)|Porridge with honey (3 cp)", Q("humble")), R("Sopa de nabo y pan duro (3 pc)|Turnip soup and stale bread (3 cp)", Q("humble")),
@@ -2944,7 +3144,7 @@ DT.simpleTableTab({
       R("Catre en un cuarto compartido (1 pp)|Cot in a shared room (1 sp)", Q("humble")),
       R("Cuarto modesto (5 pp)|Modest room (5 sp)", Q("common")), R("Cuarto cómodo con chimenea (8 pp)|Comfortable room with a hearth (8 sp)", Q("common")),
       R("Habitación de lujo (2 po)|Wealthy room (2 gp)", Q("fine")), R("Suite con baño y sirviente (4 po)|Suite with bath and servant (4 gp)", Q("fine"))]},
-    {id:"patrons", title:{en:"Who's drinking", es:"Quién está bebiendo"}, die:12, count:"1d4", rows:DT.rowsFixed([
+    {id:"patrons", title:{en:"Who's drinking", es:"Quién está bebiendo"}, die:12, count:"1d4", unique:true, rows:DT.rowsFixed([
       "Mineros saliendo del turno|Miners off their shift", "Un bardo que desafina|An off-key bard", "Dos mercaderes discutiendo precios|Two merchants arguing over prices",
       "Soldados fuera de servicio|Off-duty soldiers", "Alguien encapuchado, solo en un rincón|Someone hooded, alone in a corner", "Aventureros rivales|Rival adventurers",
       "Un noble de incógnito|A noble in disguise", "Granjeros celebrando la cosecha|Farmers celebrating the harvest", "Un sacerdote que bebe de más|A priest drinking too much",
@@ -2963,6 +3163,20 @@ DT.simpleTableTab({
     if(DT.lang==="es") return P.id==="pair" ? cap(`${A.text.es} y ${B.text.es}`) : cap(`${A.text.es} ${J[A.g]}`);
     return P.id==="pair" ? `The ${A.text.en} & ${B.text.en}` : `The ${J.text.en} ${A.text.en}`;
   },
+  // Lo que el DM lee en voz alta o consulta cuando piden algo; las tiradas, plegadas debajo.
+  sheet: h=>({
+    sub:[`${DT.t("tavern.kind")} ${h.ctxText("quality").toLowerCase()}`],
+    lines:[
+      h.line("keeper", {label:{en:"Innkeeper", es:"Posadero"}, text:`${h.text("keeper")} (${h.text("keeperAncestryX") || h.text("keeperAncestryW") || h.text("keeperAncestry")})`,
+        note:h.text("keeperTrait"), also:["keeperAncestry", "keeperAncestryX", "keeperAncestryW", "keeperTrait"]}),
+      h.line("dish", {label:{en:"To eat", es:"De comer"}}),
+      h.line("drink", {label:{en:"To drink", es:"De beber"}}),
+      h.line("room", {label:{en:"Rooms", es:"Habitaciones"}}),
+      h.line("patrons", {label:{en:"Who's in", es:"Clientela"}}),
+      h.line("tonight"),
+      h.line("rumor", {label:{en:"Heard at the bar", es:"Se oye"}}),
+      h.line("truth", {label:{en:"The rumor is", es:"El rumor es"}})]
+  }),
   article:(rec, h)=>({
     title:rec.name, template:"building", fields:{kind:DT.t("tavern.kind")},
     subtitle:`${DT.t("tavern.kind")} · ${h.ctxText("quality")}`, summary:`${h.text("keeper")} · ${h.text("drink")}`,
@@ -3111,7 +3325,22 @@ DT.simpleTableTab({
       R("{2d6*10} pies|{2d6*10} ft", B("hills","road","coast")),
       R("{2d6*50} pies|{2d6*50} ft", B("grassland","desert","arctic"))]}
   ],
-  recordName: h=> `${h.ctxText("biome")} · ${h.text("creature") || h.text("social") || h.text("hazard") || h.text("discovery") || h.text("check")}`
+  recordName: h=> `${h.ctxText("biome")} · ${h.text("creature") || h.text("social") || h.text("hazard") || h.text("discovery") || h.text("check")}`,
+  // ¿Hay encuentro? Y si lo hay: qué, haciendo qué, cómo reacciona y a qué distancia empieza.
+  sheet: h=>{
+    const chk = h.row("check"), k = h.row("kind");
+    return {
+      sub:[h.ctxText("biome"), h.ctxText("time"), h.ctxText("tier")],
+      lines:[
+        k ? h.line("kind") : h.line("check", {label:{en:"Result", es:"Resultado"}, cls:chk && chk.id==="none" ? "good" : ""}),
+        h.line("creature", {label:k && k.id==="sign" ? {en:"Signs of", es:"Rastros de"} : {en:"Creature", es:"Criatura"}, cls:k && k.id==="combat" ? "bad" : ""}),
+        h.line("activity", {label:{en:"Doing", es:"Haciendo"}}),
+        h.line("social", {label:{en:"Who", es:"Quién"}}),
+        h.line("hazard"),
+        h.line("discovery"),
+        h.line("reaction"),
+        h.line("distance", {label:{en:"Starts at", es:"Empieza a"}})]};
+  }
 });
 })();
 </script>
@@ -3171,7 +3400,7 @@ DT.simpleTableTab({
       R("Vendaval|Gale", {w:.5, weight:{climate:{mountain:2}},
         note:{es:"Como viento fuerte, y volar sin magia es imposible.", en:"As strong wind, and nonmagical flight is impossible."}})]},
     {id:"omen", title:{en:"Anything unusual?", es:"¿Algo fuera de lo común?"}, die:100, rows:[
-      R("Nada especial|Nothing special", {w:13}),
+      R("Nada especial|Nothing special", {id:"none", w:13}),
       R("Un arcoíris doble|A double rainbow", {w:2, only:{sky:["rain","storm"]}}),
       R("Una aurora en el cielo nocturno|An aurora in the night sky", {w:1.5, only:{climate:["cold","mountain"]}}),
       R("Lluvia de estrellas fugaces|A meteor shower", {w:1}),
@@ -3182,7 +3411,14 @@ DT.simpleTableTab({
       R("Un viento cálido fuera de temporada|A warm wind out of season", {w:.5}),
       R("Un halo alrededor de la luna|A halo around the moon", {w:.5})]}
   ],
-  recordName: h=> `${h.ctxText("climate")}, ${h.ctxText("season").toLowerCase()} · ${h.text("temp").split(" (")[0]} · ${h.text("sky")}`
+  recordName: h=> `${h.ctxText("climate")}, ${h.ctxText("season").toLowerCase()} · ${h.text("temp").split(" (")[0]} · ${h.text("sky")}`,
+  // Cómo está el día y qué significa en la mesa (las notas son la regla que aplica).
+  sheet: h=>{
+    const om = h.row("omen");
+    return {
+      sub:[h.ctxText("climate"), h.ctxText("season")],
+      lines:[h.line("temp"), h.line("sky"), h.line("wind"), om && om.id!=="none" ? h.line("omen", {label:{en:"Unusual", es:"Fuera de lo común"}}) : null]};
+  }
 });
 })();
 </script>
@@ -3215,6 +3451,16 @@ const art = {
   a7500:["Corona de oro enjoyada|Jeweled gold crown","Cetro de platino con un rubí|Platinum scepter with a ruby","Estatuilla de oro de un dragón con ojos de diamante|Gold dragon statuette with diamond eyes",
     "Relicario de oro y esmeraldas|Gold-and-emerald reliquary","Espejo de plata que fue de una reina|Silver mirror that belonged to a queen","Máscara funeraria de oro|Gold funerary mask"]};
 const byGroup = (groups)=> Object.entries(groups).flatMap(([g, list])=> list.map(x=> R(x, {only:{val:[g]}})));
+// Valor en po de lo que salió: monedas (del texto en inglés, con sus dados ya tirados) + gemas u objetos de arte (id g50 = 50 po cada uno).
+const GP = {cp:.01, sp:.1, gp:1, pp:10};
+function totalGp(h){
+  let gp = 0;
+  const c = h.row("coins");
+  if(c) for(const m of DT.inlineDice.fill(c.text.en, h.vals("coins")).matchAll(/(\d[\d,]*)\s*(cp|sp|gp|pp)\b/g)) gp += Number(m[1].replace(/,/g,"")) * GP[m[2]];
+  const v = h.row("val");
+  if(v && v.id!=="none") gp += (h.vals("val")[0] || 1) * parseInt(v.id.slice(1), 10);
+  return Math.round(gp);
+}
 const items = {
   common:["Poción de curación|Potion of healing","Poción de trepar|Potion of climbing","Pergamino de conjuro (truco)|Spell scroll (cantrip)","Pergamino de conjuro (nivel 1)|Spell scroll (1st level)"],
   uncommon:["Bolsa de contención|Bag of holding","Capa de protección|Cloak of protection","Botas élficas|Boots of elvenkind","Gafas de noche|Goggles of night",
@@ -3229,6 +3475,7 @@ const items = {
 DT.simpleTableTab({
   id:"loot", icon:"💰", order:70,
   title:{en:"Loot", es:"Botín"},
+  strings:{en:{"loot.total":"Worth", "loot.totalNote":"coins + gems or art; the magic item isn't counted"}, es:{"loot.total":"Vale", "loot.totalNote":"monedas + gemas u objetos de arte; sin contar el objeto mágico"}},
   tagline:{en:"Coins, gems, art objects, a magic item and a curiosity — for a pocket or a hoard, by level. Own tables; magic item names from the SRD 5.1", es:"Monedas, gemas, objetos de arte, un objeto mágico y una curiosidad — para un bolsillo o un alijo, según el nivel. Tablas propias; nombres de objetos mágicos del SRD 5.1"},
   context:[
     {id:"tier", title:{en:"Challenge", es:"Desafío"}, options:[
@@ -3274,7 +3521,20 @@ DT.simpleTableTab({
       "Una pluma que escribe sola una palabra|A quill that writes one word by itself", "Un silbato de hueso|A bone whistle", "Una piedra siempre tibia|A stone that's always warm",
       "Un retrato en miniatura|A miniature portrait", "Un yesquero con unas iniciales|A tinderbox with initials", "Un saquito de semillas desconocidas|A pouch of unknown seeds",
       "Una campanilla sin badajo|A little bell with no clapper"])}
-  ]
+  ],
+  recordName: h=> `${h.ctxText("kind")} · ${h.ctxText("tier")}`,
+  // El botín como inventario, con lo que vale en total.
+  sheet: h=>{
+    const v = h.row("val"), m = h.row("magic"), gp = totalGp(h);
+    return {
+      sub:[],
+      lines:[
+        h.line("coins"),
+        v && v.id!=="none" ? h.line("val", {text:`${h.text("val")}: ${h.text("gem") || h.text("art")}`, also:["gem", "art"]}) : null,
+        m && m.id!=="none" ? h.line("magic", {label:{en:"Magic item", es:"Objeto mágico"}, text:`${h.text("item")} (${h.text("magic").toLowerCase()})`, also:["item"]}) : null,
+        h.line("curio"),
+        {label:DT.t("loot.total"), text:`≈ ${gp.toLocaleString(DT.lang==="en"?"en":"es")} ${DT.lang==="en"?"gp":"po"}`, note:DT.t("loot.totalNote")}]};
+  }
 });
 })();
 </script>

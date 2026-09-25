@@ -10,11 +10,21 @@ Herramienta HTML autónoma (un solo archivo, sin dependencias ni conexión) con 
 |---|---|---|
 | ⚖️ | **Vendedores** | Los vendedores de un asentamiento (abajo, en detalle). |
 | 📜 | **Tablón de encargos** | Quién paga, qué, dónde, plazo, complicación y recompensa según el asentamiento y el nivel. Con una ciudad guardada, sus tenderos pagan y sus rumores se vuelven encargos. Copia para el DM o para los jugadores. |
-| 🧑 | **PNJ rápido** | Nombre según ascendencia, edad, oficio según el entorno, aspecto, personalidad, manía, actitud (mueve la CD social), qué quiere, su secreto y un rumor con su veracidad. Arriba, la ficha compacta lista para interpretarlo; debajo, las tiradas. |
-| 🍺 | **Taberna** | Nombre («La Jarra Dorada», «El Grifo y la Llave»), posadero, plato y bebida con precio, habitaciones según categoría, parroquianos, lo que pasa esta noche y lo que se oye en la barra. |
+| 🧑 | **PNJ rápido** | Nombre según su pueblo, edad, oficio según el entorno, clase (si tiene; depende del oficio), aspecto, personalidad, manía, actitud (mueve la CD social), qué quiere, su secreto y un rumor con su veracidad. |
+| 🍺 | **Taberna** | Nombre («La Jarra Dorada», «El Grifo y la Llave»), posadero, plato y bebida con precio, habitaciones según categoría, clientela, lo que pasa esta noche y lo que se oye en la barra. |
 | 🐺 | **Encuentros de viaje** | ¿Hay encuentro?, tipo, criatura (SRD 5.1) y qué hace, gente, peligros naturales con su efecto, hallazgos, reacción y distancia — por bioma, nivel, hora y amenaza. |
 | ⛅ | **Clima** | Temperatura, cielo, viento y algo fuera de lo común, por región y estación, con lo que significa en la mesa. |
 | 💰 | **Botín** | Monedas, gemas u objetos de arte, objeto mágico (nombres y rarezas del SRD 5.1) y una curiosidad — para un bolsillo o un alijo, por desafío. |
+
+**Lo útil primero.** Cada pestaña enseña arriba el resultado en limpio —el PNJ listo para
+interpretarlo, la taberna, el encuentro, el botín con lo que vale, el asentamiento con una línea
+por tienda— con un ↻ en cada línea. Los dados quedan debajo, plegados («🎲 Tiradas»), para
+quien quiera verlos o tirar a mano.
+
+**Pueblos y clases.** PNJ rápido, Taberna y Vendedores eligen de qué pueblos salen: *Clásicos*
+(los nueve del Manual del Jugador), *Todos los de D&D* (61 más, de los otros libros) o *Todo*
+(también Magic y Zelda). PNJ rápido añade la clase —las 12 del SRD y el artífice—, casi siempre
+ninguna y según el oficio. Solo nombres: ni rasgos ni reglas de esos libros.
 
 Cada pestaña guarda sus resultados, los exporta e importa, copia como Markdown y enseña sus
 tablas de referencia con los rangos del dado, para tirar a mano.

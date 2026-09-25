@@ -99,6 +99,8 @@ ok(synced.includes(cur.id), 'Veil confirma (saved) y la app lo marca como sincro
 await shot('veil-plugin');
 
 // Cambios posteriores se guardan agrupados
+// cada tienda es una línea que se abre (artículos, precios, regateo)
+await f.locator('#panel-vendors .vendor > summary').first().click();
 await f.locator('#panel-vendors .vendor').first().locator('.hagRoll').click();
 await f.locator('[data-ref="newWeek"]').click();
 await sleep(1500);
@@ -117,7 +119,9 @@ const mesaDoc = mesa ? await api('GET', `worlds/${W}/screens/${mesa.id}`) : null
 const card = mesaDoc && (mesaDoc.objects || []).find((o) => o.kind === 'snap');
 ok(!!card && card.md.includes(cur.name) && /DM: /.test(card.md), 'el asentamiento llega a la pantalla de DM como tarjeta con Markdown (con la veracidad para el DM)');
 // una sola tienda
-await f.locator('#panel-vendors .vendor').first().locator('.vScreen').click();
+const v0 = f.locator('#panel-vendors .vendor').first();
+if (!(await v0.evaluate((el) => el.open))) await v0.locator(':scope > summary').click();
+await v0.locator('.vScreen').click();
 await page.locator('.modal .pick-list button', { hasText: 'Mesa de prueba' }).click();
 await sleep(800);
 const mesa2 = await api('GET', `worlds/${W}/screens/${mesa.id}`);
@@ -152,7 +156,7 @@ const npcArt = npc.links && npc.links.article ? await api('GET', `worlds/${W}/ar
 ok(!!npcArt && npcArt.template === 'character' && /## Personalidad\n\n:::nota 🧑/.test(npcArt.body) && npcArt.body.includes(npc.trait), `PNJ → artículo de personaje con su bloque en «Personalidad» (${npc.name})`);
 ok(npcArt && !npcArt.body.includes(npc.secret), 'el artículo del PNJ no lleva su secreto');
 await api('PUT', `worlds/${W}/articles/${npc.links.article}`, { ...npcArt, body: `Nota mía.\n\n${npcArt.body}` });
-await f.locator('#panel-npc .rcard[data-t="trait"] [data-act="roll"]').click();
+await f.locator('#panel-npc [data-ref="sheet"] [data-rr="trait"]').click();   // ↻ en la línea de la ficha
 await f.locator('#panel-npc [data-ref="article"]').click();
 await sleep(900);
 const npcArt2 = await api('GET', `worlds/${W}/articles/${npc.links.article}`).then((r) => r.article);

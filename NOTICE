@@ -13,6 +13,14 @@ Food, drink and lodging prices in the Tavern tab follow the SRD 5.1 tables.
 Creature names in the Travel Encounters tab and magic item names and rarities
 in the Loot tab are taken from the SRD 5.1. Rules effects mentioned in notes
 (extreme cold and heat, heavy precipitation, strong wind) are paraphrased.
+Class names are the twelve SRD 5.1 classes plus the artificer. Beyond the SRD,
+the names (and only the names) of playable peoples from other published D&D
+books, from Plane Shift / Lorwyn (Magic: The Gathering settings) and from a
+fan-made Zelda supplement appear in the "Peoples" option; no traits, rules or
+lore from those books are included. Those names belong to their respective
+owners (Wizards of the Coast; Nintendo for the Zelda peoples) and are used
+nominatively in this free, unofficial fan tool. The personal names attached to
+each people are original.
 Vendor concepts, settlement states, market events, shopkeeper, NPC, tavern,
 job, encounter, weather and treasure tables (coin amounts, gem and art object
 lists, curiosities), generation logic, prose, and all other content are

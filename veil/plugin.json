@@ -9,7 +9,7 @@
     "en": "Table generators for the DM: settlement vendors, job board, quick NPCs, taverns, travel encounters, weather and loot. Results are saved with the world, go to the DM screen and become articles."
   },
   "glyph": "⚅",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "author": "Entropy",
   "docKind": "tablas-dnd",
   "veil": "1",

@@ -22,7 +22,8 @@ Hay dos caminos.
 ## A · Pestaña declarativa (solo datos)
 
 Para generadores del tipo «tira en estas tablas y enséñame el resultado». No hay que escribir
-interfaz: `DT.simpleTableTab` da selectores de contexto, «Tirar todo», tarjetas con ↻ por tabla,
+interfaz: `DT.simpleTableTab` da selectores de contexto, «Tirar todo», la **ficha** (el resultado en
+limpio, arriba, con ↻ por línea) y debajo, plegadas, las tarjetas de tiradas con ↻ por tabla,
 guardado, biblioteca, exportar/importar, Markdown, la pantalla de DM y el artículo de Veil, y las
 tablas de referencia con sus rangos. Cinco de las siete pestañas son así (PNJ rápido, Taberna,
 Encuentros de viaje, Clima, Botín): úsalas de ejemplo.
@@ -69,6 +70,7 @@ DT.simpleTableTab({
 | `weight: {clave: {id: factor}}` | Multiplica el peso según lo mismo (0 la quita). Las filas condicionadas usan `w`, no `lo`/`hi`. |
 | `when: {clave: [ids]}` | La tabla entera solo se tira si coincide. |
 | `count` | `"1d4"`, `3` o `{clave: {id: "1d4", default: 1}}`: tira la tabla varias veces. |
+| `unique` | Con `count`: si repite, se vuelve a tirar (la clientela de la Taberna). |
 | `{2d6*10}` en el texto | Se tira al salir la fila y se guarda. EN y ES deben llevar **los mismos dados en el mismo orden** (hay prueba). |
 | `note` | Texto bajo el resultado (p. ej. el efecto en la mesa). |
 | `hidden` | No sale como tarjeta: sirve para componer el nombre (`recordName`), como en Taberna. |
@@ -79,15 +81,27 @@ DT.simpleTableTab({
 | `context` | Selectores `[{id, title, options:[{id, text}], default?}]`. |
 | `recordName(h)` | Nombre del resultado. `h.text(tabla)`, `h.row(tabla)`, `h.ctxText(clave)`. Mientras nadie lo renombre a mano, sigue a las tablas de las que sale. El botón 🎲 vuelve a tirar `nameTables` (por omisión, las ocultas). |
 | `nameTables` | Qué tablas vuelve a tirar 🎲 (p. ej. `["name"]` en PNJ rápido: otro nombre, misma ascendencia). |
-| `sheet(h)` | Ficha: el resultado en limpio, **antes** de las tarjetas de tiradas (como en PNJ rápido). Devuelve `{sub: [texto…], lines: [h.line(tabla, {label?, text?}) …]}`; `h.line` pone la etiqueta (el título de la tabla o `label`), lo que salió, la nota y el color (`cls: good/bad`) de su fila, y marca DM si la tabla es `dm`. El núcleo escapa y pone la mayúscula inicial. Con ficha, el **Markdown** (copiar, pantalla de DM, bloque del artículo) es la ficha; las tablas que la ficha no lea van después, como lista. |
+| `sheet(h)` | **Ficha**: el resultado en limpio, lo primero que se ve; las tarjetas de tiradas quedan debajo, **plegadas** («🎲 Tiradas»). Todas las pestañas la tienen: lo útil primero, sin buscar. Devuelve `{sub: [texto…], lines: [h.line(tabla, {label?, text?, note?, cls?, also?}) …]}`. `h.line` pone la etiqueta (título de la tabla o `label`), lo que salió, la nota y el color (`good`/`bad`) de su fila, marca DM si la tabla es `dm` y le da un **↻** que vuelve a tirar esa tabla (y las de `also`, si la línea junta varias) con todo lo que dependa de ellas. Una línea `null` o sin texto no sale. Otros: `h.text`, `h.row`, `h.vals` (los dados del texto), `h.ctxText`. El núcleo escapa y pone la mayúscula inicial. Con ficha, el **Markdown** (copiar, pantalla de DM, bloque del artículo) es la ficha; las tablas que la ficha no lea van después, como lista. |
 | `article(rec, h)` | Artículo de Veil: `{title, template, fields, subtitle, summary, marker, section, block: h.block(marker, etiqueta)}`. `marker` es un emoji que identifica su bloque (`:::nota 🧑 …`); `section`, la sección de la plantilla donde va la primera vez. Repetir solo reemplaza ese bloque. |
 
 Al volver a tirar una tabla con ↻, se vuelven a tirar también las que dependen de ella.
 
 **Datos compartidos**: lo que usan varias pestañas vive en el bloque `DATOS COMPARTIDOS` como
-`DT.lib.*` (p. ej. `DT.lib.npc`: ascendencias con sus nombres, personalidad, manías, actitud,
-rumores y veracidad, que usan Vendedores, PNJ rápido y Taberna; `DT.lib.npc.nameRows("tabla")`
-da los nombres que dependen de la ascendencia que salió en esa tabla).
+`DT.lib.*`. `DT.lib.npc` tiene ascendencias con sus nombres, personalidad, manías, actitud,
+rumores y veracidad (los usan Vendedores, PNJ rápido y Taberna), y además:
+
+- **Pueblos** (`peoplesCtx`): contexto «Clásicos / Todos los de D&D / Todo». La tabla de ascendencia
+  (d20) tiene dos filas al final, «otro pueblo (D&D)» y «de otros mundos», que con «Clásicos» pesan 0;
+  si salen, mandan a `ancestryX` (d100, 61 pueblos de D&D) o a `ancestryW` (d20, 19 de Magic y Zelda).
+  Solo el nombre del pueblo; los nombres de persona son inventados, por estilo.
+  En una pestaña declarativa: las tres tablas con `when` y `DT.lib.npc.nameRows("ancestry", "ancestryX", "ancestryW")`.
+  En una completa: `DT.lib.npc.rollAncestry(peoples)` → `{id, roll, rollX?}`, `ancestryById(id)`, `namesOf(id)`.
+- **Clases** (`CLASSES`): las 12 del SRD 5.1 más el artífice (solo el nombre). PNJ rápido las pesa por oficio.
+
+`DT.condWeight(env)` da la función de peso que usa el motor (`only`/`weight`) para que una pestaña
+completa tire las mismas tablas con `table.roll(DT.condWeight({clave: id}))`.
+
+**Compatibilidad**: los resultados guardan el índice de la fila. Filas nuevas, **al final** de la tabla.
 
 ## B · Pestaña completa (`DT.registerTab`)
 
@@ -174,9 +188,11 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
 3. **Colores solo por tokens** (`var(--gold)`, `var(--muted)`…). Tipografía Ubuntu (ver `CLAUDE.md`).
 4. **`data.v`**: pon versión a tus datos. Si cambias la forma, normaliza al cargar (como
    `normalize()` en Vendedores) en lugar de romper lo guardado.
-5. **Pruebas**: añade un bloque a `tests/app.test.mjs` (datos que cubren su dado, generar con
+5. **Lo útil primero**: el resultado en limpio arriba (ficha); los dados, plegados debajo. Una
+   pestaña completa hace lo mismo con `.sheet` y `<details class="rollsbox">` (ver Vendedores y Tablón).
+6. **Pruebas**: añade un bloque a `tests/app.test.mjs` (datos que cubren su dado, generar con
    varias semillas, sin errores de consola). `npm test` y, si tocaste el puente, `npm run test:veil`.
-6. Después, `node veil/install.mjs` para llevar la versión nueva a Veil.
+7. Después, `node veil/install.mjs` para llevar la versión nueva a Veil.
 
 Todo resultado guardado de cualquier pestaña **viaja solo a Veil** (documento `tablas-dnd` del
 mundo). La pantalla de DM funciona con cualquier `toMarkdown`. El artículo de Veil hoy solo lo
@@ -186,10 +202,10 @@ hace Vendedores (`articlePayload`); otra pestaña puede hacer el suyo con `DT.br
 
 | Pestaña | Tipo | Nota |
 |---|---|---|
-| ⚖️ Vendedores | completa | La original: estado, evento semanal, tenderos, existencias, regateo. |
-| 📜 Tablón de encargos | completa | Lee las ciudades guardadas en Vendedores: sus tenderos pagan y sus rumores se vuelven encargos. |
-| 🧑 PNJ rápido | declarativa | Usa `DT.lib.npc`. Artículo de personaje en Veil. |
-| 🍺 Taberna | declarativa | Nombre compuesto con tablas ocultas y concordancia de género. Artículo de edificio en Veil. |
+| ⚖️ Vendedores | completa | La original: estado, evento semanal, tenderos (con pueblos), existencias, regateo. Ficha del asentamiento con una línea por tienda que se abre. |
+| 📜 Tablón de encargos | completa | Lee las ciudades guardadas en Vendedores: sus tenderos pagan y sus rumores se vuelven encargos. Ficha del tablón; los dados, plegados. |
+| 🧑 PNJ rápido | declarativa | Usa `DT.lib.npc` (con pueblos y clases). Artículo de personaje en Veil. |
+| 🍺 Taberna | declarativa | Nombre compuesto con tablas ocultas y concordancia de género; posadero con pueblos. Artículo de edificio en Veil. |
 | 🐺 Encuentros de viaje | declarativa | 9 biomas × 3 niveles × día/noche × amenaza. Criaturas del SRD 5.1. |
 | ⛅ Clima | declarativa | Región × estación; efectos de frío y calor extremos, lluvia, niebla, viento. |
 | 💰 Botín | declarativa | Tablas propias (las del DMG no están en el SRD 5.1); objetos mágicos con nombre y rareza del SRD 5.1. |
