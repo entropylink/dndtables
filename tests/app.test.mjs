@@ -359,6 +359,17 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
           const mdx = A.markdown(rec, { dm: false });
           const dmTables = tables.filter((t) => t.dm && data.rolls[t.id] && data.rolls[t.id].length);
           dmTables.forEach((t) => { if (mdx.includes(`**${DT.tx(t.title)}**`)) bad(`${tab.id}: la tabla DM ${t.id} sale en el Markdown para jugadores`); });
+          // Ficha: no revienta, ni deja dados sin tirar; lo del DM no sale para jugadores y nada se pierde del Markdown.
+          const sheet = A.sheetOf(rec);
+          if (sheet) {
+            sheet.lines.forEach((l) => {
+              if (TOKEN.test(l.text) || /\{\d*d\d/.test(l.text)) bad(`${tab.id}: dados sin tirar en la ficha «${l.text}»`);
+              if (l.dm && mdx.includes(`**${l.label}`)) bad(`${tab.id}: la línea DM «${l.label}» sale en el Markdown para jugadores`);
+            });
+            const mdd = A.markdown(rec, { dm: true });
+            tables.filter((t) => !t.hidden && !sheet.used.has(t.id) && data.rolls[t.id] && data.rolls[t.id].length)
+              .forEach((t) => { if (!mdd.includes(`**${DT.tx(t.title)}**`)) bad(`${tab.id}: la tabla ${t.id} no está ni en la ficha ni en el Markdown`); });
+          }
         }
       }
     }
@@ -415,6 +426,35 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(nm.diceChanges && nm.sameAncestry && nm.nameMatches, 'PNJ: 🎲 da otro nombre de la misma ascendencia', JSON.stringify(nm));
   ok(nm.followsAncestry, 'PNJ: ↻ en Ascendencia actualiza también el nombre guardado');
   ok(nm.manualKept, 'PNJ: un nombre puesto a mano no se pisa al volver a tirar');
+  // PNJ: primero la ficha (nombre, quién es, lo que hace falta para interpretarlo), luego las tiradas
+  const sh = await page.evaluate(() => {
+    const P = document.querySelector('#panel-npc'), T = DT.tabs.get('npc'), rec = DT.records.active('npc'), h = T.api.helpers(rec);
+    const sheet = P.querySelector('[data-ref="sheet"]'), grid = P.querySelector('[data-ref="results"]');
+    const out = { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING) };
+    out.head = sheet.querySelector('.sh').textContent === rec.name;
+    out.sub = sheet.querySelector('.ss').textContent.toLowerCase() === [h.text('ancestry'), h.text('age'), h.text('job')].join(' · ').toLowerCase();
+    out.body = ['looks', 'trait', 'quirk', 'wants', 'rumor', 'secret'].every((t) => sheet.textContent.toLowerCase().includes(h.text(t).toLowerCase()));
+    out.dmTags = sheet.querySelectorAll('dt .vtag.bad').length === 2;
+    out.attCls = sheet.querySelectorAll('dd.good, dd.bad').length >= 1 || /indifferent|indiferente/i.test(h.text('attitude'));
+    const pl = T.toMarkdown(rec, { dm: false }), dm = T.toMarkdown(rec, { dm: true });
+    out.mdPlayers = !pl.includes(h.text('secret')) && pl.includes(h.text('trait')) && !/\(DM\)/.test(pl);
+    out.mdDM = dm.includes(h.text('secret')) && /\(DM\):\*\* /.test(dm);
+    out.mdNoDice = !/\(d\d+: /.test(dm);   // todo lo que salió está en la ficha: no se repite como lista de tiradas
+    out.mdNoNameLine = !dm.includes(`**${h.title('name')}**`);   // el nombre ya es el título
+    const inp = P.querySelector('[data-ref="name"]'); inp.value = 'Doña Ficha'; P.querySelector('[data-ref="rename"]').click();
+    out.renamed = sheet.querySelector('.sh').textContent === 'Doña Ficha';
+    let before = h.text('wants'), k = 0;
+    while (T.api.helpers(DT.records.active('npc')).text('wants') === before && k++ < 30) P.querySelector('.rcard[data-t="wants"] [data-act="roll"]').click();
+    out.reroll = sheet.textContent.includes(T.api.helpers(DT.records.active('npc')).text('wants'));
+    DT.setLang(DT.lang === 'en' ? 'es' : 'en');
+    out.lang = P.querySelector('[data-ref="rollsHead"]').textContent === DT.t('rollsTitle') && sheet.querySelector('dt').textContent === T.api.helpers(DT.records.active('npc')).title('looks');
+    DT.setLang(DT.lang === 'en' ? 'es' : 'en');
+    return out;
+  });
+  ok(sh.visible && sh.first && sh.head && sh.sub && sh.body, 'PNJ: la ficha va primero, con nombre, quién es y todo lo que salió', JSON.stringify(sh));
+  ok(sh.dmTags && sh.attCls, 'PNJ: la ficha marca lo del DM y colorea la actitud', JSON.stringify(sh));
+  ok(sh.mdPlayers && sh.mdDM && sh.mdNoDice && sh.mdNoNameLine, 'PNJ: el Markdown es la ficha (secreto y veracidad solo para el DM)', JSON.stringify(sh));
+  ok(sh.renamed && sh.reroll && sh.lang, 'PNJ: la ficha sigue al nombre a mano, a ↻ y al idioma', JSON.stringify(sh));
   // Clima: cambiar el contexto cambia la tabla de referencia
   await page.click('#tabBar [data-tab="weather"]');
   await page.selectOption('#panel-weather select[data-ctx="climate"]', 'tropical');

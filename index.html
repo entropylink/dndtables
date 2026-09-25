@@ -133,6 +133,16 @@
   .vactions{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap}
   .rcard .rt{font-weight:700; color:var(--gold)}
   .rcard .rv{margin:6px 0; font-size:.95rem}
+  /* ficha de una pestaña declarativa (def.sheet): lo que salió, en limpio, antes de las tiradas */
+  .sheet{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:12px; padding:14px 16px; margin-top:14px; box-shadow:0 2px 0 #0006}
+  .sheet .sh{font-size:1.3rem; font-weight:700; color:var(--gold); overflow-wrap:anywhere}
+  .sheet .ss{color:var(--ink); margin-top:2px; font-weight:700}
+  .sheet dl{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:5px 14px; margin:12px 0 0}
+  .sheet dt{color:var(--muted); font-size:.86rem; padding-top:1px}
+  .sheet dd{margin:0}
+  .sheet dd.good{color:var(--green)} .sheet dd.bad{color:var(--red)}
+  .sheet dd .sub{color:var(--muted)}
+  .rollshead{margin:18px 0 0; color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.08em}
   /* reference tables */
   details{background:var(--bg2); border:1px solid var(--line); border-radius:10px; margin:10px 0; padding:0 14px}
   details[open]{padding-bottom:14px}
@@ -314,7 +324,7 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.1.0";
+DT.VERSION = "3.2.0";
 DT.SCHEMA = 3;
 DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
@@ -419,7 +429,7 @@ DT.addStrings({
     hostSent:"Sent to Veil.", hostOffline:"Veil didn't answer; working locally.",
     hostReadFailed:"Veil couldn't read this world's results: working locally. Nothing is saved to the world until you reopen this tool.",
     rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result",
-    noneThisTime:"Nothing this time.", dependsOn:"Shown for: {what}", rollName:"Roll another name",
+    noneThisTime:"Nothing this time.", rollsTitle:"Rolls", dependsOn:"Shown for: {what}", rollName:"Roll another name",
     copyMdShort:"📋 Copy as Markdown", toScreenShort:"▤ To the DM screen", toArticleShort:"¶ Veil article",
     savedTitle:"💾 Saved", refTitle:"📖 Reference tables", articleReady:"Veil article ready.", articleNotMade:"Article not created."
   },
@@ -439,7 +449,7 @@ DT.addStrings({
     hostSent:"Enviado a Veil.", hostOffline:"Veil no respondió; se trabaja en local.",
     hostReadFailed:"Veil no pudo leer los resultados del mundo: se trabaja en local. No se guarda nada en el mundo hasta que vuelvas a abrir la herramienta.",
     rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado",
-    noneThisTime:"Nada esta vez.", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
+    noneThisTime:"Nada esta vez.", rollsTitle:"Tiradas", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
     copyMdShort:"📋 Copiar como Markdown", toScreenShort:"▤ A la pantalla de DM", toArticleShort:"¶ Artículo en Veil",
     savedTitle:"💾 Guardados", refTitle:"📖 Tablas de referencia", articleReady:"Artículo listo en Veil.", articleNotMade:"No se creó el artículo."
   }
@@ -899,22 +909,49 @@ DT.simpleTableTab = function(def){
     if(!opts.noTitle) lines.push(`### ${DT.mdEsc(rec.name)}`, "");
     const cl = ctxDefs.map(c=> ctxText(d, c.id)).filter(Boolean);
     if(cl.length) lines.push(`*${cl.map(DT.mdEsc).join(" · ")}*`, "");
+    // Con ficha, el Markdown es la ficha (se lee, no se vuelve a tirar); lo que la ficha no use va después.
+    const s = sheetOf(rec);
+    if(s){
+      if(s.sub.length) lines.push(`**${s.sub.map(DT.mdEsc).join(" · ")}**`, "");
+      for(const l of s.lines) if(!l.dm || opts.dm)
+        lines.push(`- **${DT.mdEsc(l.label)}${l.dm?" (DM)":""}:** ${DT.mdEsc(l.text)}${l.note?` — *${DT.mdEsc(l.note)}*`:""}`);
+    }
     for(const t of tables){
-      if(t.hidden || (t.dm && !opts.dm)) continue;
+      if(t.hidden || (t.dm && !opts.dm) || (s && s.used.has(t.id))) continue;
       const rs = d.rolls[t.id]; if(!rs || !rs.length) continue;
       const items = rs.map(r=>{ const note = t.rows[r.i] && t.rows[r.i].note; return DT.mdEsc(resText(t, r))+(note?` — *${DT.mdEsc(DT.tx(note))}*`:""); });
       lines.push(`- **${DT.mdEsc(DT.tx(t.title))}** (d${t.die}: ${rs.map(r=>r.roll).join(", ")}): ${items.join("; ")}`);
     }
     return lines.join("\n")+"\n";
   }
-  const helpers = rec=>({
-    text:(tid,k=0)=> resText(byId.get(tid), (rec.data.rolls[tid]||[])[k]),
-    texts:(tid)=> (rec.data.rolls[tid]||[]).map(r=> resText(byId.get(tid), r)),
-    row:(tid,k=0)=>{ const r=(rec.data.rolls[tid]||[])[k]; return r ? byId.get(tid).rows[r.i] : null; },
+  // used (opcional): apunta qué tablas lee la ficha, para no repetirlas en el Markdown.
+  const helpers = (rec, used)=>{ const use = tid=>{ if(used) used.add(tid); return byId.get(tid); }; return {
+    text:(tid,k=0)=> resText(use(tid), (rec.data.rolls[tid]||[])[k]),
+    texts:(tid)=> (rec.data.rolls[tid]||[]).map(r=> resText(use(tid), r)),
+    row:(tid,k=0)=>{ const t=use(tid), r=(rec.data.rolls[tid]||[])[k]; return r ? t.rows[r.i] : null; },
+    title:(tid)=> DT.tx(byId.get(tid).title),
+    // Una línea de la ficha: etiqueta (`label` o el título de la tabla), lo que salió (o `text`), la nota y el color de su fila.
+    line:(tid, o={})=>{
+      const t = use(tid), rs = rec.data.rolls[tid]||[], row = rs[0] && t.rows[rs[0].i];
+      if(!row) return null;
+      return {label:DT.tx(o.label||t.title), text:o.text!=null ? String(o.text) : rs.map(r=> resText(t, r)).join("; "),
+        note:row.note ? DT.tx(row.note) : "", cls:row.cls||"", dm:t.dm};
+    },
     ctx:(key)=> (rec.data.ctx||{})[key], ctxText:(key)=> ctxText(rec.data, key),
     markdown:(opts)=> markdown(rec, opts),
     block:(marker, label)=> `:::nota ${marker} ${label}\n${markdown(rec, {noTitle:true, dm:false}).replace(/^:::.*$/gm,"")}\n:::`
-  });
+  }; };
+  // Ficha (def.sheet): el resultado en limpio, arriba; las tiradas van debajo.
+  // def.sheet(h) → {sub:[texto…], lines:[h.line(tabla, {label?, text?}) …]}. El núcleo escapa y pone la mayúscula inicial.
+  const cap = s=> String(s).replace(/^([^\p{L}\p{N}]*)(\p{L})/u, (m,a,b)=> a+b.toUpperCase());
+  function sheetOf(rec){
+    if(!def.sheet) return null;
+    const used = new Set(def.recordName ? nameTables : []); let s;   // el nombre ya es el título
+    try{ s = def.sheet(helpers(rec, used)); }catch(e){ console.error(e); return null; }
+    if(!s) return null;
+    return {used, sub:(s.sub||[]).filter(Boolean).map(cap),
+      lines:(s.lines||[]).filter(l=> l && l.text).map(l=> Object.assign({}, l, {text:cap(l.text), cls:l.cls==="good"||l.cls==="bad" ? l.cls : ""}))};
+  }
   function normalize(rec){
     const d = rec.data; d.ctx = Object.assign(defaultCtx(), d.ctx||{}); d.rolls = d.rolls || {};
     for(const t of tables){
@@ -940,8 +977,15 @@ DT.simpleTableTab = function(def){
     const c = cur ? cur.data.ctx : defaultCtx();
     refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(c[s.dataset.ctx]!=null) s.value = c[s.dataset.ctx]; s.onchange = renderRefs; });
   }
+  function renderSheet(){
+    const s = cur && sheetOf(cur);
+    refs.sheet.hidden = !s; refs.rollsHead.hidden = !s;
+    refs.sheet.innerHTML = !s ? "" : `<div class="sh">${DT.esc(cur.name)}</div>${s.sub.length?`<div class="ss">${DT.esc(s.sub.join(" · "))}</div>`:""}<dl>${
+      s.lines.map(l=>`<dt>${DT.esc(l.label)}${l.dm?` <span class="vtag bad">DM</span>`:""}</dt><dd${l.cls?` class="${l.cls}"`:""}>${DT.esc(l.text)}${l.note?` <span class="sub">— ${DT.esc(l.note)}</span>`:""}</dd>`).join("")}</dl>`;
+  }
   function render(){
     if(!refs) return;
+    renderSheet();
     refs.screen.hidden = !DT.host.caps.toScreen;
     refs.article.hidden = !(def.article && DT.host.caps.toArticle && cur);
     refs.nameDice.hidden = !(def.recordName && nameTables.length);
@@ -998,6 +1042,8 @@ DT.simpleTableTab = function(def){
             <button class="small host" data-ref="screen" hidden>${DT.esc(DT.t("toScreenShort"))}</button>
             <button class="small host" data-ref="article" hidden>${DT.esc(DT.t("toArticleShort"))}</button>
           </div></div>
+        <div class="sheet" data-ref="sheet" hidden></div>
+        <div class="rollshead" data-ref="rollsHead" hidden>${DT.esc(DT.t("rollsTitle"))}</div>
         <div class="grid" style="margin-top:14px" data-ref="results"></div>
         <h2>${DT.esc(DT.t("savedTitle"))}</h2><div class="controls"><div class="savebar">
           <button data-ref="exportAll">${DT.esc(DT.t("exportAll"))}</button><button data-ref="import">${DT.esc(DT.t("importBtn"))}</button></div>
@@ -1011,7 +1057,7 @@ DT.simpleTableTab = function(def){
         persist(); render();
       };
       refs.nameDice.onclick = ()=>{ if(!cur || !def.recordName) return; nameTables.forEach(id=> rerollFrom(id, cur.data)); cur.data.autoName = true; autoName(); persist(); render(); };
-      const rename = ()=>{ const v=refs.name.value.trim(); if(cur && v && v!==cur.name){ cur.name=v; cur.data.autoName = false; persist(); } };
+      const rename = ()=>{ const v=refs.name.value.trim(); if(cur && v && v!==cur.name){ cur.name=v; cur.data.autoName = false; persist(); renderSheet(); } };
       refs.rename.onclick = rename;
       refs.name.addEventListener("keydown", e=>{ if(e.key==="Enter") rename(); });
       refs.copy.onclick = ()=>{ if(cur) DT.copyText(markdown(cur, {dm:true})); };
@@ -1030,7 +1076,7 @@ DT.simpleTableTab = function(def){
       renderCtx(); render();
     },
     onShow(){ if(refs) render(); },
-    onLang(){ if(refs){ const keep = selCtx(); refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); refs.copy.textContent=DT.t("copyMdShort");
+    onLang(){ if(refs){ const keep = selCtx(); refs.rollAll.textContent=DT.t("rollAll"); refs.rename.textContent=DT.t("renameBtn"); refs.copy.textContent=DT.t("copyMdShort"); refs.rollsHead.textContent=DT.t("rollsTitle");
       refs.screen.textContent=DT.t("toScreenShort"); refs.article.textContent=DT.t("toArticleShort"); renderCtx();
       refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(keep[s.dataset.ctx]!=null) s.value=keep[s.dataset.ctx]; }); render(); } },
     validate: data=> !!(data && data.rolls && typeof data.rolls==="object"),
@@ -1046,7 +1092,7 @@ DT.simpleTableTab = function(def){
   });
   // Para las pruebas y para quien extienda.
   tab.tables = tables; tab.context = ctxDefs;
-  tab.api = {rollAll, rerollFrom, normalize, markdown, helpers, resText, weightFn, envFor, defaultCtx, current:()=>cur};
+  tab.api = {rollAll, rerollFrom, normalize, markdown, helpers, sheetOf, resText, weightFn, envFor, defaultCtx, current:()=>cur};
   return tab;
 };
 
@@ -2818,6 +2864,20 @@ DT.simpleTableTab({
   ],
   recordName: h=> h.text("name"),
   nameTables:["name"],
+  // Primero el PNJ, listo para interpretarlo; las tiradas, debajo.
+  sheet: h=>{
+    const att = h.row("attitude");
+    return {
+      sub:[h.text("ancestry"), h.text("age"), h.text("job")],
+      lines:[
+        h.line("looks"), h.line("trait"), h.line("quirk"),
+        h.line("attitude", {label:{en:"Attitude", es:"Actitud"}, text:att ? `${att.emoji} ${h.text("attitude")}` : ""}),
+        h.line("wants", {label:{en:"Wants", es:"Quiere"}}),
+        h.line("rumor", {label:{en:"Has heard", es:"Ha oído"}}),
+        h.line("secret"),
+        h.line("truth", {label:{en:"The rumor is", es:"El rumor es"}})
+      ]};
+  },
   article:(rec, h)=>({
     title:rec.name, template:"character", fields:{age:h.text("age")},
     subtitle:`${h.text("ancestry")} · ${h.text("job")}`, summary:h.text("trait"),

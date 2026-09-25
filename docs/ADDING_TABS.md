@@ -79,6 +79,7 @@ DT.simpleTableTab({
 | `context` | Selectores `[{id, title, options:[{id, text}], default?}]`. |
 | `recordName(h)` | Nombre del resultado. `h.text(tabla)`, `h.row(tabla)`, `h.ctxText(clave)`. Mientras nadie lo renombre a mano, sigue a las tablas de las que sale. El botón 🎲 vuelve a tirar `nameTables` (por omisión, las ocultas). |
 | `nameTables` | Qué tablas vuelve a tirar 🎲 (p. ej. `["name"]` en PNJ rápido: otro nombre, misma ascendencia). |
+| `sheet(h)` | Ficha: el resultado en limpio, **antes** de las tarjetas de tiradas (como en PNJ rápido). Devuelve `{sub: [texto…], lines: [h.line(tabla, {label?, text?}) …]}`; `h.line` pone la etiqueta (el título de la tabla o `label`), lo que salió, la nota y el color (`cls: good/bad`) de su fila, y marca DM si la tabla es `dm`. El núcleo escapa y pone la mayúscula inicial. Con ficha, el **Markdown** (copiar, pantalla de DM, bloque del artículo) es la ficha; las tablas que la ficha no lea van después, como lista. |
 | `article(rec, h)` | Artículo de Veil: `{title, template, fields, subtitle, summary, marker, section, block: h.block(marker, etiqueta)}`. `marker` es un emoji que identifica su bloque (`:::nota 🧑 …`); `section`, la sección de la plantilla donde va la primera vez. Repetir solo reemplaza ese bloque. |
 
 Al volver a tirar una tabla con ↻, se vuelven a tirar también las que dependen de ella.
