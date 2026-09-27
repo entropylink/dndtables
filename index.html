@@ -163,7 +163,7 @@
   ul.rumors{margin:6px 0 0; padding-left:18px}
   ul.rumors li{margin:4px 0}
   /* Tablón: un encargo por bloque, dentro de la ficha */
-  .sheet .job{border-top:1px solid var(--line); padding:10px 0 4px; margin-top:10px}
+  .sheet .job:not(.gcard){border-top:1px solid var(--line); padding:10px 0 4px; margin-top:10px}
   .sheet .job .jt{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
   .sheet .job .jt b{font-size:1.02rem}
   .rollsbox > .grid{margin-top:4px}
@@ -207,10 +207,10 @@
   .gcard{display:flex; flex-direction:column; gap:6px; min-width:0; padding:10px 12px; border:1px solid var(--line); border-left:3px solid var(--gold2); border-radius:12px;
     background:linear-gradient(180deg,var(--card2),var(--card)); box-shadow:0 2px 0 #0006}
   .gcard.current{border-color:var(--gold)}
-  .gtog{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 6px; width:100%; padding:0; border:0; border-radius:4px; background:none; text-align:left;
+  .gtog{display:flex; flex-wrap:nowrap; align-items:baseline; gap:2px 6px; width:100%; padding:0; border:0; border-radius:4px; background:none; text-align:left;
     color:var(--gold); font-weight:700; font-size:1.05rem}
   .gtog:hover{background:none; color:var(--cyan); transform:none}
-  .gtog::before{content:"▾"; color:var(--muted); font-weight:400}
+  .gtog::before{content:"▾"; color:var(--muted); font-weight:400; flex:none}
   .gcard.folded .gtog::before{content:"▸"}
   .gtog .gname{overflow-wrap:anywhere}
   .gtog .vtag{font-weight:400}
@@ -234,6 +234,36 @@
   .gcards.sm dt{max-width:none; margin-top:4px; font-size:.7rem}
   .gcards.sm dd{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
   .gcards.sm .gact button{padding:2px 7px}
+  .ghead{display:flex; align-items:flex-start; gap:6px}
+  .ghead > .gtog{flex:1; min-width:0}
+  /* La ficha en cards: cada línea (declarativas), cada encargo (Tablón), cada tienda (Vendedores) */
+  .sheet > .viewbar{margin:12px 0 10px}
+  .sheet .gcards{margin-top:4px}
+  .sheet .gcard{background:var(--bg2); box-shadow:none}
+  .gcard.lcard .gtog{font-size:.86rem; color:var(--muted)}
+  .gcard.lcard .gtog:hover{color:var(--cyan)}
+  .gcard.job .gtog{font-size:1rem; color:var(--ink)}
+  .gcard.job .gtog:hover{color:var(--cyan)}
+  .lval{font-size:1rem}
+  .lval.good{color:var(--green)} .lval.bad{color:var(--red)}
+  .gcards.lg .lval{font-size:1.2rem}
+  .gcards.lg .gcard.job .gtog{font-size:1.12rem}
+  .gcards.sm .lval{font-size:.9rem}
+  .gcards.sm .gcard.lcard .gtog{font-size:.78rem}
+  .gcard .lval + .sub{font-size:.8rem; margin-top:2px}
+  details.vcard{margin:0; padding:0 12px; border-radius:12px; min-width:0}
+  details.vcard > summary{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:10px 0; font-weight:400; color:var(--ink)}
+  details.vcard > summary::before{content:"▸"; color:var(--muted); width:.8em}
+  details.vcard[open] > summary::before{content:"▾"}
+  details.vcard[open]{padding-bottom:12px}
+  details.vcard .vtag{margin:0}
+  details.vcard .vicon{font-size:1.3rem}
+  .gcards.lg details.vcard .vname{font-size:1.15rem}
+  #panel-vendors .gcards.md{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+  #panel-vendors .gcards.sm{grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr))}
+  .gcards.sm details.vcard .goods td.base, .gcards.sm details.vcard .haggle, .gcards.sm details.vcard .vactions, .gcards.sm details.vcard .npc{display:none}
+  .gcards.sm details.vcard .vname{font-size:.95rem}
+  .gcards.sm details.vcard .goods td.price{white-space:normal}
   .toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--card2); border:1px solid var(--gold);
     color:var(--ink); padding:8px 16px; border-radius:8px; font-size:.86rem; box-shadow:0 6px 24px #000a}
   .flash{animation:flash .6s ease}
@@ -297,7 +327,8 @@
     <div class="sh" data-ref="shName"></div>
     <div class="ss" data-ref="shSub"></div>
     <dl data-ref="shStatus"></dl>
-    <div class="sgroup"><span data-i18n="permGroup">🏪 Permanent</span> <span class="sub" data-i18n="openHint">— open a shop for its goods, prices and haggling</span></div>
+    <div data-ref="shView"></div>
+    <div class="sgroup"><span data-i18n="permGroup">🏪 Permanent</span> <span class="sub" data-ref="openHint" data-i18n="openHint">— open a shop for its goods, prices and haggling</span></div>
     <div data-ref="permGrid"></div>
     <div class="sgroup" data-i18n="travGroup">🐎 Traveling, this week</div>
     <div data-ref="travelGrid"></div>
@@ -402,7 +433,7 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.4.0";
+DT.VERSION = "3.5.0";
 DT.SCHEMA = 3;
 DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
@@ -790,15 +821,9 @@ DT.io = {
   }
 };
 
-/* ===================== BIBLIOTECA (lo guardado de cada pestaña) ===================== */
-const libraries = new Set();
-// DT.library(contenedor, tabId) → lo guardado, en lista o en cards (grandes / medianas / pequeñas), con cargar / exportar / borrar.
-// Lista: tab.summary(rec) → {chips:[…], meta:[…], detail:"…"}.
-// Cards: tab.card(rec) → {sub:[…], lines:[{label, text, note?, dm?, cls?}], meta?:[…]}; sin card(), el detail del resumen.
-// Al pie de la card va meta (o, si no la da, los chips del resumen) y la fecha.
-// Todo es texto plano; aquí se escapa. La vista es preferencia de quien mira (por pestaña); lo plegado va con el mundo.
+/* ===================== VISTAS: lista o cards (grandes / medianas / pequeñas) que se pliegan ===================== */
+// Las usan la ficha de cada pestaña y «Guardados». La vista es preferencia de quien mira: DT.views.get/set(clave).
 const VIEWS = ["list","lg","md","sm"], VIEW_KEY = {list:"viewList", lg:"viewLg", md:"viewMd", sm:"viewSm"};
-const FOLD_KEY = "dndtables.v3.folded";
 const VIEW_ICON = {   // rectángulos de 16×16: tres renglones · dos cards · cuatro · nueve
   list:[[1,2,14,2.4],[1,6.8,14,2.4],[1,11.6,14,2.4]],
   lg:[[1,1.5,6.2,13],[8.8,1.5,6.2,13]],
@@ -806,9 +831,80 @@ const VIEW_ICON = {   // rectángulos de 16×16: tres renglones · dos cards · 
   sm:[0.5,6,11.5].flatMap(y=> [0.5,6,11.5].map(x=> [x,y,4,4]))
 };
 const viewIcon = v=> `<svg class="vico" viewBox="0 0 16 16" aria-hidden="true">${VIEW_ICON[v].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8"/>`).join("")}</svg>`;
+DT.views = {
+  list: VIEWS,
+  get(key){ const v = DT.storage.pref(key); return VIEWS.includes(v) ? v : "list"; },
+  set(key, v){ if(VIEWS.includes(v)) DT.storage.pref(key, v); },
+  // «Ver: Lista · Grandes · Medianas · Pequeñas» y, en cards, «Plegar todas» (DT.cards.wire le pone el texto).
+  bar(view){
+    const E = DT.esc;
+    return `<div class="viewbar" role="group" aria-label="${E(DT.t("viewAs"))}"><span class="sub">${E(DT.t("viewAs"))}</span>${
+      VIEWS.map(v=>`<button class="small ghost vbtn" data-view="${v}" aria-pressed="${v===view}">${viewIcon(v)}<span>${E(DT.t(VIEW_KEY[v]))}</span></button>`).join("")}${
+      view==="list" ? "" : `<button class="small ghost" data-act="foldAll" data-fold="1">${E(DT.t("foldAll"))}</button>`}</div>`;
+  },
+  // Cambiar de vista: guarda, redibuja y deja el foco en el botón pulsado.
+  wire(bar, key, redraw){
+    if(!bar) return;
+    bar.querySelectorAll("[data-view]").forEach(b=>{ b.onclick = ()=>{
+      const v = b.dataset.view; DT.views.set(key, v); redraw();
+      const nb = document.querySelector(`.viewbar[data-vkey="${CSS.escape(key)}"] [data-view="${v}"]`); if(nb) nb.focus();
+    }; });
+    bar.dataset.vkey = key;
+  }
+};
+// Card plegable. title/head/body/foot son HTML ya escapado; head va junto al título (p. ej. el ↻) y foot, siempre visible.
+DT.cards = {
+  html({key, cls="", attrs="", title, head="", body="", foot="", folded=false}){
+    return `<article class="gcard${cls?" "+cls:""}${folded?" folded":""}" data-fid="${DT.esc(key)}"${attrs?" "+attrs:""}>
+        <div class="ghead"><button class="gtog" data-act="fold" aria-expanded="${!folded}" title="${DT.esc(DT.t(folded?"unfoldCard":"foldCard"))}">${title}</button>${head}</div>
+        <div class="gbody"${folded?" hidden":""}>${body}</div>${foot}
+      </article>`;
+  },
+  // Pliega en el sitio, sin redibujar. Vale para .gcard y para <details class="vcard"> (Vendedores).
+  // on = {toggle(key, plegada), done()}: para recordarlo; done() una vez por clic.
+  wire(root, bar, on={}){
+    if(!root) return;
+    const cards = ()=> [...root.querySelectorAll(".gcard[data-fid], details.vcard")];
+    const isFolded = c=> c.tagName==="DETAILS" ? !c.open : c.classList.contains("folded");
+    const sync = ()=>{
+      const fa = bar && bar.querySelector('[data-act="foldAll"]'); if(!fa) return;
+      const any = cards().some(c=> !isFolded(c));
+      fa.dataset.fold = any ? "1" : "0"; fa.textContent = DT.t(any ? "foldAll" : "unfoldAll");
+    };
+    const set = (c, fold)=>{
+      if(c.tagName==="DETAILS"){ c.open = !fold; return; }   // su «toggle» avisa (abajo)
+      c.classList.toggle("folded", fold);
+      const b = c.querySelector(":scope > .ghead > .gtog"); b.setAttribute("aria-expanded", String(!fold)); b.title = DT.t(fold ? "unfoldCard" : "foldCard");
+      c.querySelector(":scope > .gbody").hidden = fold;
+      on.toggle && on.toggle(c.dataset.fid, fold);
+    };
+    root.querySelectorAll(".gcard[data-fid] > .ghead > .gtog").forEach(b=>{ b.onclick = ()=>{ const c = b.closest(".gcard"); set(c, !isFolded(c)); sync(); on.done && on.done(); }; });
+    // <details>: se pliegan solos; el aviso llega por «toggle» (no burbujea: se escucha en captura, una sola vez por contenedor).
+    root._dtCards = {on, sync};
+    if(!root._dtToggle){
+      root._dtToggle = true;
+      root.addEventListener("toggle", e=>{ const w = root._dtCards, c = e.target;
+        if(!w || !c.matches || !c.matches("details.vcard")) return;
+        w.on.toggle && w.on.toggle(c.dataset.id, !c.open); w.sync(); w.on.done && w.on.done(); }, true);
+    }
+    const fa = bar && bar.querySelector('[data-act="foldAll"]');
+    if(fa) fa.onclick = ()=>{ const fold = fa.dataset.fold==="1"; cards().forEach(c=> set(c, fold)); sync(); on.done && on.done(); };
+    sync();
+  },
+  // Lo plegado de una ficha dura mientras se trabaja ese resultado; uno nuevo sale abierto.
+  memo(){ let id = null, set = new Set(); return recId=>{ if(recId!==id){ id = recId; set = new Set(); } return set; }; }
+};
+
+/* ===================== BIBLIOTECA (lo guardado de cada pestaña) ===================== */
+const libraries = new Set();
+// DT.library(contenedor, tabId) → lo guardado, en lista o en cards (grandes / medianas / pequeñas), con cargar / exportar / borrar.
+// Lista: tab.summary(rec) → {chips:[…], meta:[…], detail:"…"}.
+// Cards: tab.card(rec) → {sub:[…], lines:[{label, text, note?, dm?, cls?}], meta?:[…]}; sin card(), el detail del resumen.
+// Al pie de la card va meta (o, si no la da, los chips del resumen) y la fecha.
+// Todo es texto plano; aquí se escapa. La vista es preferencia de quien mira (por pestaña); lo plegado va con el mundo.
+const FOLD_KEY = "dndtables.v3.folded";
 DT.library = function(box, tabId){
-  const E = DT.esc;
-  const viewOf = ()=>{ const v = DT.storage.pref("view."+tabId); return VIEWS.includes(v) ? v : "list"; };
+  const E = DT.esc, VKEY = "view."+tabId;
   let folded = null;
   const foldedAll = ()=>{ const all = DT.storage.getJSON(FOLD_KEY, {}); return all && typeof all==="object" && !Array.isArray(all) ? all : {}; };
   const foldedSet = ()=>{ if(!folded){ const ids = foldedAll()[tabId]; folded = new Set(Array.isArray(ids) ? ids.filter(x=> typeof x==="string") : []); } return folded; };
@@ -839,34 +935,29 @@ DT.library = function(box, tabId){
     let c = null; try{ c = tab.card ? tab.card(r) : null; }catch(e){ console.error(e); }
     if(!c) c = {sub:[], lines: s.detail ? [{label:"", text:s.detail}] : []};
     const lines = (c.lines||[]).filter(l=> l && l.text), shown = view==="sm" ? lines.slice(0,3) : lines;
-    const isFold = foldedSet().has(r.id), meta = [...(Array.isArray(c.meta) ? c.meta : s.chips), DT.recordDate(r)].filter(Boolean).join(" · ");
-    return `<article class="gcard${isCur?" current":""}${isFold?" folded":""}" data-id="${E(r.id)}">
-        <button class="gtog" data-act="fold" aria-expanded="${!isFold}" title="${E(DT.t(isFold?"unfoldCard":"foldCard"))}"><span class="gname">${E(r.name)}</span>${isCur?` <span class="vtag basic">${E(DT.t("currentTag"))}</span>`:""}</button>
-        <div class="gbody"${isFold?" hidden":""}>${(c.sub||[]).length?`<div class="gsub">${E(c.sub.filter(Boolean).join(" · "))}</div>`:""}${
-          shown.length?`<dl>${shown.map(l=>`<dt>${E(l.label||"")}</dt><dd${l.cls==="good"||l.cls==="bad"?` class="${l.cls}"`:""}>${l.dm?`<span class="vtag bad">DM</span> `:""}${E(l.text)}${
-            view==="lg" && l.note?`<div class="sub">${E(l.note)}</div>`:""}</dd>`).join("")}</dl>`:""}${
-          lines.length>shown.length?`<div class="gmore">${E(DT.t("moreLines",{n:lines.length-shown.length}))}</div>`:""}${
-          meta?`<div class="gmeta">${E(meta)}</div>`:""}</div>
-        <div class="gact">${acts()}</div>
-      </article>`;
+    const meta = [...(Array.isArray(c.meta) ? c.meta : s.chips), DT.recordDate(r)].filter(Boolean).join(" · ");
+    return DT.cards.html({key:r.id, cls:isCur?"current":"", attrs:`data-id="${E(r.id)}"`, folded:foldedSet().has(r.id),
+      title:`<span class="gname">${E(r.name)}</span>${isCur?` <span class="vtag basic">${E(DT.t("currentTag"))}</span>`:""}`,
+      body:`${(c.sub||[]).length?`<div class="gsub">${E(c.sub.filter(Boolean).join(" · "))}</div>`:""}${
+        shown.length?`<dl>${shown.map(l=>`<dt>${E(l.label||"")}</dt><dd${l.cls==="good"||l.cls==="bad"?` class="${l.cls}"`:""}>${l.dm?`<span class="vtag bad">DM</span> `:""}${E(l.text)}${
+          view==="lg" && l.note?`<div class="sub">${E(l.note)}</div>`:""}</dd>`).join("")}</dl>`:""}${
+        lines.length>shown.length?`<div class="gmore">${E(DT.t("moreLines",{n:lines.length-shown.length}))}</div>`:""}${
+        meta?`<div class="gmeta">${E(meta)}</div>`:""}`,
+      foot:`<div class="gact">${acts()}</div>`});
   }
-  const lib = {box, tabId, view:viewOf, render(){
+  const lib = {box, tabId, view:()=> DT.views.get(VKEY), render(){
     const tab = DT.tabs.get(tabId);
     const cur = DT.records.active(tabId);
     const recs = DT.records.list(tabId).slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", DT.lang));
     if(!recs.length){ box.innerHTML = `<div class="sub">${E(DT.t(tab.emptyLibraryKey||"noResults"))}</div>`; return; }
-    const view = viewOf(), f = foldedSet(), anyOpen = recs.some(r=> !f.has(r.id));
+    const view = DT.views.get(VKEY);
     const summ = r=>{ let s = {chips:[], meta:[], detail:""}; try{ s = Object.assign(s, tab.summary ? tab.summary(r) : {}); }catch(e){ console.error(e); } return s; };
     const items = recs.map(r=>{ const s = summ(r), isCur = !!(cur && cur.id===r.id); return view==="list" ? listItem(r, s, isCur) : card(r, s, isCur, view, tab); }).join("");
-    box.innerHTML = `<div class="viewbar" role="group" aria-label="${E(DT.t("viewAs"))}"><span class="sub">${E(DT.t("viewAs"))}</span>${
-        VIEWS.map(v=>`<button class="small ghost vbtn" data-view="${v}" aria-pressed="${v===view}">${viewIcon(v)}<span>${E(DT.t(VIEW_KEY[v]))}</span></button>`).join("")}${
-        view==="list" ? "" : `<button class="small ghost" data-act="foldAll" data-fold="${anyOpen?1:0}">${E(DT.t(anyOpen?"foldAll":"unfoldAll"))}</button>`}</div>${
-      view==="list" ? items : `<div class="gcards ${view}">${items}</div>`}`;
-    // Tras redibujar, el foco vuelve al botón que se pulsó.
-    const redraw = sel=>{ lib.render(); const el = sel && box.querySelector(sel); if(el) el.focus(); };
-    box.querySelectorAll("[data-view]").forEach(b=>{ b.onclick = ()=>{ DT.storage.pref("view."+tabId, b.dataset.view); redraw(`[data-view="${b.dataset.view}"]`); }; });
-    const fa = box.querySelector('[data-act="foldAll"]');
-    if(fa) fa.onclick = ()=>{ if(fa.dataset.fold==="1") recs.forEach(r=> f.add(r.id)); else f.clear(); saveFolded(recs); redraw('[data-act="foldAll"]'); };
+    box.innerHTML = DT.views.bar(view) + (view==="list" ? items : `<div class="gcards ${view}">${items}</div>`);
+    const bar = box.querySelector(".viewbar");
+    DT.views.wire(bar, VKEY, ()=> lib.render());
+    const f = foldedSet();
+    if(view!=="list") DT.cards.wire(box, bar, {toggle:(id, fold)=>{ if(fold) f.add(id); else f.delete(id); }, done:()=> saveFolded(recs)});
     box.querySelectorAll("[data-id]").forEach(item=>{
       const id = item.dataset.id, rec = ()=> DT.records.get(id);
       item.querySelector('[data-act="load"]').onclick = ()=>{ const r=rec(); if(r && tab.load) tab.load(r); };
@@ -874,8 +965,6 @@ DT.library = function(box, tabId){
       item.querySelector('[data-act="delete"]').onclick = ()=>{ const r=rec(); if(!r) return;
         if(!confirm(DT.t("deleteConfirm",{name:r.name}))) return;
         DT.records.remove(r.id); };
-      const tog = item.querySelector('[data-act="fold"]');
-      if(tog) tog.onclick = ()=>{ if(f.has(id)) f.delete(id); else f.add(id); saveFolded(recs); redraw(`.gcard[data-id="${CSS.escape(id)}"] .gtog`); };
     });
   }};
   libraries.add(lib); lib.render();
@@ -1123,16 +1212,26 @@ DT.simpleTableTab = function(def){
     const c = cur ? cur.data.ctx : defaultCtx();
     refs.ctx.querySelectorAll("select[data-ctx]").forEach(s=>{ if(c[s.dataset.ctx]!=null) s.value = c[s.dataset.ctx]; s.onchange = renderRefs; });
   }
+  // En lista, un renglón por línea; en cards (grandes / medianas / pequeñas), una card por línea, con su ↻, que se pliega.
+  const VKEY = "sheetview."+def.id, sheetFolds = DT.cards.memo();
   function renderSheet(){
     if(!def.sheet) return;
     const s = cur && sheetOf(cur);
     refs.sheet.hidden = !s;
     if(!s){ refs.sheet.innerHTML = ""; return; }
-    const rr = DT.esc(DT.t("rerollThis"));
-    refs.sheet.innerHTML = `<div class="sh">${DT.esc(cur.name)}</div>${s.sub.length?`<div class="ss">${DT.esc(s.sub.join(" · "))}</div>`:""}<dl>${
-      s.lines.map(l=>`<dt>${DT.esc(l.label)}${l.dm?` <span class="vtag bad">DM</span>`:""}</dt><dd${l.cls?` class="${l.cls}"`:""}>${DT.esc(l.text)}${l.note?`<div class="sub">${DT.esc(l.note)}</div>`:""}</dd>${
-        l.tids.length?`<button class="small ghost rr" data-rr="${DT.esc(l.tids.join(","))}" title="${rr}" aria-label="${rr}: ${DT.esc(l.label)}">↻</button>`:`<span class="rrx"></span>`}`).join("")}</dl>`;
+    const E = DT.esc, rr = E(DT.t("rerollThis")), view = DT.views.get(VKEY), folds = sheetFolds(cur.id);
+    const rrBtn = l=> l.tids.length ? `<button class="small ghost rr" data-rr="${E(l.tids.join(","))}" title="${rr}" aria-label="${rr}: ${E(l.label)}">↻</button>` : `<span class="rrx"></span>`;
+    const key = l=> l.tids.join(",") || l.label, dmTag = l=> l.dm ? ` <span class="vtag bad">DM</span>` : "";
+    const body = view==="list"
+      ? `<dl>${s.lines.map(l=>`<dt>${E(l.label)}${dmTag(l)}</dt><dd${l.cls?` class="${l.cls}"`:""}>${E(l.text)}${l.note?`<div class="sub">${E(l.note)}</div>`:""}</dd>${rrBtn(l)}`).join("")}</dl>`
+      : `<div class="gcards ${view}">${s.lines.map(l=> DT.cards.html({key:key(l), cls:"lcard", folded:folds.has(key(l)),
+          title:`${E(l.label)}${dmTag(l)}`, head:l.tids.length ? rrBtn(l) : "",
+          body:`<div class="lval${l.cls?" "+l.cls:""}">${E(l.text)}</div>${l.note && view!=="sm"?`<div class="sub">${E(l.note)}</div>`:""}`})).join("")}</div>`;
+    refs.sheet.innerHTML = `<div class="sh">${E(cur.name)}</div>${s.sub.length?`<div class="ss">${E(s.sub.join(" · "))}</div>`:""}${DT.views.bar(view)}${body}`;
     refs.sheet.querySelectorAll("[data-rr]").forEach(b=>{ b.onclick = ()=>{ if(!cur) return; rerollMany(b.dataset.rr.split(","), cur.data); autoName(); persist(); render(); }; });
+    const bar = refs.sheet.querySelector(".viewbar");
+    DT.views.wire(bar, VKEY, renderSheet);
+    if(view!=="list") DT.cards.wire(refs.sheet, bar, {toggle:(k, fold)=>{ if(fold) folds.add(k); else folds.delete(k); }});
   }
   function render(){
     if(!refs) return;
@@ -2559,7 +2658,7 @@ function vendorCard(v, id){
   // Cerrada: quién es, quién atiende, cómo están los precios, la CD y si tiene pieza especial. Abierta: todo lo demás.
   const n = v.npc, a = n && ancestryById(n.anc), att = attitudeOf(v);
   const same = Math.abs(mult-1)<0.005;
-  return `<details class="vendor vrow ${v.tier==="travel"?"travel":""}" data-id="${id}">
+  return `<details class="vendor ${DT.views.get(VKEY)==="list"?"vrow":"vcard"} ${v.tier==="travel"?"travel":""}" data-id="${id}">
     <summary><span class="vicon">${c.icon}</span><span class="vname">${esc(vName(v.key))}</span>
       ${n?`<span class="vwho">🧑 ${esc(n.name)} <span class="sub">(${esc(tx(a.name))})</span> ${att.emoji}</span>`:""}
       <span class="vtag ${same?"":(mult>1?"bad":"good")}">${esc(same ? L("priceSame") : pct(mult-1))}</span>
@@ -2598,16 +2697,25 @@ function vendorById(id){
   const i = parseInt(id.slice(1),10);
   return id[0]==="p" ? d.permanent[i] : d.traveling[i];
 }
+// Las tiendas, en lista (una fila que se abre) o en cards grandes / medianas / pequeñas (abiertas; se pliegan).
+const VKEY = "sheetview.vendors", shopFolds = DT.cards.memo();
 function renderVendors(){
   const d = D();
   const pg = refs.permGrid, tg = refs.travelGrid;
   refs.sheet.hidden = !d; refs.emptyMsg.hidden = !!d;
-  if(!d){ pg.innerHTML = tg.innerHTML = refs.shRumors.innerHTML = ""; return; }
-  // Lo que estaba abierto sigue abierto (por ejemplo, al volver a tirar un estado).
+  if(!d){ pg.innerHTML = tg.innerHTML = refs.shRumors.innerHTML = refs.shView.innerHTML = ""; return; }
+  const view = DT.views.get(VKEY), folds = shopFolds(cur.id);
+  refs.shView.innerHTML = DT.views.bar(view);
+  refs.openHint.hidden = view!=="list";
+  pg.className = tg.className = view==="list" ? "" : "gcards "+view;
+  // En lista, lo que estaba abierto sigue abierto (por ejemplo, al volver a tirar un estado).
   const open = new Set([...refs.sheet.querySelectorAll("details.vrow[open]")].map(x=> x.dataset.id));
   pg.innerHTML = d.permanent.map((v,i)=> vendorCard(v, "p"+i)).join("");
   tg.innerHTML = d.traveling.length ? d.traveling.map((v,i)=> vendorCard(v, "t"+i)).join("") : `<div class="sub">${esc(L("travNone"))}</div>`;
-  refs.sheet.querySelectorAll("details.vrow").forEach(el=>{ if(open.has(el.dataset.id)) el.open = true; wireCard(el); });
+  refs.sheet.querySelectorAll("details.vendor").forEach(el=>{ el.open = view==="list" ? open.has(el.dataset.id) : !folds.has(el.dataset.id); wireCard(el); });
+  const bar = refs.shView.querySelector(".viewbar");
+  DT.views.wire(bar, VKEY, renderVendors);
+  if(view!=="list") DT.cards.wire(refs.sheet, bar, {toggle:(id, fold)=>{ if(fold) folds.add(id); else folds.delete(id); }});
   renderRumors();
 }
 // Los rumores de todos los tenderos, juntos: lo primero que un DM busca para sembrar ganchos.
@@ -2980,6 +3088,7 @@ function boardMarkdown(rec, opts={}){
   return `### ${md(rec.name)}\n\n*${md(d.city ? d.city.name+" · " : "")}${md(sizeText(d.size))} · ${md(tx(tierOf(d.tier).text))}*\n\n` +
     d.jobs.map((j,i)=> jobMarkdown(j, i, !!opts.dm)).join("\n\n") + "\n";
 }
+const VKEY = "sheetview.jobs", jobFolds = DT.cards.memo();
 function renderSelectors(){
   const keepW = refs.where.value, keepT = refs.tier.value;
   const cities = DT.records.list("vendors").slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", DT.lang));
@@ -3001,13 +3110,27 @@ function render(){
   // Primero el tablón tal cual se lee: qué hay que hacer, cuánto pagan, quién, dónde y para cuándo; lo del DM, marcado.
   refs.shName.textContent = cur.name;
   refs.shSub.textContent = [d.city ? d.city.name : "", sizeText(d.size), tx(tierOf(d.tier).text), `${d.jobs.length} ${L("jobs.jobsWord").toLowerCase()}`].filter(Boolean).join(" · ");
-  refs.cards.innerHTML = d.jobs.map((j,i)=>`
+  // En lista, un bloque por encargo; en cards (grandes / medianas / pequeñas), una card por encargo, con su ↻, que se pliega.
+  const view = DT.views.get(VKEY), folds = jobFolds(cur.id);
+  refs.shView.innerHTML = DT.views.bar(view);
+  refs.cards.className = view==="list" ? "" : "gcards "+view;
+  const rrBtn = `<button class="small ghost rr" data-act="reroll" title="${rr}" aria-label="${rr}">↻</button>`;
+  const chips = j=> `<span class="vtag mod">💰 ${esc(gp(reward(j)))}</span>${j.rumorJob?` <span class="vtag var">🗣 ${esc(L("jobs.fromRumor"))}</span>`:""}`;
+  const dmNote = j=> `<div class="note bad"><span class="vtag bad">DM</span> ${esc(L("jobs.comp"))}: ${esc(T(COMP, j.comp))}${j.rumorJob?` · ${esc(L("jobs.truth"))} ${esc(T(DT.lib.npc.TRUTH, j.shop.truth))}`:""}</div>`;
+  refs.cards.innerHTML = view==="list" ? d.jobs.map((j,i)=>`
     <div class="job" data-i="${i}">
-      <div class="jt"><div><b>${i+1}. ${esc(taskText(j))}</b> <span class="vtag mod">💰 ${esc(gp(reward(j)))}</span>${j.rumorJob?` <span class="vtag var">🗣 ${esc(L("jobs.fromRumor"))}</span>`:""}</div>
-        <button class="small ghost rr" data-act="reroll" title="${rr}" aria-label="${rr}">↻</button></div>
+      <div class="jt"><div><b>${i+1}. ${esc(taskText(j))}</b> ${chips(j)}</div>
+        ${rrBtn}</div>
       <div class="sub">${esc(L("jobs.patron"))}: <b>${esc(patronText(j))}</b> · ${esc(L("jobs.where"))}: ${esc(T(WHERE, j.where))} · ${esc(L("jobs.deadline"))}: ${esc(T(DEADLINE, j.deadline))} · ${esc(L("jobs.payWord"))}: ${esc(T(PAY, j.pay))}</div>
-      <div class="note bad"><span class="vtag bad">DM</span> ${esc(L("jobs.comp"))}: ${esc(T(COMP, j.comp))}${j.rumorJob?` · ${esc(L("jobs.truth"))} ${esc(T(DT.lib.npc.TRUTH, j.shop.truth))}`:""}</div>
-    </div>`).join("");
+      ${dmNote(j)}
+    </div>`).join("")
+    : d.jobs.map((j,i)=> DT.cards.html({key:String(i), cls:"job", attrs:`data-i="${i}"`, folded:folds.has(String(i)),
+        title:`${i+1}. ${esc(taskText(j))}`, head:rrBtn,
+        body:`<div class="lval">${chips(j)}</div><dl>${[["jobs.patron", patronText(j)], ["jobs.where", T(WHERE, j.where)], ["jobs.deadline", T(DEADLINE, j.deadline)], ["jobs.payWord", T(PAY, j.pay)]]
+          .map(([k,v])=>`<dt>${esc(L(k))}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${dmNote(j)}`})).join("");
+  const bar = refs.shView.querySelector(".viewbar");
+  DT.views.wire(bar, VKEY, render);
+  if(view!=="list") DT.cards.wire(refs.cards, bar, {toggle:(k, fold)=>{ if(fold) folds.add(k); else folds.delete(k); }});
   // Las tiradas de cada encargo, para quien quiera verlas o tirar a mano.
   const th = (k, t)=> `<th>${esc(L(k))} <span class="die">d${t.die}</span></th>`, t = tierOf(d.tier);
   refs.rolls.innerHTML = `<div class="tscroll"><table class="ref"><tr><th>#</th>${th("jobs.patron", PATRON)}${th("jobs.task", TASK)}${th("jobs.where", WHERE)}${th("jobs.comp", COMP)}${th("jobs.deadline", DEADLINE)}${th("jobs.payWord", PAY)}<th>${esc(L("jobs.base"))} <span class="die">${t.dice[0]}d${t.dice[1]}×${t.dice[2]}</span></th></tr>${
@@ -3066,7 +3189,7 @@ const tab = DT.registerTab({
           <button class="small host" data-ref="screen" data-i18n="toScreenShort" hidden></button>
         </div></div>
       <div class="empty" data-ref="empty" data-i18n="jobs.empty" style="margin-top:14px"></div>
-      <div class="sheet" data-ref="sheet" hidden><div class="sh" data-ref="shName"></div><div class="ss" data-ref="shSub"></div><div data-ref="cards"></div></div>
+      <div class="sheet" data-ref="sheet" hidden><div class="sh" data-ref="shName"></div><div class="ss" data-ref="shSub"></div><div data-ref="shView"></div><div data-ref="cards"></div></div>
       <details class="rollsbox" data-ref="rollsBox" hidden><summary><span data-i18n="rollsTitle"></span> <span class="sub" data-i18n="jobs.rollsHint"></span></summary><div data-ref="rolls"></div></details>
       <h2 data-i18n="jobs.saved"></h2>
       <div class="controls"><div class="savebar"><button data-ref="exportAll" data-i18n="exportAll"></button><button data-ref="import" data-i18n="importBtn"></button></div>

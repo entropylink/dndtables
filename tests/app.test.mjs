@@ -542,9 +542,13 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
       }
     }
     out.classes = DT.lib.npc.CLASSES.length;
+    // Probabilidad exacta sobre las caras del dado (lo muestreado arriba varía de corrida en corrida).
+    const ct = T.tables.find((t) => t.id === 'class');
+    const pr = (jobId, id) => { const wf = A.weightFn(Object.assign(A.defaultCtx(), { job: jobId })), f = DT.faces(ct.rows.map((r) => wf(r)), ct.die), x = f[ct.rows.findIndex((r) => r.id === id)]; return x ? (x.hi - x.lo + 1) / ct.die : 0; };
+    out.pThiefRogue = pr('thief', 'rogue'); out.pFarmerNone = pr('farmer', 'none'); out.pAdvNone = pr('adventurer', 'none');
     return out;
   });
-  ok(cl.classes === 13 && cl.adv === 300 && cl.thiefRogue > 120 && cl.farmerNone > 220 && cl.subOk, 'clases: 13; dependen del oficio; «ninguna» no sale en la ficha', JSON.stringify(cl));
+  ok(cl.classes === 13 && cl.adv === 300 && cl.pAdvNone === 0 && cl.pThiefRogue >= 0.35 && cl.pFarmerNone >= 0.75 && cl.subOk, 'clases: 13; dependen del oficio; «ninguna» no sale en la ficha', JSON.stringify(cl));
   // Botín: el total suma monedas y objetos de valor; Taberna: la clientela no se repite.
   const misc = await page.evaluate(() => {
     const L = DT.tabs.get('loot'), A = L.api, t = (id) => L.tables.find((x) => x.id === id), out = {};
@@ -681,14 +685,14 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   // Vendedores y Tablón: su propia card
   await page.click('#tabBar [data-tab="vendors"]');
   await page.click('#panel-vendors [data-ref="genBtn"]');
-  await page.click('#panel-vendors [data-view="md"]');
+  await page.click('#panel-vendors [data-ref="savedList"] [data-view="md"]');
   const vc = await page.evaluate(() => { const c = document.querySelector('#panel-vendors .gcard.current'), d = DT.records.active('vendors').data;
     return { dts: [...c.querySelectorAll('dt')].map((x) => x.textContent), perm: c.querySelectorAll('dd')[2].textContent, first: d.permanent[0].npc.name, meta: c.querySelector('.gmeta').textContent }; });
   ok(vc.dts[0] === 'State' && vc.dts[1] === 'This week' && /Permanent/.test(vc.dts[2]) && vc.perm.includes(vc.first) && /goods/.test(vc.meta),
     'card de ciudad: estado, semana, tiendas con su tendero y artículos', JSON.stringify(vc));
   await page.click('#tabBar [data-tab="jobs"]');
   await page.click('#panel-jobs [data-ref="roll"]');
-  await page.click('#panel-jobs [data-view="lg"]');
+  await page.click('#panel-jobs [data-ref="lib"] [data-view="lg"]');
   const jc = await page.evaluate(() => { const c = document.querySelector('#panel-jobs .gcard.current'), n = DT.records.active('jobs').data.jobs.length;
     return { n, dts: c.querySelectorAll('dt').length, notes: [...c.querySelectorAll('dd .sub')].map((x) => x.textContent) }; });
   ok(jc.dts === jc.n && jc.notes.length === jc.n && jc.notes.every((t) => /^Patron: .+ · Where: .+ · Deadline: /.test(t)), 'card de tablón: un renglón por encargo; en grande, quién paga, dónde y plazo');
@@ -711,14 +715,15 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await ctx.close();
 
   // Preferencias rotas en el navegador: arranca en lista y se puede plegar igual
-  const g = await fresh({ init: `localStorage.setItem('dndtables.v3.folded', '"basura"'); localStorage.setItem('dndtables.view.npc', 'nope');` });
+  const g = await fresh({ init: `localStorage.setItem('dndtables.v3.folded', '"basura"'); localStorage.setItem('dndtables.view.npc', 'nope'); localStorage.setItem('dndtables.sheetview.npc', '{}');` });
   await g.page.click('#tabBar [data-tab="npc"]');
   await g.page.click('#panel-npc [data-ref="rollAll"]');
-  const gl = await g.page.locator('#panel-npc .saved-item').count();
-  await g.page.click('#panel-npc [data-view="sm"]');
-  await g.page.locator('#panel-npc .gtog').click();
-  const gh = await g.page.evaluate(() => ({ hidden: document.querySelector('#panel-npc .gbody').hidden, st: JSON.parse(localStorage.getItem('dndtables.v3.folded')) }));
-  ok(gl === 1 && gh.hidden && Array.isArray(gh.st.npc) && !g.errors.length, 'con la vista o lo plegado rotos en el navegador: arranca en lista y pliega sin errores', g.errors.join(' | '));
+  const gl = await g.page.locator('#panel-npc [data-ref="lib"] .saved-item').count();
+  const gs = await g.page.locator('#panel-npc [data-ref="sheet"] > dl').count();
+  await g.page.click('#panel-npc [data-ref="lib"] [data-view="sm"]');
+  await g.page.locator('#panel-npc [data-ref="lib"] .gtog').click();
+  const gh = await g.page.evaluate(() => ({ hidden: document.querySelector('#panel-npc [data-ref="lib"] .gbody').hidden, st: JSON.parse(localStorage.getItem('dndtables.v3.folded')) }));
+  ok(gl === 1 && gs === 1 && gh.hidden && Array.isArray(gh.st.npc) && !g.errors.length, 'con la vista o lo plegado rotos en el navegador: arranca en lista y pliega sin errores', g.errors.join(' | '));
   await g.ctx.close();
 
   // Móvil: ninguna vista desborda
@@ -728,14 +733,126 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     await m.page.click(`#tabBar [data-tab="${id}"]`);
     for (let i = 0; i < 2; i++) await m.page.click(id === 'jobs' ? '#panel-jobs [data-ref="roll"]' : id === 'vendors' ? '#panel-vendors [data-ref="genBtn"]' : '#panel-npc [data-ref="rollAll"]');
     for (const v of ['lg', 'md', 'sm']) {
-      await m.page.click(`#panel-${id} [data-view="${v}"]`);
+      await m.page.click(`#panel-${id} [data-ref="${id === 'vendors' ? 'savedList' : 'lib'}"] [data-view="${v}"]`);
       const o = await m.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       if (o > 0) overs.push(`${id}/${v}: ${o}px`);
       if (v === 'sm') await shot(m.page, `mobile-cards-${id}`, true);
     }
   }
   ok(!overs.length, 'móvil 390 px: las cards no desbordan en ningún tamaño', overs.join(', '));
-  ok(await m.page.evaluate(() => getComputedStyle(document.querySelector('#panel-jobs .gcards')).gridTemplateColumns.split(' ').length) === 2, 'móvil: las pequeñas van de dos en dos');
+  ok(await m.page.evaluate(() => getComputedStyle(document.querySelector('#panel-jobs [data-ref="lib"] .gcards')).gridTemplateColumns.split(' ').length) === 2, 'móvil: las pequeñas van de dos en dos');
+  await m.ctx.close();
+}
+
+/* ── 6e. La ficha de cada pestaña: en lista o en cards (grandes / medianas / pequeñas) que se pliegan ── */
+{
+  const { ctx, page, errors } = await fresh();
+  const sheet = (id) => `#panel-${id} [data-ref="sheet"]`;
+  // Pestañas declarativas: una card por línea, con lo mismo que la lista y su ↻
+  const DECL = ['npc', 'tavern', 'encounters', 'weather', 'loot'];
+  const bad = [];
+  for (const id of DECL) {
+    await page.click(`#tabBar [data-tab="${id}"]`);
+    await page.click(`#panel-${id} [data-ref="rollAll"]`);
+    const list = await page.evaluate((id) => ({ dl: !!document.querySelector(`#panel-${id} [data-ref="sheet"] > dl`), cards: document.querySelectorAll(`#panel-${id} [data-ref="sheet"] .gcard`).length }), id);
+    if (!list.dl || list.cards) bad.push(`${id}: no empieza en lista`);
+    for (const v of ['lg', 'md', 'sm']) {
+      await page.click(`${sheet(id)} [data-view="${v}"]`);
+      const r = await page.evaluate(({ id, v }) => {
+        const t = DT.tabs.get(id), s = t.api.sheetOf(DT.records.active(id)), box = document.querySelector(`#panel-${id} [data-ref="sheet"]`);
+        const cards = [...box.querySelectorAll(`.gcards.${v} > .gcard.lcard`)];
+        return { n: cards.length, lines: s.lines.length, dl: !!box.querySelector(':scope > dl'),
+          same: cards.every((c, i) => c.querySelector('.lval').textContent === s.lines[i].text && c.querySelector('.gtog').textContent.startsWith(s.lines[i].label)),
+          rr: box.querySelectorAll('.gcard [data-rr]').length, wantRr: s.lines.filter((l) => l.tids.length).length,
+          notes: box.querySelectorAll('.gcard .lval + .sub').length, wantNotes: s.lines.filter((l) => l.note).length,
+          dm: box.querySelectorAll('.gcard .gtog .vtag.bad').length, wantDm: s.lines.filter((l) => l.dm).length };
+      }, { id, v });
+      if (r.n !== r.lines || r.dl || !r.same || r.rr !== r.wantRr || r.dm !== r.wantDm) bad.push(`${id}/${v}: ${JSON.stringify(r)}`);
+      if (v === 'sm' ? r.notes !== 0 : r.notes !== r.wantNotes) bad.push(`${id}/${v}: notas ${r.notes}/${r.wantNotes}`);
+    }
+    await page.click(`${sheet(id)} [data-view="list"]`);
+  }
+  ok(!bad.length, 'fichas declarativas: en cards, una por línea con su texto, nota (salvo pequeñas), DM y ↻', bad.join(' | '));
+
+  // Plegar en la ficha: sobrevive a un ↻; un resultado nuevo sale abierto
+  await page.click('#tabBar [data-tab="npc"]');
+  await page.click(`${sheet('npc')} [data-view="md"]`);
+  const k0 = await page.locator(`${sheet('npc')} .gcard`).nth(0).getAttribute('data-fid');
+  await page.locator(`${sheet('npc')} .gcard`).nth(0).locator('.gtog').click();
+  const p1 = await page.evaluate((k) => { const c = document.querySelector(`#panel-npc [data-ref="sheet"] .gcard[data-fid="${k}"]`);
+    return { exp: c.querySelector('.gtog').getAttribute('aria-expanded'), hidden: c.querySelector('.gbody').hidden, rr: !!c.querySelector('.ghead [data-rr]'), focus: document.activeElement === c.querySelector('.gtog') }; }, k0);
+  ok(p1.exp === 'false' && p1.hidden && p1.rr && p1.focus, 'ficha en cards: plegar deja la etiqueta y el ↻, con el foco en ella');
+  await page.locator(`${sheet('npc')} .gcard`).nth(3).locator('[data-rr]').click();
+  const p2 = await page.evaluate((k) => ({ folded: document.querySelector(`#panel-npc [data-ref="sheet"] .gcard[data-fid="${k}"] .gbody`).hidden, md: !!document.querySelector('#panel-npc [data-ref="sheet"] .gcards.md') }), k0);
+  ok(p2.folded && p2.md, '↻ en una card: sigue en la misma vista y lo plegado sigue plegado');
+  await page.click(`${sheet('npc')} [data-act="foldAll"]`);
+  const p3 = await page.evaluate(() => ({ open: [...document.querySelectorAll('#panel-npc [data-ref="sheet"] .gcard .gbody')].filter((b) => !b.hidden).length, btn: document.querySelector('#panel-npc [data-ref="sheet"] [data-act="foldAll"]').textContent }));
+  ok(p3.open === 0 && p3.btn === 'Unfold all', 'ficha: «Fold all» pliega todas las cards');
+  await page.click('#panel-npc [data-ref="rollAll"]');
+  ok(await page.evaluate(() => [...document.querySelectorAll('#panel-npc [data-ref="sheet"] .gcard .gbody')].every((b) => !b.hidden)), 'un resultado nuevo sale con todas las cards abiertas');
+  const keys = await page.evaluate(() => ({ sheet: localStorage.getItem('dndtables.sheetview.npc'), lib: localStorage.getItem('dndtables.view.npc'), libCards: document.querySelectorAll('#panel-npc [data-ref="lib"] .gcard').length }));
+  ok(keys.sheet === 'md' && keys.lib === null && keys.libCards === 0, 'la vista de la ficha es aparte de la de «Guardados»');
+
+  // Vendedores: cada tienda, una card abierta que se pliega; el regateo sigue funcionando
+  await page.click('#tabBar [data-tab="vendors"]');
+  await page.click('#panel-vendors [data-ref="genBtn"]');
+  await page.click(`${sheet('vendors')} [data-view="md"]`);
+  const v1 = await page.evaluate(() => { const d = DT.records.active('vendors').data, all = [...document.querySelectorAll('#panel-vendors details.vendor')];
+    return { n: all.length, want: d.permanent.length + d.traveling.length, cards: all.every((x) => x.classList.contains('vcard') && x.open), grid: document.querySelector('#panel-vendors [data-ref="permGrid"]').className, hint: document.querySelector('#panel-vendors [data-ref="openHint"]').hidden }; });
+  ok(v1.n === v1.want && v1.cards && v1.grid === 'gcards md' && v1.hint, 'Vendedores en cards: una por tienda, abiertas, en rejilla', JSON.stringify(v1));
+  const shop = page.locator('#panel-vendors details.vcard').first();
+  await shop.locator(':scope > summary').click();
+  ok(!(await shop.evaluate((x) => x.open)), 'una tienda en card se pliega desde su encabezado');
+  await page.locator('#panel-vendors details.vcard').nth(1).locator('.hagRoll').click();
+  const v2 = await page.evaluate(() => { const c = document.querySelectorAll('#panel-vendors details.vcard')[1]; return { open: c.open, note: c.querySelector('.haggle .note').textContent, card: c.classList.contains('vcard') }; });
+  ok(v2.open && v2.card && /\d/.test(v2.note), 'regatear en una card la deja abierta y en card', JSON.stringify(v2));
+  await page.click('#panel-vendors [data-act="rerollState"]');
+  ok(!(await page.evaluate(() => document.querySelector('#panel-vendors details.vcard').open)), 'volver a tirar el estado no despliega lo plegado');
+  await page.click(`${sheet('vendors')} [data-act="foldAll"]`);
+  await page.waitForTimeout(50);
+  const v3 = await page.evaluate(() => ({ open: document.querySelectorAll('#panel-vendors details.vcard[open]').length, btn: document.querySelector('#panel-vendors [data-ref="sheet"] [data-act="foldAll"]').textContent }));
+  ok(v3.open === 0 && v3.btn === 'Unfold all', 'Vendedores: «Fold all» pliega todas las tiendas');
+  await page.click(`${sheet('vendors')} [data-act="foldAll"]`);
+  await page.click(`${sheet('vendors')} [data-view="sm"]`);
+  const v4 = await page.evaluate(() => { const c = document.querySelector('#panel-vendors details.vcard'); return { haggle: getComputedStyle(c.querySelector('.haggle')).display, base: getComputedStyle(c.querySelector('.goods td.base')).display, goods: c.querySelectorAll('.goods tr').length }; });
+  ok(v4.haggle === 'none' && v4.base === 'none' && v4.goods > 1, 'tiendas pequeñas: artículos y precio, sin regateo ni precio base');
+  await page.click(`${sheet('vendors')} [data-view="list"]`);
+  ok(await page.evaluate(() => [...document.querySelectorAll('#panel-vendors details.vendor')].every((x) => x.classList.contains('vrow') && !x.open)), 'de vuelta en lista: filas cerradas, como antes');
+
+  // Tablón: una card por encargo, con su ↻
+  await page.click('#tabBar [data-tab="jobs"]');
+  await page.click('#panel-jobs [data-ref="roll"]');
+  await page.click(`${sheet('jobs')} [data-view="lg"]`);
+  const j1 = await page.evaluate(() => { const d = DT.records.active('jobs').data, cards = [...document.querySelectorAll('#panel-jobs .gcards.lg > .gcard.job')];
+    return { n: cards.length, want: d.jobs.length, dts: cards.every((c) => c.querySelectorAll('dt').length === 4), dm: cards.every((c) => c.querySelector('.note.bad')), title: cards[0].querySelector('.gtog').textContent.trim().startsWith('1.') }; });
+  ok(j1.n === j1.want && j1.dts && j1.dm && j1.title, 'Tablón en cards: una por encargo con quién paga, dónde, plazo, paga y lo del DM');
+  const before = await page.evaluate(() => JSON.stringify(DT.records.active('jobs').data.jobs[0]));
+  let changed = false;
+  for (let i = 0; i < 6 && !changed; i++) { await page.locator('#panel-jobs .gcard.job').first().locator('[data-act="reroll"]').click(); changed = await page.evaluate((b) => JSON.stringify(DT.records.active('jobs').data.jobs[0]) !== b, before); }
+  ok(changed && await page.locator('#panel-jobs .gcards.lg > .gcard.job').count() === j1.want, '↻ en la card de un encargo lo cambia y sigue en cards');
+  await page.click('#langToggle');
+  ok(/Ver/.test(await page.textContent(`${sheet('jobs')} .viewbar`)) && /Grandes/.test(await page.textContent(`${sheet('jobs')} .viewbar`)), 'la barra de la ficha cambia de idioma');
+  await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
+  await page.click('#tabBar [data-tab="npc"]');
+  ok(await page.locator(`${sheet('npc')} .gcards.md`).count() === 1 && await page.locator(`${sheet('tavern')} .gcards`).count() === 0, 'al recargar, cada ficha vuelve en su vista');
+  ok(!errors.length, 'sin errores de consola en las fichas en cards', errors.join(' | '));
+  await ctx.close();
+
+  // Móvil: ninguna ficha desborda en ninguna vista
+  const m = await fresh({ viewport: { width: 390, height: 844 } });
+  const overs = [];
+  for (const id of ['npc', 'tavern', 'encounters', 'weather', 'loot', 'vendors', 'jobs']) {
+    await m.page.click(`#tabBar [data-tab="${id}"]`);
+    await m.page.click(id === 'jobs' ? '#panel-jobs [data-ref="roll"]' : id === 'vendors' ? '#panel-vendors [data-ref="genBtn"]' : `#panel-${id} [data-ref="rollAll"]`);
+    for (const v of ['lg', 'md', 'sm']) {
+      await m.page.click(`${sheet(id)} [data-view="${v}"]`);
+      const o = await m.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (o > 0) overs.push(`${id}/${v}: ${o}px`);
+    }
+    await shot(m.page, `mobile-sheet-${id}`, true);
+  }
+  ok(!overs.length, 'móvil 390 px: ninguna ficha en cards desborda', overs.join(', '));
+  ok(!m.errors.length, 'sin errores de consola en móvil (fichas en cards)', m.errors.join(' | '));
   await m.ctx.close();
 }
 

@@ -21,11 +21,13 @@ interpretarlo, la taberna, el encuentro, el botín con lo que vale, el asentamie
 por tienda— con un ↻ en cada línea. Los dados quedan debajo, plegados («🎲 Tiradas»), para
 quien quiera verlos o tirar a mano.
 
-**Guardados en lista o en cards.** Lo que guardas se ve como lista (nombre y resumen) o como
-cards **grandes** (la ficha entera, con notas), **medianas** (la ficha sin notas) o **pequeñas**
-(lo que es y tres líneas) — para leer tus PNJ, tabernas o ciudades de la sesión sin cargarlos
-uno por uno. Cada card se pliega (▾) y «Plegar todas» las deja en su nombre. La vista se
-recuerda por pestaña.
+**En lista o en cards.** La ficha de cada pestaña se ve en **lista** (un renglón por línea, como
+siempre) o en cards **grandes**, **medianas** o **pequeñas**: una card por línea del PNJ, la
+taberna, el encuentro, el clima o el botín; una por tienda en Vendedores (con sus artículos y su
+regateo) y una por encargo en el Tablón. Cada card se pliega (▾) sin perder su ↻, y «Plegar
+todas» las deja en su título; lo plegado se mantiene mientras trabajas ese resultado y uno nuevo
+sale abierto. «Guardados» tiene su propio selector: lista o cards con lo guardado, para leer tus
+PNJ, tabernas o ciudades de la sesión sin cargarlos uno por uno. Cada vista se recuerda por pestaña.
 
 **Pueblos y clases.** PNJ rápido, Taberna y Vendedores eligen de qué pueblos salen: *Clásicos*
 (los nueve del Manual del Jugador), *Todos los de D&D* (61 más, de los otros libros) o *Todo*

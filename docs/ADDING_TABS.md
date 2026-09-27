@@ -177,6 +177,8 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
 | `DT.refTableHTML(tabla, columnas, pesoFn?)` | Tabla de referencia «para tirar a mano». |
 | `DT.log(dado, resultado, texto)` | Registro de tiradas. |
 | `DT.records` (`all/list/get/upsert/remove/active/setActive/onChange`) | Resultados guardados; seguros con varias pestañas abiertas. |
+| `DT.views.get/set(clave)`, `DT.views.bar(vista)`, `DT.views.wire(barra, clave, redibujar)` | «Ver: Lista · Grandes · Medianas · Pequeñas». La vista es preferencia de quien mira; la ficha usa la clave `sheetview.<tab>`. |
+| `DT.cards.html({key, title, head, body, foot, folded})`, `DT.cards.wire(raíz, barra, {toggle, done})`, `DT.cards.memo()` | Cards plegables (también pliega `<details class="vcard">`) y «Plegar todas». `memo()` recuerda lo plegado mientras se trabaja un resultado. |
 | `DT.library(el, tabId)`, `DT.io.exportRecord/exportMany/pickFile` | Guardados (en lista o en cards grandes / medianas / pequeñas que se pliegan), exportar e importar. La vista es preferencia de cada pestaña (`dndtables.view.<tab>`); lo plegado va con el mundo (`dndtables.v3.folded`) y nunca en el resultado. |
 | `DT.bridge.toScreen({label, md, w, h})`, `DT.host.caps` | Pantalla de DM de Veil (solo si `caps.toScreen`). |
 | `DT.esc`, `DT.mdEsc`, `DT.money`, `DT.refs`, `DT.toast`, `DT.copyText`, `DT.uid` | Utilidades. |
@@ -192,7 +194,10 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
    `normalize()` en Vendedores) en lugar de romper lo guardado.
 5. **Lo útil primero**: el resultado en limpio arriba (ficha); los dados, plegados debajo. Una
    pestaña completa hace lo mismo con `.sheet` y `<details class="rollsbox">` (ver Vendedores y Tablón),
-   y da `card(rec)` para que lo guardado se lea en «Guardados» sin cargarlo.
+   y da `card(rec)` para que lo guardado se lea en «Guardados» sin cargarlo. La ficha se ve **en lista o
+   en cards** (grandes / medianas / pequeñas, plegables): las declarativas lo traen de serie (una card
+   por línea); una pestaña completa pone `DT.views.bar` en su ficha y pinta sus piezas con
+   `DT.cards.html` (ver el Tablón) o con `<details class="vcard">` (ver Vendedores).
 6. **Pruebas**: añade un bloque a `tests/app.test.mjs` (datos que cubren su dado, generar con
    varias semillas, sin errores de consola). `npm test` y, si tocaste el puente, `npm run test:veil`.
 7. Después, `node veil/install.mjs` para llevar la versión nueva a Veil.
