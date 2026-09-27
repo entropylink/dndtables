@@ -180,7 +180,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(vs.shops === cards && vs.open === cards && vs.grid === 'gcards md' && vs.pressed === 'md' && vs.who && vs.rumors === cards,
     'Vendedores: por omisión, una card mediana abierta por tienda con su tendero; todos los rumores juntos', JSON.stringify(vs));
   await page.click('[data-ref="genBtn"]');
-  const curMark = await page.evaluate(() => ({ active: DT.records.active('vendors').id, marked: document.querySelector('#panel-vendors .saved-item.current').dataset.id }));
+  const curMark = await page.evaluate(() => ({ active: DT.records.active('vendors').id, marked: document.querySelector('#panel-vendors [data-ref="savedList"] .current[data-id]').dataset.id }));
   ok(curMark.active === curMark.marked, 'tras generar otra ciudad, la biblioteca marca como «actual» la nueva', JSON.stringify(curMark));
   const first = page.locator('#panel-vendors .vendor').first();   // en card ya viene abierta
   const before = await first.locator('.note').textContent();
@@ -200,7 +200,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
   ok(await page.inputValue('[data-ref="saveName"]') === name, 'al recargar vuelve la ciudad activa', name);
   ok((await page.textContent('#tabBar')).includes('Vendedores'), 'al recargar recuerda el idioma');
-  ok(await page.locator('#panel-vendors .saved-item').count() === 2, 'las ciudades aparecen en «Ciudades guardadas»');
+  ok(await page.locator('#panel-vendors [data-ref="savedList"] [data-id]').count() === 2, 'las ciudades aparecen en «Ciudades guardadas»');
   // copiar como Markdown
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
   const md = await page.evaluate(() => { const t = DT.tabs.get('vendors'); return t.toMarkdown(DT.records.active('vendors'), { dm: true }); });
@@ -212,8 +212,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const exported = JSON.parse(readFileSync(await dl.path(), 'utf8'));
   ok(exported.type === 'dndtables-record' && exported.record.name === name && exported.record.data.v === 3, 'exportar actual → dndtables-record v3');
   // borrar la actual limpia la vista
-  await page.locator('#panel-vendors .saved-item.current [data-act="delete"]').click();
-  ok(await page.locator('#panel-vendors .vendor').count() === 0 && await page.locator('#panel-vendors .saved-item').count() === 1, 'borrar la ciudad actual la quita de la lista y de la vista');
+  await page.locator('#panel-vendors [data-ref="savedList"] .current[data-id] [data-act="delete"]').click();
+  ok(await page.locator('#panel-vendors .vendor').count() === 0 && await page.locator('#panel-vendors [data-ref="savedList"] [data-id]').count() === 1, 'borrar la ciudad actual la quita de la lista y de la vista');
   ok(!errors.length, 'sin errores de consola en la interfaz', errors.join(' | '));
   await ctx.close();
 }
@@ -230,7 +230,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(r.recs.length === 1 && r.recs[0] === 'Oldport', 'las ciudades v2 pasan a la v3 al primer arranque');
   ok(r.old, 'la clave vieja no se borra');
   ok(r.lang === 'es', 'la preferencia de idioma vieja se respeta');
-  await page.locator('#panel-vendors .saved-item [data-act="load"]').click();
+  await page.locator('#panel-vendors [data-ref="savedList"] [data-id] [data-act="load"]').click();
   const cards = await page.locator('#panel-vendors .vendor').count();
   ok(cards === 3, `una ciudad v2 carga (la clave desconocida se ignora): ${cards} fichas`);
   ok(await page.locator('#panel-vendors [data-act="rollNpc"]').count() === 3, 'sin tendero en la v2 → botón «Tirar tendero»');
@@ -246,7 +246,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#panel-vendors [data-ref="importBtn"]')]);
   await chooser.setFiles({ name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(single)) });
   await page.waitForTimeout(300);
-  const x = await page.evaluate(() => ({ xss: !!window.__xss, imgs: document.querySelectorAll('#panel-vendors .saved-item img').length, n: DT.records.list('vendors').length, name: document.querySelector('#panel-vendors [data-ref="saveName"]').value }));
+  const x = await page.evaluate(() => ({ xss: !!window.__xss, imgs: document.querySelectorAll('#panel-vendors [data-ref="savedList"] img').length, n: DT.records.list('vendors').length, name: document.querySelector('#panel-vendors [data-ref="saveName"]').value }));
   ok(x.n === 2 && x.name.startsWith('<img'), 'importar una ciudad v2 la guarda y la carga');
   ok(!x.xss && x.imgs === 0, 'un nombre malicioso importado se muestra escapado (sin XSS)');
   const coll = await page.evaluate(() => { const r = DT.io.parse({ type: 'dnd-vendor-collection', cities: [{ id: 'c1', name: 'Dup', data: { sizeKey: 'town', permanent: [] } }, { name: 'Bad' }] }); const added = DT.io.importRecords(r.records); return { added: added.length, skipped: r.skipped, newId: added[0].id !== 'c1' }; });
@@ -280,7 +280,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const rc = await page.locator('#panel-test-weather .rcard').count();
   const saved = await page.evaluate(() => DT.records.list('test-weather').length);
   ok(rc === 2 && saved === 1, 'pestaña declarativa: «Tirar todo» tira cada tabla y guarda el resultado');
-  ok(await page.locator('#panel-test-weather .saved-item').count() === 1, 'la biblioteca genérica lista el resultado');
+  ok(await page.locator('#panel-test-weather [data-ref="lib"] [data-id]').count() === 1, 'la biblioteca genérica lista el resultado');
   const md = await page.evaluate(() => DT.tabs.get('test-weather').toMarkdown(DT.records.list('test-weather')[0]));
   ok(/\*\*Sky\*\* \(d6: \d\)/.test(md), 'la pestaña declarativa exporta Markdown', md);
   await page.click('#tabBar [data-tab="test-broken"]');
@@ -622,8 +622,10 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const lib = '#panel-npc [data-ref="lib"]';
   await page.click('#tabBar [data-tab="npc"]');
   for (let i = 0; i < 3; i++) await page.click('#panel-npc [data-ref="rollAll"]');
-  ok(await page.locator(`${lib} .saved-item`).count() === 3 && await page.locator(`${lib} .gcard`).count() === 0
-    && await page.getAttribute(`${lib} [data-view="list"]`, 'aria-pressed') === 'true', 'Guardados: por omisión, en lista como antes');
+  ok(await page.locator(`${lib} .gcards.md > .gcard`).count() === 3 && await page.locator(`${lib} .saved-item`).count() === 0
+    && await page.getAttribute(`${lib} [data-view="md"]`, 'aria-pressed') === 'true', 'Guardados: por omisión, en cards medianas');
+  await page.click(`${lib} [data-view="list"]`);
+  ok(await page.locator(`${lib} .saved-item`).count() === 3 && await page.locator(`${lib} .gcard`).count() === 0, 'Guardados en lista: como antes');
   await page.click(`${lib} [data-view="md"]`);
   const md = await page.evaluate(() => {
     const t = DT.tabs.get('npc'), cur = DT.records.active('npc'), s = t.api.sheetOf(cur);
@@ -673,7 +675,9 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(rl.view && rl.folded, 'al recargar: misma vista y lo plegado sigue plegado');
   await page.click('#tabBar [data-tab="tavern"]');
   await page.click('#panel-tavern [data-ref="rollAll"]');
-  ok(await page.locator('#panel-tavern .saved-item').count() === 1, 'la vista es de cada pestaña (Taberna sigue en lista)');
+  await page.click('#panel-tavern [data-ref="lib"] [data-view="list"]');
+  const per = await page.evaluate(() => ({ tav: document.querySelectorAll('#panel-tavern [data-ref="lib"] .saved-item').length, npc: localStorage.getItem('dndtables.view.npc'), tavPref: localStorage.getItem('dndtables.view.tavern') }));
+  ok(per.tav === 1 && per.npc === 'md' && per.tavPref === 'list', 'la vista es de cada pestaña (Taberna en lista, PNJ sigue en medianas)', JSON.stringify(per));
 
   // Botones de la card
   await page.click('#tabBar [data-tab="npc"]');
@@ -721,7 +725,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const g = await fresh({ init: `localStorage.setItem('dndtables.v3.folded', '"basura"'); localStorage.setItem('dndtables.view.npc', 'nope'); localStorage.setItem('dndtables.sheetview.npc', '{}');` });
   await g.page.click('#tabBar [data-tab="npc"]');
   await g.page.click('#panel-npc [data-ref="rollAll"]');
-  const gl = await g.page.locator('#panel-npc [data-ref="lib"] .saved-item').count();
+  const gl = await g.page.locator('#panel-npc [data-ref="lib"] .gcards.md > .gcard').count();   // vista rota → medianas
   const gs = await g.page.locator('#panel-npc [data-ref="sheet"] .gcards.md').count();   // vista rota → la de siempre (medianas)
   await g.page.click('#panel-npc [data-ref="lib"] [data-view="sm"]');
   await g.page.locator('#panel-npc [data-ref="lib"] .gtog').click();
@@ -794,8 +798,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(p3.open === 0 && p3.btn === 'Unfold all', 'ficha: «Fold all» pliega todas las cards');
   await page.click('#panel-npc [data-ref="rollAll"]');
   ok(await page.evaluate(() => [...document.querySelectorAll('#panel-npc [data-ref="sheet"] .gcard .gbody')].every((b) => !b.hidden)), 'un resultado nuevo sale con todas las cards abiertas');
-  const keys = await page.evaluate(() => ({ sheet: localStorage.getItem('dndtables.sheetview.npc'), lib: localStorage.getItem('dndtables.view.npc'), libCards: document.querySelectorAll('#panel-npc [data-ref="lib"] .gcard').length }));
-  ok(keys.sheet === 'md' && keys.lib === null && keys.libCards === 0, 'la vista de la ficha es aparte de la de «Guardados»');
+  const keys = await page.evaluate(() => ({ sheet: localStorage.getItem('dndtables.sheetview.npc'), lib: localStorage.getItem('dndtables.view.npc'), libMd: document.querySelectorAll('#panel-npc [data-ref="lib"] .gcards.md > .gcard').length }));
+  ok(keys.sheet === 'md' && keys.lib === null && keys.libMd > 0, 'la vista de la ficha es aparte de la de «Guardados» (que sale en medianas)');
 
   // Vendedores: cada tienda, una card abierta que se pliega; el regateo sigue funcionando
   await page.click('#tabBar [data-tab="vendors"]');

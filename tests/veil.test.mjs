@@ -213,7 +213,7 @@ let slowed = 0;
 await page.route('**/api/worlds/*/tablas-dnd', async (route) => { if (route.request().method() === 'POST') { slowed++; await sleep(1500); } await route.continue(); });
 await f.locator('[data-ref="genBtn"]').click();
 await sleep(1000);   // ya pasó la espera de 0.7 s: el POST va en camino
-await f.locator('#panel-vendors .saved-item.current [data-act="delete"]').click();
+await f.locator('#panel-vendors [data-ref="savedList"] .current[data-id] [data-act="delete"]').click();
 await sleep(2500);
 await page.unroute('**/api/worlds/*/tablas-dnd');
 ok(slowed >= 1, `el guardado lento se simuló de verdad (${slowed} POST retenidos)`);
@@ -221,7 +221,7 @@ ok((await docs()).length === before, 'borrar mientras se guarda por primera vez 
 
 // Borrar desde la app → se borra el documento
 const n0 = (await docs()).length;
-await f.locator('#panel-vendors .saved-item [data-act="delete"]').first().click();
+await f.locator('#panel-vendors [data-ref="savedList"] [data-id] [data-act="delete"]').first().click();
 await sleep(900);
 ok((await docs()).length === n0 - 1, 'borrar en la app borra el documento del mundo');
 

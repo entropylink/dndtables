@@ -27,8 +27,8 @@ taberna, el encuentro, el clima o el botín; una por tienda en Vendedores (con s
 regateo) y una por encargo en el Tablón. Cada card se pliega (▾) sin perder su ↻, y «Plegar
 todas» las deja en su título; lo plegado se mantiene mientras trabajas ese resultado y uno nuevo
 sale abierto. «Guardados» tiene su propio selector: lista o cards con lo guardado, para leer tus
-PNJ, tabernas o ciudades de la sesión sin cargarlos uno por uno (ahí sale en lista). Cada vista
-se recuerda por pestaña.
+PNJ, tabernas o ciudades de la sesión sin cargarlos uno por uno (también sale en medianas; «Plegar
+todas» los deja en su nombre). Cada vista se recuerda por pestaña.
 
 **Pueblos y clases.** PNJ rápido, Taberna y Vendedores eligen de qué pueblos salen: *Clásicos*
 (los nueve del Manual del Jugador), *Todos los de D&D* (61 más, de los otros libros) o *Todo*
