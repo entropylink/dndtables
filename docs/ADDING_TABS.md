@@ -132,7 +132,7 @@ DT.registerTab({
       cur = { id: DT.uid(), tab: "npc", name: "…", data: { v: 1, mood: r.roll } };  // guarda la TIRADA, no el texto
       DT.records.upsert(cur); DT.records.setActive("npc", cur.id); render();
     };
-    DT.library(refs.saved, "npc");      // lista de guardados con cargar / exportar / borrar
+    DT.library(refs.saved, "npc");      // guardados en lista o en cards, con cargar / exportar / borrar
     cur = DT.records.active("npc"); render();
   },
   onLang() { render(); },               // el idioma cambió: vuelve a pintar
@@ -141,6 +141,7 @@ DT.registerTab({
   onRemoved(rec) { if (cur && cur.id === rec.id) { cur = null; render(); } },
   validate: (data) => !!(data && data.mood),          // al importar y al recibir de Veil
   summary: (rec) => ({ chips: [tx(MOOD.lookup(rec.data.mood).row.name)], meta: [], detail: "" }),
+  card: (rec) => ({ sub: [], lines: [{ label: tx({ en: "Mood", es: "Ánimo" }), text: tx(MOOD.lookup(rec.data.mood).row.name) }] }),  // su card en «Guardados»
   toMarkdown: (rec, { dm } = {}) => `### ${DT.mdEsc(rec.name)}\n…\n`,  // copiar y pantalla de DM
 });
 function render() { /* … usa esc() para TODO lo que venga de datos guardados … */ }
@@ -160,7 +161,8 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
 | `onShow`, `onLang` | — | Al enseñar la pestaña / al cambiar de idioma. |
 | `load`, `current`, `onRemoved` | — | Cargar un resultado, cuál está abierto, y qué hacer si se borra (aquí, en Veil o en otra pestaña). |
 | `validate(data)` | recomendado | Rechaza datos rotos al importar o al llegar de Veil. |
-| `summary(rec)` | recomendado | `{chips, meta, detail}` en texto plano para la biblioteca y el documento de Veil. |
+| `summary(rec)` | recomendado | `{chips, meta, detail}` en texto plano para la lista de «Guardados» y el documento de Veil. |
+| `card(rec)` | recomendado | `{sub, lines:[{label, text, note?, dm?, cls?}], meta?}` en texto plano: lo que enseña su card en «Guardados». Grandes: todas las líneas con nota; medianas: todas, sin nota; pequeñas: las tres primeras. Al pie, `meta` (o los `chips` del resumen) y la fecha. Sin `card`, la card enseña el `detail` del resumen. Las declarativas la sacan de su `sheet`. |
 | `toMarkdown(rec, {dm})` | recomendado | Para «Copiar como Markdown» y la pantalla de DM. |
 | `adoptForeign(obj)` | — | Convierte JSON de formatos viejos o ajenos en resultados (`[{tab, name, data}]`). |
 
@@ -175,7 +177,7 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
 | `DT.refTableHTML(tabla, columnas, pesoFn?)` | Tabla de referencia «para tirar a mano». |
 | `DT.log(dado, resultado, texto)` | Registro de tiradas. |
 | `DT.records` (`all/list/get/upsert/remove/active/setActive/onChange`) | Resultados guardados; seguros con varias pestañas abiertas. |
-| `DT.library(el, tabId)`, `DT.io.exportRecord/exportMany/pickFile` | Guardados, exportar e importar. |
+| `DT.library(el, tabId)`, `DT.io.exportRecord/exportMany/pickFile` | Guardados (en lista o en cards grandes / medianas / pequeñas que se pliegan), exportar e importar. La vista es preferencia de cada pestaña (`dndtables.view.<tab>`); lo plegado va con el mundo (`dndtables.v3.folded`) y nunca en el resultado. |
 | `DT.bridge.toScreen({label, md, w, h})`, `DT.host.caps` | Pantalla de DM de Veil (solo si `caps.toScreen`). |
 | `DT.esc`, `DT.mdEsc`, `DT.money`, `DT.refs`, `DT.toast`, `DT.copyText`, `DT.uid` | Utilidades. |
 
@@ -189,7 +191,8 @@ function render() { /* … usa esc() para TODO lo que venga de datos guardados �
 4. **`data.v`**: pon versión a tus datos. Si cambias la forma, normaliza al cargar (como
    `normalize()` en Vendedores) en lugar de romper lo guardado.
 5. **Lo útil primero**: el resultado en limpio arriba (ficha); los dados, plegados debajo. Una
-   pestaña completa hace lo mismo con `.sheet` y `<details class="rollsbox">` (ver Vendedores y Tablón).
+   pestaña completa hace lo mismo con `.sheet` y `<details class="rollsbox">` (ver Vendedores y Tablón),
+   y da `card(rec)` para que lo guardado se lea en «Guardados» sin cargarlo.
 6. **Pruebas**: añade un bloque a `tests/app.test.mjs` (datos que cubren su dado, generar con
    varias semillas, sin errores de consola). `npm test` y, si tocaste el puente, `npm run test:veil`.
 7. Después, `node veil/install.mjs` para llevar la versión nueva a Veil.

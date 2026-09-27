@@ -193,6 +193,47 @@
   .saved-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg2); margin-top:6px; font-size:.86rem}
   .saved-item.current{outline:1px solid var(--gold)}
   .saved-item .meta{color:var(--muted); font-size:.78rem}
+  /* Guardados: en lista o en cards (grandes / medianas / pequeñas) que se pliegan */
+  .viewbar{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px}
+  .vbtn{display:inline-flex; align-items:center; gap:5px}
+  .vbtn[aria-pressed="true"]{background:var(--gold); color:var(--on-gold); border-color:var(--gold); font-weight:700}
+  .vbtn[aria-pressed="true"]:hover{color:var(--on-gold)}
+  .vico{width:13px; height:13px; fill:currentColor; flex:none}
+  .viewbar [data-act="foldAll"]{margin-left:auto}
+  .gcards{display:grid; gap:12px; align-items:start}
+  .gcards.lg{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+  .gcards.md{grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))}
+  .gcards.sm{grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr)); gap:8px}
+  .gcard{display:flex; flex-direction:column; gap:6px; min-width:0; padding:10px 12px; border:1px solid var(--line); border-left:3px solid var(--gold2); border-radius:12px;
+    background:linear-gradient(180deg,var(--card2),var(--card)); box-shadow:0 2px 0 #0006}
+  .gcard.current{border-color:var(--gold)}
+  .gtog{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 6px; width:100%; padding:0; border:0; border-radius:4px; background:none; text-align:left;
+    color:var(--gold); font-weight:700; font-size:1.05rem}
+  .gtog:hover{background:none; color:var(--cyan); transform:none}
+  .gtog::before{content:"▾"; color:var(--muted); font-weight:400}
+  .gcard.folded .gtog::before{content:"▸"}
+  .gtog .gname{overflow-wrap:anywhere}
+  .gtog .vtag{font-weight:400}
+  .gsub{font-weight:700; font-size:.9rem}
+  .gcard dl{display:grid; grid-template-columns:max-content minmax(0,1fr); gap:4px 10px; margin:2px 0 0; font-size:.88rem}
+  .gcard dt{color:var(--muted); max-width:10em; overflow-wrap:anywhere}
+  .gcard dd{margin:0; overflow-wrap:anywhere}
+  .gcard dd.good{color:var(--green)} .gcard dd.bad{color:var(--red)}
+  .gcard dd .sub{font-size:.8rem}
+  .gmore,.gmeta{color:var(--muted); font-size:.74rem}
+  .gact{display:flex; flex-wrap:wrap; gap:6px}
+  .gcards.lg .gcard{padding:14px 16px}
+  .gcards.lg .gtog{font-size:1.25rem}
+  .gcards.lg .gsub{font-size:.95rem}
+  .gcards.lg dl{font-size:.92rem; gap:6px 12px}
+  .gcards.md dt{max-width:8em}
+  .gcards.sm .gcard{padding:8px 10px; border-radius:10px; gap:4px}
+  .gcards.sm .gtog{font-size:.95rem}
+  .gcards.sm .gsub{font-size:.8rem}
+  .gcards.sm dl{display:block; font-size:.8rem}
+  .gcards.sm dt{max-width:none; margin-top:4px; font-size:.7rem}
+  .gcards.sm dd{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .gcards.sm .gact button{padding:2px 7px}
   .toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--card2); border:1px solid var(--gold);
     color:var(--ink); padding:8px 16px; border-radius:8px; font-size:.86rem; box-shadow:0 6px 24px #000a}
   .flash{animation:flash .6s ease}
@@ -206,6 +247,9 @@
     #log{position:static; width:auto; max-height:none; margin:20px 16px 0}
     header{padding:18px 64px 14px}
     header h1{font-size:1.35rem}
+    .gcard dl{display:block}
+    .gcard dt{max-width:none; margin-top:5px; font-size:.74rem}
+    .viewbar [data-act="foldAll"]{margin-left:0}
   }
 </style>
 </head>
@@ -358,7 +402,7 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.3.0";
+DT.VERSION = "3.4.0";
 DT.SCHEMA = 3;
 DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
@@ -465,7 +509,9 @@ DT.addStrings({
     rollAll:"🎲 Roll all", reroll:"↻", noResults:"Nothing rolled yet.", resultWord:"Result",
     noneThisTime:"Nothing this time.", rollsTitle:"🎲 Rolls", rollsHint:"— what each die rolled; ↻ to reroll one", rerollThis:"Reroll", dependsOn:"Shown for: {what}", rollName:"Roll another name",
     copyMdShort:"📋 Copy as Markdown", toScreenShort:"▤ To the DM screen", toArticleShort:"¶ Veil article",
-    savedTitle:"💾 Saved", refTitle:"📖 Reference tables", articleReady:"Veil article ready.", articleNotMade:"Article not created."
+    savedTitle:"💾 Saved", refTitle:"📖 Reference tables", articleReady:"Veil article ready.", articleNotMade:"Article not created.",
+    viewAs:"View", viewList:"List", viewLg:"Large", viewMd:"Medium", viewSm:"Small", foldAll:"Fold all", unfoldAll:"Unfold all",
+    foldCard:"Fold", unfoldCard:"Unfold", moreLines:"+{n} more"
   },
   es:{
     appTitle:"🎲 Tablas D&D", docTitle:"Tablas D&D",
@@ -485,7 +531,9 @@ DT.addStrings({
     rollAll:"🎲 Tirar todo", reroll:"↻", noResults:"Aún no has tirado nada.", resultWord:"Resultado",
     noneThisTime:"Nada esta vez.", rollsTitle:"🎲 Tiradas", rollsHint:"— qué salió en cada dado; ↻ para volver a tirar una", rerollThis:"Volver a tirar", dependsOn:"Mostrada para: {what}", rollName:"Tirar otro nombre",
     copyMdShort:"📋 Copiar como Markdown", toScreenShort:"▤ A la pantalla de DM", toArticleShort:"¶ Artículo en Veil",
-    savedTitle:"💾 Guardados", refTitle:"📖 Tablas de referencia", articleReady:"Artículo listo en Veil.", articleNotMade:"No se creó el artículo."
+    savedTitle:"💾 Guardados", refTitle:"📖 Tablas de referencia", articleReady:"Artículo listo en Veil.", articleNotMade:"No se creó el artículo.",
+    viewAs:"Ver", viewList:"Lista", viewLg:"Grandes", viewMd:"Medianas", viewSm:"Pequeñas", foldAll:"Plegar todas", unfoldAll:"Desplegar todas",
+    foldCard:"Plegar", unfoldCard:"Desplegar", moreLines:"+{n} más"
   }
 });
 
@@ -742,38 +790,92 @@ DT.io = {
   }
 };
 
-/* ===================== BIBLIOTECA (lista de guardados por pestaña) ===================== */
+/* ===================== BIBLIOTECA (lo guardado de cada pestaña) ===================== */
 const libraries = new Set();
-// DT.library(contenedor, tabId) → lista ordenada con cargar / exportar / borrar.
-// La pestaña da el resumen con tab.summary(rec) → {chips:[…], meta:[…], detail:"…"} (texto plano; aquí se escapa).
+// DT.library(contenedor, tabId) → lo guardado, en lista o en cards (grandes / medianas / pequeñas), con cargar / exportar / borrar.
+// Lista: tab.summary(rec) → {chips:[…], meta:[…], detail:"…"}.
+// Cards: tab.card(rec) → {sub:[…], lines:[{label, text, note?, dm?, cls?}], meta?:[…]}; sin card(), el detail del resumen.
+// Al pie de la card va meta (o, si no la da, los chips del resumen) y la fecha.
+// Todo es texto plano; aquí se escapa. La vista es preferencia de quien mira (por pestaña); lo plegado va con el mundo.
+const VIEWS = ["list","lg","md","sm"], VIEW_KEY = {list:"viewList", lg:"viewLg", md:"viewMd", sm:"viewSm"};
+const FOLD_KEY = "dndtables.v3.folded";
+const VIEW_ICON = {   // rectángulos de 16×16: tres renglones · dos cards · cuatro · nueve
+  list:[[1,2,14,2.4],[1,6.8,14,2.4],[1,11.6,14,2.4]],
+  lg:[[1,1.5,6.2,13],[8.8,1.5,6.2,13]],
+  md:[[1,1,6.2,6.2],[8.8,1,6.2,6.2],[1,8.8,6.2,6.2],[8.8,8.8,6.2,6.2]],
+  sm:[0.5,6,11.5].flatMap(y=> [0.5,6,11.5].map(x=> [x,y,4,4]))
+};
+const viewIcon = v=> `<svg class="vico" viewBox="0 0 16 16" aria-hidden="true">${VIEW_ICON[v].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8"/>`).join("")}</svg>`;
 DT.library = function(box, tabId){
-  const lib = {box, tabId, render(){
+  const E = DT.esc;
+  const viewOf = ()=>{ const v = DT.storage.pref("view."+tabId); return VIEWS.includes(v) ? v : "list"; };
+  let folded = null;
+  const foldedAll = ()=>{ const all = DT.storage.getJSON(FOLD_KEY, {}); return all && typeof all==="object" && !Array.isArray(all) ? all : {}; };
+  const foldedSet = ()=>{ if(!folded){ const ids = foldedAll()[tabId]; folded = new Set(Array.isArray(ids) ? ids.filter(x=> typeof x==="string") : []); } return folded; };
+  const saveFolded = recs=>{
+    const f = foldedSet(), ids = new Set(recs.map(r=> r.id));
+    for(const id of [...f]) if(!ids.has(id)) f.delete(id);
+    const all = foldedAll();
+    if(f.size) all[tabId] = [...f]; else delete all[tabId];
+    DT.storage.setJSON(FOLD_KEY, all);
+  };
+  const acts = ()=> `<button class="small" data-act="load">${E(DT.t("load"))}</button>
+          <button class="small ghost" data-act="export" title="${E(DT.t("exportCurrent"))}">⬇</button>
+          <button class="small ghost" data-act="delete" title="✕">✕</button>`;
+  function listItem(r, s, isCur){
+    const d = DT.recordDate(r);
+    return `<div class="saved-item${isCur?" current":""}" data-id="${E(r.id)}">
+        <div style="flex:1; min-width:0">
+          <div><b>${E(r.name)}</b> ${s.chips.map(c=>`<span class="vtag var">${E(c)}</span>`).join("")}${isCur?` <span class="vtag basic">${E(DT.t("currentTag"))}</span>`:""}</div>
+          <div class="meta">${E([...s.meta, d].filter(Boolean).join(" · "))}</div>
+          ${s.detail?`<div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${E(s.detail)}</div>`:""}
+        </div>
+        <div class="row">
+          ${acts()}
+        </div></div>`;
+  }
+  // Grandes: todo, con notas · medianas: todo, sin notas · pequeñas: las tres primeras líneas.
+  function card(r, s, isCur, view, tab){
+    let c = null; try{ c = tab.card ? tab.card(r) : null; }catch(e){ console.error(e); }
+    if(!c) c = {sub:[], lines: s.detail ? [{label:"", text:s.detail}] : []};
+    const lines = (c.lines||[]).filter(l=> l && l.text), shown = view==="sm" ? lines.slice(0,3) : lines;
+    const isFold = foldedSet().has(r.id), meta = [...(Array.isArray(c.meta) ? c.meta : s.chips), DT.recordDate(r)].filter(Boolean).join(" · ");
+    return `<article class="gcard${isCur?" current":""}${isFold?" folded":""}" data-id="${E(r.id)}">
+        <button class="gtog" data-act="fold" aria-expanded="${!isFold}" title="${E(DT.t(isFold?"unfoldCard":"foldCard"))}"><span class="gname">${E(r.name)}</span>${isCur?` <span class="vtag basic">${E(DT.t("currentTag"))}</span>`:""}</button>
+        <div class="gbody"${isFold?" hidden":""}>${(c.sub||[]).length?`<div class="gsub">${E(c.sub.filter(Boolean).join(" · "))}</div>`:""}${
+          shown.length?`<dl>${shown.map(l=>`<dt>${E(l.label||"")}</dt><dd${l.cls==="good"||l.cls==="bad"?` class="${l.cls}"`:""}>${l.dm?`<span class="vtag bad">DM</span> `:""}${E(l.text)}${
+            view==="lg" && l.note?`<div class="sub">${E(l.note)}</div>`:""}</dd>`).join("")}</dl>`:""}${
+          lines.length>shown.length?`<div class="gmore">${E(DT.t("moreLines",{n:lines.length-shown.length}))}</div>`:""}${
+          meta?`<div class="gmeta">${E(meta)}</div>`:""}</div>
+        <div class="gact">${acts()}</div>
+      </article>`;
+  }
+  const lib = {box, tabId, view:viewOf, render(){
     const tab = DT.tabs.get(tabId);
     const cur = DT.records.active(tabId);
     const recs = DT.records.list(tabId).slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"", DT.lang));
-    if(!recs.length){ box.innerHTML = `<div class="sub">${DT.esc(DT.t(tab.emptyLibraryKey||"noResults"))}</div>`; return; }
-    box.innerHTML = recs.map(r=>{
-      let s = {chips:[], meta:[], detail:""}; try{ s = Object.assign(s, tab.summary ? tab.summary(r) : {}); }catch(e){ console.error(e); }
-      const isCur = cur && cur.id===r.id; const d = DT.recordDate(r);
-      return `<div class="saved-item${isCur?" current":""}" data-id="${DT.esc(r.id)}">
-        <div style="flex:1; min-width:0">
-          <div><b>${DT.esc(r.name)}</b> ${s.chips.map(c=>`<span class="vtag var">${DT.esc(c)}</span>`).join("")}${isCur?` <span class="vtag basic">${DT.esc(DT.t("currentTag"))}</span>`:""}</div>
-          <div class="meta">${DT.esc([...s.meta, d].filter(Boolean).join(" · "))}</div>
-          ${s.detail?`<div class="meta" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${DT.esc(s.detail)}</div>`:""}
-        </div>
-        <div class="row">
-          <button class="small" data-act="load">${DT.esc(DT.t("load"))}</button>
-          <button class="small ghost" data-act="export" title="${DT.esc(DT.t("exportCurrent"))}">⬇</button>
-          <button class="small ghost" data-act="delete" title="✕">✕</button>
-        </div></div>`;
-    }).join("");
-    box.querySelectorAll(".saved-item").forEach(item=>{
-      const rec = ()=> DT.records.get(item.dataset.id);
+    if(!recs.length){ box.innerHTML = `<div class="sub">${E(DT.t(tab.emptyLibraryKey||"noResults"))}</div>`; return; }
+    const view = viewOf(), f = foldedSet(), anyOpen = recs.some(r=> !f.has(r.id));
+    const summ = r=>{ let s = {chips:[], meta:[], detail:""}; try{ s = Object.assign(s, tab.summary ? tab.summary(r) : {}); }catch(e){ console.error(e); } return s; };
+    const items = recs.map(r=>{ const s = summ(r), isCur = !!(cur && cur.id===r.id); return view==="list" ? listItem(r, s, isCur) : card(r, s, isCur, view, tab); }).join("");
+    box.innerHTML = `<div class="viewbar" role="group" aria-label="${E(DT.t("viewAs"))}"><span class="sub">${E(DT.t("viewAs"))}</span>${
+        VIEWS.map(v=>`<button class="small ghost vbtn" data-view="${v}" aria-pressed="${v===view}">${viewIcon(v)}<span>${E(DT.t(VIEW_KEY[v]))}</span></button>`).join("")}${
+        view==="list" ? "" : `<button class="small ghost" data-act="foldAll" data-fold="${anyOpen?1:0}">${E(DT.t(anyOpen?"foldAll":"unfoldAll"))}</button>`}</div>${
+      view==="list" ? items : `<div class="gcards ${view}">${items}</div>`}`;
+    // Tras redibujar, el foco vuelve al botón que se pulsó.
+    const redraw = sel=>{ lib.render(); const el = sel && box.querySelector(sel); if(el) el.focus(); };
+    box.querySelectorAll("[data-view]").forEach(b=>{ b.onclick = ()=>{ DT.storage.pref("view."+tabId, b.dataset.view); redraw(`[data-view="${b.dataset.view}"]`); }; });
+    const fa = box.querySelector('[data-act="foldAll"]');
+    if(fa) fa.onclick = ()=>{ if(fa.dataset.fold==="1") recs.forEach(r=> f.add(r.id)); else f.clear(); saveFolded(recs); redraw('[data-act="foldAll"]'); };
+    box.querySelectorAll("[data-id]").forEach(item=>{
+      const id = item.dataset.id, rec = ()=> DT.records.get(id);
       item.querySelector('[data-act="load"]').onclick = ()=>{ const r=rec(); if(r && tab.load) tab.load(r); };
       item.querySelector('[data-act="export"]').onclick = ()=>{ const r=rec(); if(r) DT.io.exportRecord(r); };
       item.querySelector('[data-act="delete"]').onclick = ()=>{ const r=rec(); if(!r) return;
         if(!confirm(DT.t("deleteConfirm",{name:r.name}))) return;
         DT.records.remove(r.id); };
+      const tog = item.querySelector('[data-act="fold"]');
+      if(tog) tog.onclick = ()=>{ if(f.has(id)) f.delete(id); else f.add(id); saveFolded(recs); redraw(`.gcard[data-id="${CSS.escape(id)}"] .gtog`); };
     });
   }};
   libraries.add(lib); lib.render();
@@ -800,7 +902,7 @@ DT.records.onChange(ev=>{
 // DT.registerTab({
 //   id, icon, order, title:{en,es}, heading?:{en,es}, tagline:{en,es}, strings:{en:{…},es:{…}}, template:"tpl-…",
 //   mount(panel, DT), onShow(), onLang(),
-//   summary(rec), validate(data), load(rec), current(), onRemoved(rec), adoptForeign(obj),
+//   summary(rec), card?(rec), validate(data), load(rec), current(), onRemoved(rec), adoptForeign(obj),
 //   toMarkdown(rec, {dm}) → texto para copiar / mandar a la pantalla de DM
 // })
 DT.tabs = new Map();
@@ -1137,6 +1239,14 @@ DT.simpleTableTab = function(def){
       normalize(rec);
       const shown = tables.filter(t=> !t.hidden && !t.dm).flatMap(t=> (rec.data.rolls[t.id]||[]).map(r=> resText(t, r))).filter(Boolean);
       return {chips: ctxDefs.map(c=> ctxText(rec.data, c.id)).filter(Boolean).slice(0,2), meta:[], detail: shown.slice(0,4).join(" · ")};
+    },
+    // Card en «Guardados»: la ficha; sin ficha, una línea por tabla.
+    card(rec){
+      normalize(rec);
+      const s = sheetOf(rec);
+      if(s) return {sub:s.sub, lines:s.lines};
+      return {sub:[], lines:tables.filter(t=> !t.hidden && (rec.data.rolls[t.id]||[]).length).map(t=>
+        ({label:DT.tx(t.title), text:rec.data.rolls[t.id].map(r=> resText(t, r)).join("; "), dm:t.dm}))};
     },
     toMarkdown(rec, opts={}){ return markdown(normalize(JSON.parse(JSON.stringify(rec))), opts); }
   });
@@ -2751,6 +2861,18 @@ const tab = DT.registerTab({
     if(st.id!=="normal" && rec.data && rec.data.state) chips.push(`${st.icon} ${tx(st.name)}`);
     return {chips, meta:[`${sm.nV} ${L("vendorsWord")}`, `${sm.goods} ${L("goodsWord")}`], detail:sm.shops.join(", ")};
   },
+  // Card en «Ciudades guardadas»: lo mismo que la ficha, sin abrir tiendas.
+  card(rec){
+    const d = rec.data || {}, s = sizeOf(d.sizeKey), st = stateRow(d), ev = eventRow(d);
+    const shop = v=>{ const c = CATALOG[v && v.key]; return c ? `${c.icon} ${vName(v.key)}${v.npc && v.npc.name ? ` (${v.npc.name})` : ""}` : null; };
+    const perm = (d.permanent||[]).map(shop).filter(Boolean), trav = (d.traveling||[]).map(shop).filter(Boolean);
+    return {sub:[s?sizeName(s):String(d.sizeKey||"?"), s?`👥 ${fmtPop(s.pop)}`:"", `${L("weekWord")} ${d.week||1}`.replace(/^./, c=> c.toUpperCase()), L("shopsN",{n:perm.length+trav.length})],
+      meta:[`${citySummary(rec).goods} ${L("goodsWord")}`],
+      lines:[{label:L("sheetState"), text:`${st.icon} ${tx(st.name)}`, note:tx(st.desc)},
+        {label:L("sheetEvent"), text:`${ev.icon} ${tx(ev.name)}`, note:tx(ev.desc)},
+        perm.length && {label:L("permGroup"), text:perm.join(" · ")},
+        trav.length && {label:L("travGroup"), text:trav.join(" · ")}].filter(Boolean)};
+  },
   toMarkdown(rec, opts={}){ return settlementMarkdown(normalize(JSON.parse(JSON.stringify(rec))), opts); }
 });
 // Para las pruebas y para quien extienda: acceso a los datos y funciones puras de esta pestaña.
@@ -2974,6 +3096,13 @@ const tab = DT.registerTab({
   onRemoved(rec){ if(cur && cur.id===rec.id){ cur = null; render(); } },
   validate: data=> !!(data && Array.isArray(data.jobs) && data.jobs.every(j=> j && Number.isFinite(j.base))),
   summary(rec){ const d = rec.data; return {chips:[d.city ? d.city.name : sizeText(d.size), tx(tierOf(d.tier).text)], meta:[`${d.jobs.length} ${L("jobs.jobsWord").toLowerCase()}`], detail:d.jobs.map(taskText).join(" · ")}; },
+  // Card en «Tablones guardados»: un renglón por encargo (qué, cuánto) y, en las grandes, quién paga, dónde y para cuándo.
+  card(rec){
+    const d = rec.data, jobs = d.jobs || [];
+    return {sub:[d.city ? d.city.name : "", sizeText(d.size), tx(tierOf(d.tier).text), `${jobs.length} ${L("jobs.jobsWord").toLowerCase()}`], meta:[],
+      lines:jobs.map((j,i)=> ({label:`${i+1}.`, text:`${taskText(j)} — 💰 ${gp(reward(j))}`,
+        note:`${L("jobs.patron")}: ${patronText(j)} · ${L("jobs.where")}: ${T(WHERE, j.where)} · ${L("jobs.deadline")}: ${T(DEADLINE, j.deadline)}`}))};
+  },
   toMarkdown: (rec, opts={})=> boardMarkdown(rec, opts)
 });
 tab.api = {PATRON, TASK, WHERE, COMP, DEADLINE, PAY, TIERS, COUNT, reward, rollJob, shopkeepers, boardMarkdown, current:()=>cur, newBoard:()=>newBoard(), select:(where, tier)=>{ if(refs){ refs.where.value=where; refs.tier.value=tier; } }};

@@ -609,6 +609,136 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await ctx.close();
 }
 
+/* ── 6d. Guardados: en lista o en cards (grandes / medianas / pequeñas) que se pliegan ── */
+{
+  const { ctx, page, errors } = await fresh();
+  const lib = '#panel-npc [data-ref="lib"]';
+  await page.click('#tabBar [data-tab="npc"]');
+  for (let i = 0; i < 3; i++) await page.click('#panel-npc [data-ref="rollAll"]');
+  ok(await page.locator(`${lib} .saved-item`).count() === 3 && await page.locator(`${lib} .gcard`).count() === 0
+    && await page.getAttribute(`${lib} [data-view="list"]`, 'aria-pressed') === 'true', 'Guardados: por omisión, en lista como antes');
+  await page.click(`${lib} [data-view="md"]`);
+  const md = await page.evaluate(() => {
+    const t = DT.tabs.get('npc'), cur = DT.records.active('npc'), s = t.api.sheetOf(cur);
+    const card = document.querySelector(`#panel-npc .gcard[data-id="${cur.id}"]`);
+    return { n: document.querySelectorAll('#panel-npc .gcards.md > .gcard').length, current: card.classList.contains('current'),
+      name: card.querySelector('.gname').textContent, want: cur.name, sub: card.querySelector('.gsub').textContent, wantSub: s.sub.join(' · '),
+      dts: card.querySelectorAll('dt').length, lines: s.lines.length, notes: card.querySelectorAll('dd .sub').length,
+      dm: card.querySelectorAll('dd .vtag.bad').length, wantDm: s.lines.filter((l) => l.dm).length,
+      focus: document.activeElement && document.activeElement.dataset.view, pref: localStorage.getItem('dndtables.view.npc') };
+  });
+  ok(md.n === 3 && md.current && md.name === md.want && md.sub === md.wantSub, 'cards medianas: una por resultado, con nombre y lo que es; la actual, marcada');
+  ok(md.dts === md.lines && md.notes === 0 && md.dm === md.wantDm && md.dm > 0, `cards medianas: todas las líneas de la ficha, sin notas, las del DM marcadas (${md.dts}/${md.lines})`);
+  ok(md.focus === 'md' && md.pref === 'md', 'cambiar de vista deja el foco en el botón y se recuerda');
+  await page.click(`${lib} [data-view="lg"]`);
+  const lg = await page.evaluate(() => document.querySelectorAll('#panel-npc .gcards.lg .gcard dd .sub').length);
+  ok(lg >= 3, 'cards grandes: con las notas (p. ej. la CD de la actitud)');
+  await page.click(`${lib} [data-view="sm"]`);
+  const sm = await page.evaluate(() => [...document.querySelectorAll('#panel-npc .gcards.sm .gcard')].map((c) => ({ dts: c.querySelectorAll('dt').length, more: (c.querySelector('.gmore') || {}).textContent || '' })));
+  ok(sm.length === 3 && sm.every((c) => c.dts === 3 && /^\+\d+ more$/.test(c.more)), 'cards pequeñas: tres líneas y «+N more»', JSON.stringify(sm));
+  const cols = {};
+  for (const v of ['lg', 'md', 'sm']) { await page.click(`${lib} [data-view="${v}"]`); cols[v] = await page.evaluate(() => getComputedStyle(document.querySelector('#panel-npc .gcards')).gridTemplateColumns.split(' ').length); }
+  ok(cols.lg < cols.md && cols.md < cols.sm, `más pequeñas, más por renglón (${cols.lg} · ${cols.md} · ${cols.sm})`);
+
+  // Plegar: la card se queda en su nombre y sus botones; no toca el resultado (nada que sincronizar).
+  await page.click(`${lib} [data-view="md"]`);
+  const id0 = await page.locator(`${lib} .gcard`).first().getAttribute('data-id');
+  const before = await page.evaluate((id) => DT.records.get(id).savedAt, id0);
+  await page.locator(`${lib} .gcard`).first().locator('.gtog').click();
+  const f1 = await page.evaluate((id) => { const c = document.querySelector(`#panel-npc .gcard[data-id="${id}"]`);
+    return { exp: c.querySelector('.gtog').getAttribute('aria-expanded'), hidden: c.querySelector('.gbody').hidden, load: !!c.querySelector('.gact [data-act="load"]'),
+      focus: document.activeElement === c.querySelector('.gtog'), saved: DT.records.get(id).savedAt }; }, id0);
+  ok(f1.exp === 'false' && f1.hidden && f1.load && f1.focus, 'plegar una card deja nombre y botones, y el foco en ella');
+  ok(f1.saved === before, 'plegar no toca el resultado guardado');
+  await page.click('#panel-npc [data-ref="rollAll"]');
+  const f2 = await page.evaluate((id) => ({ folded: document.querySelector(`#panel-npc .gcard[data-id="${id}"] .gbody`).hidden,
+    fresh: document.querySelector('#panel-npc .gcard.current .gbody').hidden, n: document.querySelectorAll('#panel-npc .gcard').length }), id0);
+  ok(f2.n === 4 && f2.folded && !f2.fresh, 'lo plegado sigue plegado al guardar otro; lo nuevo sale abierto');
+  await page.click(`${lib} [data-act="foldAll"]`);
+  const all = await page.evaluate(() => ({ open: [...document.querySelectorAll('#panel-npc .gcard .gbody')].filter((b) => !b.hidden).length, btn: document.querySelector('#panel-npc [data-act="foldAll"]').textContent }));
+  ok(all.open === 0 && all.btn === 'Unfold all', '«Fold all» pliega todas y el botón pasa a «Unfold all»');
+  await page.click(`${lib} [data-act="foldAll"]`);
+  ok(await page.evaluate(() => [...document.querySelectorAll('#panel-npc .gcard .gbody')].every((b) => !b.hidden)), '«Unfold all» las despliega');
+  await page.locator(`${lib} .gcard[data-id="${id0}"] .gtog`).click();   // por id: el PNJ nuevo puede ordenarse antes
+  await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
+  await page.click('#tabBar [data-tab="npc"]');
+  const rl = await page.evaluate((id) => ({ view: !!document.querySelector('#panel-npc .gcards.md'), folded: document.querySelector(`#panel-npc .gcard[data-id="${id}"] .gbody`).hidden }), id0);
+  ok(rl.view && rl.folded, 'al recargar: misma vista y lo plegado sigue plegado');
+  await page.click('#tabBar [data-tab="tavern"]');
+  await page.click('#panel-tavern [data-ref="rollAll"]');
+  ok(await page.locator('#panel-tavern .saved-item').count() === 1, 'la vista es de cada pestaña (Taberna sigue en lista)');
+
+  // Botones de la card
+  await page.click('#tabBar [data-tab="npc"]');
+  const other = await page.evaluate(() => document.querySelector('#panel-npc .gcard:not(.current)').dataset.id);
+  await page.locator(`${lib} .gcard[data-id="${other}"] [data-act="load"]`).click();
+  const ld = await page.evaluate((id) => ({ act: DT.records.active('npc').id, sheet: document.querySelector('#panel-npc [data-ref="sheet"] .sh').textContent, name: DT.records.get(id).name,
+    marked: document.querySelector('#panel-npc .gcard.current').dataset.id }), other);
+  ok(ld.act === other && ld.sheet === ld.name && ld.marked === other, '«Load» en una card la abre arriba y la marca como actual');
+  await page.locator(`${lib} .gcard[data-id="${other}"] [data-act="delete"]`).click();
+  ok(await page.locator(`${lib} .gcard`).count() === 3 && !(await page.evaluate((id) => !!DT.records.get(id), other)), '«✕» en una card la borra');
+
+  // Vendedores y Tablón: su propia card
+  await page.click('#tabBar [data-tab="vendors"]');
+  await page.click('#panel-vendors [data-ref="genBtn"]');
+  await page.click('#panel-vendors [data-view="md"]');
+  const vc = await page.evaluate(() => { const c = document.querySelector('#panel-vendors .gcard.current'), d = DT.records.active('vendors').data;
+    return { dts: [...c.querySelectorAll('dt')].map((x) => x.textContent), perm: c.querySelectorAll('dd')[2].textContent, first: d.permanent[0].npc.name, meta: c.querySelector('.gmeta').textContent }; });
+  ok(vc.dts[0] === 'State' && vc.dts[1] === 'This week' && /Permanent/.test(vc.dts[2]) && vc.perm.includes(vc.first) && /goods/.test(vc.meta),
+    'card de ciudad: estado, semana, tiendas con su tendero y artículos', JSON.stringify(vc));
+  await page.click('#tabBar [data-tab="jobs"]');
+  await page.click('#panel-jobs [data-ref="roll"]');
+  await page.click('#panel-jobs [data-view="lg"]');
+  const jc = await page.evaluate(() => { const c = document.querySelector('#panel-jobs .gcard.current'), n = DT.records.active('jobs').data.jobs.length;
+    return { n, dts: c.querySelectorAll('dt').length, notes: [...c.querySelectorAll('dd .sub')].map((x) => x.textContent) }; });
+  ok(jc.dts === jc.n && jc.notes.length === jc.n && jc.notes.every((t) => /^Patron: .+ · Where: .+ · Deadline: /.test(t)), 'card de tablón: un renglón por encargo; en grande, quién paga, dónde y plazo');
+
+  // Lo que viene de fuera se escapa también en las cards
+  await page.evaluate(() => {
+    const t = DT.tabs.get('npc'), d = t.api.rollAll();
+    DT.records.upsert({ id: 'evil-npc', tab: 'npc', name: '<img src=x onerror=window.__xss=1>', data: d });
+    const city = JSON.parse(JSON.stringify(DT.records.active('vendors'))); city.id = 'evil-city'; city.data.permanent[0].npc.name = '<img src=x onerror=window.__xss=2>';
+    DT.records.upsert(city);
+  });
+  await page.click('#tabBar [data-tab="npc"]');
+  await page.click('#tabBar [data-tab="vendors"]');
+  const x = await page.evaluate(() => ({ xss: window.__xss || 0, imgs: document.querySelectorAll('.gcard img').length, evil: !!document.querySelector('#panel-vendors .gcard[data-id="evil-city"]') }));
+  ok(!x.xss && x.imgs === 0 && x.evil, 'nombres maliciosos en cards: escapados (sin XSS)');
+  await page.click('#langToggle');
+  const es = await page.evaluate(() => ({ bar: document.querySelector('#panel-vendors .viewbar').textContent, dt: document.querySelector('#panel-vendors .gcard dt').textContent }));
+  ok(/Ver/.test(es.bar) && /Medianas/.test(es.bar) && es.dt === 'Estado', 'las cards y la barra cambian de idioma');
+  ok(!errors.length, 'sin errores de consola en Guardados', errors.join(' | '));
+  await ctx.close();
+
+  // Preferencias rotas en el navegador: arranca en lista y se puede plegar igual
+  const g = await fresh({ init: `localStorage.setItem('dndtables.v3.folded', '"basura"'); localStorage.setItem('dndtables.view.npc', 'nope');` });
+  await g.page.click('#tabBar [data-tab="npc"]');
+  await g.page.click('#panel-npc [data-ref="rollAll"]');
+  const gl = await g.page.locator('#panel-npc .saved-item').count();
+  await g.page.click('#panel-npc [data-view="sm"]');
+  await g.page.locator('#panel-npc .gtog').click();
+  const gh = await g.page.evaluate(() => ({ hidden: document.querySelector('#panel-npc .gbody').hidden, st: JSON.parse(localStorage.getItem('dndtables.v3.folded')) }));
+  ok(gl === 1 && gh.hidden && Array.isArray(gh.st.npc) && !g.errors.length, 'con la vista o lo plegado rotos en el navegador: arranca en lista y pliega sin errores', g.errors.join(' | '));
+  await g.ctx.close();
+
+  // Móvil: ninguna vista desborda
+  const m = await fresh({ viewport: { width: 390, height: 844 } });
+  const overs = [];
+  for (const id of ['npc', 'vendors', 'jobs']) {
+    await m.page.click(`#tabBar [data-tab="${id}"]`);
+    for (let i = 0; i < 2; i++) await m.page.click(id === 'jobs' ? '#panel-jobs [data-ref="roll"]' : id === 'vendors' ? '#panel-vendors [data-ref="genBtn"]' : '#panel-npc [data-ref="rollAll"]');
+    for (const v of ['lg', 'md', 'sm']) {
+      await m.page.click(`#panel-${id} [data-view="${v}"]`);
+      const o = await m.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (o > 0) overs.push(`${id}/${v}: ${o}px`);
+      if (v === 'sm') await shot(m.page, `mobile-cards-${id}`, true);
+    }
+  }
+  ok(!overs.length, 'móvil 390 px: las cards no desbordan en ningún tamaño', overs.join(', '));
+  ok(await m.page.evaluate(() => getComputedStyle(document.querySelector('#panel-jobs .gcards')).gridTemplateColumns.split(' ').length) === 2, 'móvil: las pequeñas van de dos en dos');
+  await m.ctx.close();
+}
+
 /* ── 7. Puente con Veil: la mezcla (sin Veil) ─────────────────────────── */
 {
   const { ctx, page } = await fresh();
