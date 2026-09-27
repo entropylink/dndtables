@@ -167,21 +167,22 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(cards >= 9, `Villa: ≥ 9 fichas (${cards})`);
   ok(await page.locator('#panel-vendors .scard').count() === 2, 'estado y evento con su d20, en las tiradas');
   ok(await page.locator('#panel-vendors .vendor .npc .who').count() === cards, 'cada ficha tiene su tendero');
-  // Primero el asentamiento en limpio: estado, evento, una línea por tienda (cerrada) y los rumores; las tiradas, plegadas.
+  // Primero el asentamiento en limpio: estado, evento, una card mediana (abierta) por tienda y los rumores; las tiradas, plegadas.
   const vs = await page.evaluate(() => {
     const P = document.querySelector('#panel-vendors'), sheet = P.querySelector('[data-ref="sheet"]'), rolls = P.querySelector('[data-ref="rollsBox"]');
     return { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(rolls) & Node.DOCUMENT_POSITION_FOLLOWING), rollsClosed: !rolls.open,
-      status: sheet.querySelectorAll('[data-ref="shStatus"] dt').length, closed: sheet.querySelectorAll('details.vrow:not([open])').length,
-      rows: sheet.querySelectorAll('details.vrow').length, who: [...sheet.querySelectorAll('details.vrow > summary')].every((x) => /🧑/.test(x.textContent)),
+      status: sheet.querySelectorAll('[data-ref="shStatus"] dt').length, open: sheet.querySelectorAll('details.vcard[open]').length,
+      shops: sheet.querySelectorAll('details.vcard').length, grid: sheet.querySelector('[data-ref="permGrid"]').className,
+      pressed: sheet.querySelector('.viewbar [aria-pressed="true"]').dataset.view, who: [...sheet.querySelectorAll('details.vcard > summary')].every((x) => /🧑/.test(x.textContent)),
       rumors: sheet.querySelectorAll('ul.rumors li').length, name: sheet.querySelector('.sh').textContent === DT.records.active('vendors').name };
   });
   ok(vs.visible && vs.first && vs.rollsClosed && vs.status === 2 && vs.name, 'Vendedores: la ficha del asentamiento va primero y las tiradas plegadas', JSON.stringify(vs));
-  ok(vs.rows === cards && vs.closed === cards && vs.who && vs.rumors === cards, 'Vendedores: una línea por tienda con su tendero, cerrada; todos los rumores juntos', JSON.stringify(vs));
+  ok(vs.shops === cards && vs.open === cards && vs.grid === 'gcards md' && vs.pressed === 'md' && vs.who && vs.rumors === cards,
+    'Vendedores: por omisión, una card mediana abierta por tienda con su tendero; todos los rumores juntos', JSON.stringify(vs));
   await page.click('[data-ref="genBtn"]');
   const curMark = await page.evaluate(() => ({ active: DT.records.active('vendors').id, marked: document.querySelector('#panel-vendors .saved-item.current').dataset.id }));
   ok(curMark.active === curMark.marked, 'tras generar otra ciudad, la biblioteca marca como «actual» la nueva', JSON.stringify(curMark));
-  const first = page.locator('#panel-vendors .vendor').first();
-  await first.locator(':scope > summary').click();
+  const first = page.locator('#panel-vendors .vendor').first();   // en card ya viene abierta
   const before = await first.locator('.note').textContent();
   await first.locator('.hagInput').fill('30');
   await first.locator('.hagApply').click();
@@ -236,7 +237,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   // precio igual al de la v2: factor 1.1, sin competencia, existencias normales → antorcha 1 pc × 1.1
   const price = await page.locator('#panel-vendors .vendor').first().locator('tr', { hasText: 'Saco de dormir' }).locator('td.price').textContent();
   ok(price.trim() === '1 po 1 pp', `los precios de una ciudad v2 no cambian (saco de dormir 1 po × 1.1 = ${price.trim()})`);
-  await page.locator('#panel-vendors .vendor > summary').first().click();
+  const s0 = page.locator('#panel-vendors .vendor').first();   // en card ya viene abierta; en lista hay que abrirla
+  if (!(await s0.evaluate((el) => el.open))) await s0.locator(':scope > summary').click();
   await page.locator('#panel-vendors [data-act="rollNpc"]').first().click();
   ok(await page.locator('#panel-vendors .vendor').first().locator('.npc .who').count() === 1, 'se le puede tirar tendero a una ciudad vieja');
   // importar un JSON de la v2 (una ciudad) por el selector de archivos
@@ -448,8 +450,9 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     const ss = sheet.querySelector('.ss').textContent.toLowerCase();
     out.sub = ss === T.api.sheetOf(rec).sub.join(' · ').toLowerCase() && [h.text('ancestryX') || h.text('ancestryW') || h.text('ancestry'), h.text('age'), h.text('job')].every((x) => ss.includes(x.toLowerCase()));
     out.body = ['looks', 'trait', 'quirk', 'wants', 'rumor', 'secret'].every((t) => sheet.textContent.toLowerCase().includes(h.text(t).toLowerCase()));
-    out.dmTags = sheet.querySelectorAll('dt .vtag.bad').length === 2;
-    out.attCls = sheet.querySelectorAll('dd.good, dd.bad').length >= 1 || /indifferent|indiferente/i.test(h.text('attitude'));
+    // En lista (dt/dd) o en cards (.gtog/.lval): lo mismo.
+    out.dmTags = sheet.querySelectorAll('dt .vtag.bad, .gtog .vtag.bad').length === 2;
+    out.attCls = sheet.querySelectorAll('dd.good, dd.bad, .lval.good, .lval.bad').length >= 1 || /indifferent|indiferente/i.test(h.text('attitude'));
     const pl = T.toMarkdown(rec, { dm: false }), dm = T.toMarkdown(rec, { dm: true });
     out.mdPlayers = !pl.includes(h.text('secret')) && pl.includes(h.text('trait')) && !/\(DM\)/.test(pl);
     out.mdDM = dm.includes(h.text('secret')) && /\(DM\):\*\* /.test(dm);
@@ -461,7 +464,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     while (T.api.helpers(DT.records.active('npc')).text('wants') === before && k++ < 30) P.querySelector('.rcard[data-t="wants"] [data-act="roll"]').click();
     out.reroll = sheet.textContent.includes(T.api.helpers(DT.records.active('npc')).text('wants'));
     DT.setLang(DT.lang === 'en' ? 'es' : 'en');
-    out.lang = P.querySelector('[data-ref="rollsSum"]').textContent === DT.t('rollsTitle') && sheet.querySelector('dt').textContent === T.api.helpers(DT.records.active('npc')).title('looks');
+    out.lang = P.querySelector('[data-ref="rollsSum"]').textContent === DT.t('rollsTitle') && sheet.querySelector('dt, .gtog').textContent === T.api.helpers(DT.records.active('npc')).title('looks');
     DT.setLang(DT.lang === 'en' ? 'es' : 'en');
     return out;
   });
@@ -478,7 +481,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
       P.querySelector('[data-ref="rollAll"]').click();
       const sheet = P.querySelector('[data-ref="sheet"]'), box = P.querySelector('[data-ref="rollsBox"]');
       const o = out[id] = { visible: !sheet.hidden, first: !!(sheet.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING), closed: !box.open,
-        noEmpty: [...sheet.querySelectorAll('dd')].every((x) => x.textContent.trim()), cards: box.querySelectorAll('.rcard').length > 0 };
+        noEmpty: [...sheet.querySelectorAll('dd, .lval')].every((x) => x.textContent.trim()) && sheet.querySelectorAll('dd, .lval').length > 0, cards: box.querySelectorAll('.rcard').length > 0 };
       // ↻ de la primera línea que se pueda volver a tirar: cambia esa tabla (en ≤ 40 intentos) y deja igual las que no dependen de ella.
       const btn = sheet.querySelector('[data-rr]'), tids = btn.dataset.rr.split(',');
       const snap = () => JSON.stringify(DT.records.active(id).data.rolls);
@@ -624,8 +627,8 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.click(`${lib} [data-view="md"]`);
   const md = await page.evaluate(() => {
     const t = DT.tabs.get('npc'), cur = DT.records.active('npc'), s = t.api.sheetOf(cur);
-    const card = document.querySelector(`#panel-npc .gcard[data-id="${cur.id}"]`);
-    return { n: document.querySelectorAll('#panel-npc .gcards.md > .gcard').length, current: card.classList.contains('current'),
+    const card = document.querySelector(`#panel-npc [data-ref="lib"] .gcard[data-id="${cur.id}"]`);
+    return { n: document.querySelectorAll('#panel-npc [data-ref="lib"] .gcards.md > .gcard').length, current: card.classList.contains('current'),
       name: card.querySelector('.gname').textContent, want: cur.name, sub: card.querySelector('.gsub').textContent, wantSub: s.sub.join(' · '),
       dts: card.querySelectorAll('dt').length, lines: s.lines.length, notes: card.querySelectorAll('dd .sub').length,
       dm: card.querySelectorAll('dd .vtag.bad').length, wantDm: s.lines.filter((l) => l.dm).length,
@@ -635,13 +638,13 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(md.dts === md.lines && md.notes === 0 && md.dm === md.wantDm && md.dm > 0, `cards medianas: todas las líneas de la ficha, sin notas, las del DM marcadas (${md.dts}/${md.lines})`);
   ok(md.focus === 'md' && md.pref === 'md', 'cambiar de vista deja el foco en el botón y se recuerda');
   await page.click(`${lib} [data-view="lg"]`);
-  const lg = await page.evaluate(() => document.querySelectorAll('#panel-npc .gcards.lg .gcard dd .sub').length);
+  const lg = await page.evaluate(() => document.querySelectorAll('#panel-npc [data-ref="lib"] .gcards.lg .gcard dd .sub').length);
   ok(lg >= 3, 'cards grandes: con las notas (p. ej. la CD de la actitud)');
   await page.click(`${lib} [data-view="sm"]`);
-  const sm = await page.evaluate(() => [...document.querySelectorAll('#panel-npc .gcards.sm .gcard')].map((c) => ({ dts: c.querySelectorAll('dt').length, more: (c.querySelector('.gmore') || {}).textContent || '' })));
+  const sm = await page.evaluate(() => [...document.querySelectorAll('#panel-npc [data-ref="lib"] .gcards.sm .gcard')].map((c) => ({ dts: c.querySelectorAll('dt').length, more: (c.querySelector('.gmore') || {}).textContent || '' })));
   ok(sm.length === 3 && sm.every((c) => c.dts === 3 && /^\+\d+ more$/.test(c.more)), 'cards pequeñas: tres líneas y «+N more»', JSON.stringify(sm));
   const cols = {};
-  for (const v of ['lg', 'md', 'sm']) { await page.click(`${lib} [data-view="${v}"]`); cols[v] = await page.evaluate(() => getComputedStyle(document.querySelector('#panel-npc .gcards')).gridTemplateColumns.split(' ').length); }
+  for (const v of ['lg', 'md', 'sm']) { await page.click(`${lib} [data-view="${v}"]`); cols[v] = await page.evaluate(() => getComputedStyle(document.querySelector('#panel-npc [data-ref="lib"] .gcards')).gridTemplateColumns.split(' ').length); }
   ok(cols.lg < cols.md && cols.md < cols.sm, `más pequeñas, más por renglón (${cols.lg} · ${cols.md} · ${cols.sm})`);
 
   // Plegar: la card se queda en su nombre y sus botones; no toca el resultado (nada que sincronizar).
@@ -649,24 +652,24 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   const id0 = await page.locator(`${lib} .gcard`).first().getAttribute('data-id');
   const before = await page.evaluate((id) => DT.records.get(id).savedAt, id0);
   await page.locator(`${lib} .gcard`).first().locator('.gtog').click();
-  const f1 = await page.evaluate((id) => { const c = document.querySelector(`#panel-npc .gcard[data-id="${id}"]`);
+  const f1 = await page.evaluate((id) => { const c = document.querySelector(`#panel-npc [data-ref="lib"] .gcard[data-id="${id}"]`);
     return { exp: c.querySelector('.gtog').getAttribute('aria-expanded'), hidden: c.querySelector('.gbody').hidden, load: !!c.querySelector('.gact [data-act="load"]'),
       focus: document.activeElement === c.querySelector('.gtog'), saved: DT.records.get(id).savedAt }; }, id0);
   ok(f1.exp === 'false' && f1.hidden && f1.load && f1.focus, 'plegar una card deja nombre y botones, y el foco en ella');
   ok(f1.saved === before, 'plegar no toca el resultado guardado');
   await page.click('#panel-npc [data-ref="rollAll"]');
-  const f2 = await page.evaluate((id) => ({ folded: document.querySelector(`#panel-npc .gcard[data-id="${id}"] .gbody`).hidden,
-    fresh: document.querySelector('#panel-npc .gcard.current .gbody').hidden, n: document.querySelectorAll('#panel-npc .gcard').length }), id0);
+  const f2 = await page.evaluate((id) => ({ folded: document.querySelector(`#panel-npc [data-ref="lib"] .gcard[data-id="${id}"] .gbody`).hidden,
+    fresh: document.querySelector('#panel-npc [data-ref="lib"] .gcard.current .gbody').hidden, n: document.querySelectorAll('#panel-npc [data-ref="lib"] .gcard').length }), id0);
   ok(f2.n === 4 && f2.folded && !f2.fresh, 'lo plegado sigue plegado al guardar otro; lo nuevo sale abierto');
   await page.click(`${lib} [data-act="foldAll"]`);
-  const all = await page.evaluate(() => ({ open: [...document.querySelectorAll('#panel-npc .gcard .gbody')].filter((b) => !b.hidden).length, btn: document.querySelector('#panel-npc [data-act="foldAll"]').textContent }));
+  const all = await page.evaluate(() => ({ open: [...document.querySelectorAll('#panel-npc [data-ref="lib"] .gcard .gbody')].filter((b) => !b.hidden).length, btn: document.querySelector('#panel-npc [data-ref="lib"] [data-act="foldAll"]').textContent }));
   ok(all.open === 0 && all.btn === 'Unfold all', '«Fold all» pliega todas y el botón pasa a «Unfold all»');
   await page.click(`${lib} [data-act="foldAll"]`);
-  ok(await page.evaluate(() => [...document.querySelectorAll('#panel-npc .gcard .gbody')].every((b) => !b.hidden)), '«Unfold all» las despliega');
+  ok(await page.evaluate(() => [...document.querySelectorAll('#panel-npc [data-ref="lib"] .gcard .gbody')].every((b) => !b.hidden)), '«Unfold all» las despliega');
   await page.locator(`${lib} .gcard[data-id="${id0}"] .gtog`).click();   // por id: el PNJ nuevo puede ordenarse antes
   await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
   await page.click('#tabBar [data-tab="npc"]');
-  const rl = await page.evaluate((id) => ({ view: !!document.querySelector('#panel-npc .gcards.md'), folded: document.querySelector(`#panel-npc .gcard[data-id="${id}"] .gbody`).hidden }), id0);
+  const rl = await page.evaluate((id) => ({ view: !!document.querySelector('#panel-npc [data-ref="lib"] .gcards.md'), folded: document.querySelector(`#panel-npc [data-ref="lib"] .gcard[data-id="${id}"] .gbody`).hidden }), id0);
   ok(rl.view && rl.folded, 'al recargar: misma vista y lo plegado sigue plegado');
   await page.click('#tabBar [data-tab="tavern"]');
   await page.click('#panel-tavern [data-ref="rollAll"]');
@@ -674,10 +677,10 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
 
   // Botones de la card
   await page.click('#tabBar [data-tab="npc"]');
-  const other = await page.evaluate(() => document.querySelector('#panel-npc .gcard:not(.current)').dataset.id);
+  const other = await page.evaluate(() => document.querySelector('#panel-npc [data-ref="lib"] .gcard:not(.current)').dataset.id);
   await page.locator(`${lib} .gcard[data-id="${other}"] [data-act="load"]`).click();
   const ld = await page.evaluate((id) => ({ act: DT.records.active('npc').id, sheet: document.querySelector('#panel-npc [data-ref="sheet"] .sh').textContent, name: DT.records.get(id).name,
-    marked: document.querySelector('#panel-npc .gcard.current').dataset.id }), other);
+    marked: document.querySelector('#panel-npc [data-ref="lib"] .gcard.current').dataset.id }), other);
   ok(ld.act === other && ld.sheet === ld.name && ld.marked === other, '«Load» en una card la abre arriba y la marca como actual');
   await page.locator(`${lib} .gcard[data-id="${other}"] [data-act="delete"]`).click();
   ok(await page.locator(`${lib} .gcard`).count() === 3 && !(await page.evaluate((id) => !!DT.records.get(id), other)), '«✕» en una card la borra');
@@ -686,14 +689,14 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await page.click('#tabBar [data-tab="vendors"]');
   await page.click('#panel-vendors [data-ref="genBtn"]');
   await page.click('#panel-vendors [data-ref="savedList"] [data-view="md"]');
-  const vc = await page.evaluate(() => { const c = document.querySelector('#panel-vendors .gcard.current'), d = DT.records.active('vendors').data;
+  const vc = await page.evaluate(() => { const c = document.querySelector('#panel-vendors [data-ref="savedList"] .gcard.current'), d = DT.records.active('vendors').data;
     return { dts: [...c.querySelectorAll('dt')].map((x) => x.textContent), perm: c.querySelectorAll('dd')[2].textContent, first: d.permanent[0].npc.name, meta: c.querySelector('.gmeta').textContent }; });
   ok(vc.dts[0] === 'State' && vc.dts[1] === 'This week' && /Permanent/.test(vc.dts[2]) && vc.perm.includes(vc.first) && /goods/.test(vc.meta),
     'card de ciudad: estado, semana, tiendas con su tendero y artículos', JSON.stringify(vc));
   await page.click('#tabBar [data-tab="jobs"]');
   await page.click('#panel-jobs [data-ref="roll"]');
   await page.click('#panel-jobs [data-ref="lib"] [data-view="lg"]');
-  const jc = await page.evaluate(() => { const c = document.querySelector('#panel-jobs .gcard.current'), n = DT.records.active('jobs').data.jobs.length;
+  const jc = await page.evaluate(() => { const c = document.querySelector('#panel-jobs [data-ref="lib"] .gcard.current'), n = DT.records.active('jobs').data.jobs.length;
     return { n, dts: c.querySelectorAll('dt').length, notes: [...c.querySelectorAll('dd .sub')].map((x) => x.textContent) }; });
   ok(jc.dts === jc.n && jc.notes.length === jc.n && jc.notes.every((t) => /^Patron: .+ · Where: .+ · Deadline: /.test(t)), 'card de tablón: un renglón por encargo; en grande, quién paga, dónde y plazo');
 
@@ -706,10 +709,10 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   });
   await page.click('#tabBar [data-tab="npc"]');
   await page.click('#tabBar [data-tab="vendors"]');
-  const x = await page.evaluate(() => ({ xss: window.__xss || 0, imgs: document.querySelectorAll('.gcard img').length, evil: !!document.querySelector('#panel-vendors .gcard[data-id="evil-city"]') }));
+  const x = await page.evaluate(() => ({ xss: window.__xss || 0, imgs: document.querySelectorAll('.gcard img').length, evil: !!document.querySelector('#panel-vendors [data-ref="savedList"] .gcard[data-id="evil-city"]') }));
   ok(!x.xss && x.imgs === 0 && x.evil, 'nombres maliciosos en cards: escapados (sin XSS)');
   await page.click('#langToggle');
-  const es = await page.evaluate(() => ({ bar: document.querySelector('#panel-vendors .viewbar').textContent, dt: document.querySelector('#panel-vendors .gcard dt').textContent }));
+  const es = await page.evaluate(() => ({ bar: document.querySelector('#panel-vendors [data-ref="savedList"] .viewbar').textContent, dt: document.querySelector('#panel-vendors [data-ref="savedList"] .gcard dt').textContent }));
   ok(/Ver/.test(es.bar) && /Medianas/.test(es.bar) && es.dt === 'Estado', 'las cards y la barra cambian de idioma');
   ok(!errors.length, 'sin errores de consola en Guardados', errors.join(' | '));
   await ctx.close();
@@ -719,11 +722,11 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   await g.page.click('#tabBar [data-tab="npc"]');
   await g.page.click('#panel-npc [data-ref="rollAll"]');
   const gl = await g.page.locator('#panel-npc [data-ref="lib"] .saved-item').count();
-  const gs = await g.page.locator('#panel-npc [data-ref="sheet"] > dl').count();
+  const gs = await g.page.locator('#panel-npc [data-ref="sheet"] .gcards.md').count();   // vista rota → la de siempre (medianas)
   await g.page.click('#panel-npc [data-ref="lib"] [data-view="sm"]');
   await g.page.locator('#panel-npc [data-ref="lib"] .gtog').click();
   const gh = await g.page.evaluate(() => ({ hidden: document.querySelector('#panel-npc [data-ref="lib"] .gbody').hidden, st: JSON.parse(localStorage.getItem('dndtables.v3.folded')) }));
-  ok(gl === 1 && gs === 1 && gh.hidden && Array.isArray(gh.st.npc) && !g.errors.length, 'con la vista o lo plegado rotos en el navegador: arranca en lista y pliega sin errores', g.errors.join(' | '));
+  ok(gl === 1 && gs === 1 && gh.hidden && Array.isArray(gh.st.npc) && !g.errors.length, 'con la vista o lo plegado rotos en el navegador: vuelve a la de siempre y pliega sin errores', g.errors.join(' | '));
   await g.ctx.close();
 
   // Móvil: ninguna vista desborda
@@ -754,8 +757,9 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   for (const id of DECL) {
     await page.click(`#tabBar [data-tab="${id}"]`);
     await page.click(`#panel-${id} [data-ref="rollAll"]`);
-    const list = await page.evaluate((id) => ({ dl: !!document.querySelector(`#panel-${id} [data-ref="sheet"] > dl`), cards: document.querySelectorAll(`#panel-${id} [data-ref="sheet"] .gcard`).length }), id);
-    if (!list.dl || list.cards) bad.push(`${id}: no empieza en lista`);
+    const st = await page.evaluate((id) => { const b = document.querySelector(`#panel-${id} [data-ref="sheet"]`);
+      return { dl: !!b.querySelector(':scope > dl'), md: b.querySelectorAll('.gcards.md > .gcard').length, pressed: b.querySelector('.viewbar [aria-pressed="true"]').dataset.view }; }, id);
+    if (st.dl || !st.md || st.pressed !== 'md') bad.push(`${id}: no empieza en cards medianas ${JSON.stringify(st)}`);
     for (const v of ['lg', 'md', 'sm']) {
       await page.click(`${sheet(id)} [data-view="${v}"]`);
       const r = await page.evaluate(({ id, v }) => {
@@ -772,7 +776,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
     }
     await page.click(`${sheet(id)} [data-view="list"]`);
   }
-  ok(!bad.length, 'fichas declarativas: en cards, una por línea con su texto, nota (salvo pequeñas), DM y ↻', bad.join(' | '));
+  ok(!bad.length, 'fichas declarativas: empiezan en cards medianas; una por línea con su texto, nota (salvo pequeñas), DM y ↻', bad.join(' | '));
 
   // Plegar en la ficha: sobrevive a un ↻; un resultado nuevo sale abierto
   await page.click('#tabBar [data-tab="npc"]');
@@ -822,6 +826,7 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   // Tablón: una card por encargo, con su ↻
   await page.click('#tabBar [data-tab="jobs"]');
   await page.click('#panel-jobs [data-ref="roll"]');
+  ok(await page.locator('#panel-jobs .gcards.md > .gcard.job').count() > 0, 'Tablón: empieza en cards medianas');
   await page.click(`${sheet('jobs')} [data-view="lg"]`);
   const j1 = await page.evaluate(() => { const d = DT.records.active('jobs').data, cards = [...document.querySelectorAll('#panel-jobs .gcards.lg > .gcard.job')];
     return { n: cards.length, want: d.jobs.length, dts: cards.every((c) => c.querySelectorAll('dt').length === 4), dm: cards.every((c) => c.querySelector('.note.bad')), title: cards[0].querySelector('.gtog').textContent.trim().startsWith('1.') }; });
@@ -834,7 +839,9 @@ const shot = async (page, name, full = false) => { if (process.env.SHOTS) await 
   ok(/Ver/.test(await page.textContent(`${sheet('jobs')} .viewbar`)) && /Grandes/.test(await page.textContent(`${sheet('jobs')} .viewbar`)), 'la barra de la ficha cambia de idioma');
   await page.reload(); await page.waitForFunction(() => window.DT && DT.started);
   await page.click('#tabBar [data-tab="npc"]');
-  ok(await page.locator(`${sheet('npc')} .gcards.md`).count() === 1 && await page.locator(`${sheet('tavern')} .gcards`).count() === 0, 'al recargar, cada ficha vuelve en su vista');
+  const npcMd = await page.locator(`${sheet('npc')} .gcards.md`).count();
+  await page.click('#tabBar [data-tab="tavern"]');
+  ok(npcMd === 1 && await page.locator(`${sheet('tavern')} > dl`).count() === 1, 'al recargar, cada ficha vuelve en la vista que se eligió (PNJ en medianas, Taberna en lista)');
   ok(!errors.length, 'sin errores de consola en las fichas en cards', errors.join(' | '));
   await ctx.close();
 

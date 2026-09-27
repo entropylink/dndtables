@@ -99,8 +99,9 @@ ok(synced.includes(cur.id), 'Veil confirma (saved) y la app lo marca como sincro
 await shot('veil-plugin');
 
 // Cambios posteriores se guardan agrupados
-// cada tienda es una línea que se abre (artículos, precios, regateo)
-await f.locator('#panel-vendors .vendor > summary').first().click();
+// cada tienda es una card abierta (o, en lista, una línea que se abre): artículos, precios, regateo
+const shop0 = f.locator('#panel-vendors .vendor').first();
+if (!(await shop0.evaluate((el) => el.open))) await shop0.locator(':scope > summary').click();
 await f.locator('#panel-vendors .vendor').first().locator('.hagRoll').click();
 await f.locator('[data-ref="newWeek"]').click();
 await sleep(1500);

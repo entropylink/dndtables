@@ -433,7 +433,7 @@
  * ===================================================================== */
 "use strict";
 const DT = window.DT = {};
-DT.VERSION = "3.5.0";
+DT.VERSION = "3.5.1";
 DT.SCHEMA = 3;
 DT.lib = {};   // datos que comparten varias pestañas (ver el bloque DATOS COMPARTIDOS)
 
@@ -833,7 +833,8 @@ const VIEW_ICON = {   // rectángulos de 16×16: tres renglones · dos cards · 
 const viewIcon = v=> `<svg class="vico" viewBox="0 0 16 16" aria-hidden="true">${VIEW_ICON[v].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".8"/>`).join("")}</svg>`;
 DT.views = {
   list: VIEWS,
-  get(key){ const v = DT.storage.pref(key); return VIEWS.includes(v) ? v : "list"; },
+  sheetDefault: "md",   // la ficha, mientras no se elija otra: cards medianas. «Guardados», en lista.
+  get(key, fallback="list"){ const v = DT.storage.pref(key); return VIEWS.includes(v) ? v : fallback; },
   set(key, v){ if(VIEWS.includes(v)) DT.storage.pref(key, v); },
   // «Ver: Lista · Grandes · Medianas · Pequeñas» y, en cards, «Plegar todas» (DT.cards.wire le pone el texto).
   bar(view){
@@ -1219,7 +1220,7 @@ DT.simpleTableTab = function(def){
     const s = cur && sheetOf(cur);
     refs.sheet.hidden = !s;
     if(!s){ refs.sheet.innerHTML = ""; return; }
-    const E = DT.esc, rr = E(DT.t("rerollThis")), view = DT.views.get(VKEY), folds = sheetFolds(cur.id);
+    const E = DT.esc, rr = E(DT.t("rerollThis")), view = DT.views.get(VKEY, DT.views.sheetDefault), folds = sheetFolds(cur.id);
     const rrBtn = l=> l.tids.length ? `<button class="small ghost rr" data-rr="${E(l.tids.join(","))}" title="${rr}" aria-label="${rr}: ${E(l.label)}">↻</button>` : `<span class="rrx"></span>`;
     const key = l=> l.tids.join(",") || l.label, dmTag = l=> l.dm ? ` <span class="vtag bad">DM</span>` : "";
     const body = view==="list"
@@ -2658,7 +2659,7 @@ function vendorCard(v, id){
   // Cerrada: quién es, quién atiende, cómo están los precios, la CD y si tiene pieza especial. Abierta: todo lo demás.
   const n = v.npc, a = n && ancestryById(n.anc), att = attitudeOf(v);
   const same = Math.abs(mult-1)<0.005;
-  return `<details class="vendor ${DT.views.get(VKEY)==="list"?"vrow":"vcard"} ${v.tier==="travel"?"travel":""}" data-id="${id}">
+  return `<details class="vendor ${DT.views.get(VKEY, DT.views.sheetDefault)==="list"?"vrow":"vcard"} ${v.tier==="travel"?"travel":""}" data-id="${id}">
     <summary><span class="vicon">${c.icon}</span><span class="vname">${esc(vName(v.key))}</span>
       ${n?`<span class="vwho">🧑 ${esc(n.name)} <span class="sub">(${esc(tx(a.name))})</span> ${att.emoji}</span>`:""}
       <span class="vtag ${same?"":(mult>1?"bad":"good")}">${esc(same ? L("priceSame") : pct(mult-1))}</span>
@@ -2704,7 +2705,7 @@ function renderVendors(){
   const pg = refs.permGrid, tg = refs.travelGrid;
   refs.sheet.hidden = !d; refs.emptyMsg.hidden = !!d;
   if(!d){ pg.innerHTML = tg.innerHTML = refs.shRumors.innerHTML = refs.shView.innerHTML = ""; return; }
-  const view = DT.views.get(VKEY), folds = shopFolds(cur.id);
+  const view = DT.views.get(VKEY, DT.views.sheetDefault), folds = shopFolds(cur.id);
   refs.shView.innerHTML = DT.views.bar(view);
   refs.openHint.hidden = view!=="list";
   pg.className = tg.className = view==="list" ? "" : "gcards "+view;
@@ -3111,7 +3112,7 @@ function render(){
   refs.shName.textContent = cur.name;
   refs.shSub.textContent = [d.city ? d.city.name : "", sizeText(d.size), tx(tierOf(d.tier).text), `${d.jobs.length} ${L("jobs.jobsWord").toLowerCase()}`].filter(Boolean).join(" · ");
   // En lista, un bloque por encargo; en cards (grandes / medianas / pequeñas), una card por encargo, con su ↻, que se pliega.
-  const view = DT.views.get(VKEY), folds = jobFolds(cur.id);
+  const view = DT.views.get(VKEY, DT.views.sheetDefault), folds = jobFolds(cur.id);
   refs.shView.innerHTML = DT.views.bar(view);
   refs.cards.className = view==="list" ? "" : "gcards "+view;
   const rrBtn = `<button class="small ghost rr" data-act="reroll" title="${rr}" aria-label="${rr}">↻</button>`;
